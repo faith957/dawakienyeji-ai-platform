@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Natural Tones palette overrides */
+  --color-emerald-50: #FDFCF0;
+  --color-emerald-100: #F5F1E6;
+  --color-emerald-200: #CBE1C3;
+  --color-emerald-300: #A8C99D;
+  --color-emerald-400: #81AC75;
+  --color-emerald-500: #5C7F51;
+  --color-emerald-600: #4A6741;
+  --color-emerald-700: #4A6741;
+  --color-emerald-800: #304E2A;
+  --color-emerald-850: #253D20;
+  --color-emerald-900: #1A2F1A;
+  --color-emerald-950: #1A2F1A;
+
+  --color-green-50: #FDFCF0;
+  --color-green-100: #F5F1E6;
+  --color-green-700: #4A6741;
+  --color-green-800: #304E2A;
+  --color-green-900: #1A2F1A;
+  --color-green-950: #1A2F1A;
+
+  --color-stone-50: #FDFCF0;
+  --color-stone-100: #F5F1E6;
+  --color-stone-150: #E7E2D1;
+  --color-stone-200: #E7E2D1;
+  --color-stone-220: #E7E2D1;
+  --color-stone-250: #E7E2D1;
+  --color-stone-300: #D8D2BC;
+  --color-stone-350: #BDB69C;
+  --color-stone-400: #9E967A;
+  --color-stone-500: #5D4037;
+  --color-stone-600: #5D4037;
+  --color-stone-700: #5D4037;
+  --color-stone-800: #463029;
+  --color-stone-900: #1A2F1A;
+  --color-stone-950: #1A2F1A;
+
+  --color-amber-50: #FDFCF0;
+  --color-amber-100: #F5F1E6;
+  --color-amber-200: #E7E2D1;
+  --color-amber-700: #5D4037;
+  --color-amber-800: #463029;
+  --color-amber-900: #1A2F1A;
+
+  --color-red-50: #FFFDF0;
+  --color-red-100: #FCECE6;
+  --color-red-150: #E7D2C1;
+  --color-red-500: #B45309;
+  --color-red-600: #92400E;
+  --color-red-700: #78350F;
+  --color-red-800: #78350F;
+  --color-red-950: #451A03;
+}
+
+@layer base {
+  body {
+    background-color: #FDFCF0; /* Natural Tones warm ivory background */
+    color: #1A2F1A; /* Natural Tones rich charcoal forest dark text */
+    font-family: var(--font-sans);
+  }
+}
+
+/* Custom fine grain overlay for organic feel */
+.bg-grain {
+  background-image: radial-gradient(rgba(74, 103, 65, 0.03) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FDFCF0;
+}
+::-webkit-scrollbar-thumb {
+  background: #E7E2D1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4A6741;
+}
+
+/* Leaf float animation */
+@keyframes hover {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-leaf-hover {
+  animation: hover 6s ease-in-out infinite;
+}
