@@ -13,6 +13,11 @@ import PlantsCatalog from "./components/PlantsCatalog";
 import TraditionalRemedies from "./components/TraditionalRemedies";
 import ResearchKnowledge from "./components/ResearchKnowledge";
 import BlogFeed from "./components/BlogFeed";
+
+import heroSlide1 from "./assets/images/hero_slide_1_1780659974970.png";
+import heroSlide2 from "./assets/images/hero_slide_2_1780659992793.png";
+import heroSlide3 from "./assets/images/hero_slide_3_1780660007523.png";
+import heroSlide4 from "./assets/images/hero_slide_4_1780660023541.png";
 import ContactPage from "./components/ContactPage";
 import ChatbotPage from "./components/ChatbotPage";
 import AdminDashboard from "./components/AdminDashboard";
@@ -40,7 +45,7 @@ export default function App() {
       id: 1,
       titleKey: "slides.1.title",
       subtitleKey: "slides.1.subtitle",
-      bgImage: "/src/assets/images/hero_slide_1_1780659974970.png",
+      bgImage: heroSlide1,
       btn1Key: "slides.1.btn1",
       btn1Route: "plants" as PageRoute,
       btn2Key: "slides.1.btn2",
@@ -50,7 +55,7 @@ export default function App() {
       id: 2,
       titleKey: "slides.2.title",
       subtitleKey: "slides.2.subtitle",
-      bgImage: "/src/assets/images/hero_slide_2_1780659992793.png",
+      bgImage: heroSlide2,
       btn1Key: "slides.2.btn1",
       btn1Route: "knowledge" as PageRoute,
       btn2Key: "slides.2.btn2",
@@ -60,7 +65,7 @@ export default function App() {
       id: 3,
       titleKey: "slides.3.title",
       subtitleKey: "slides.3.subtitle",
-      bgImage: "/src/assets/images/hero_slide_3_1780660007523.png",
+      bgImage: heroSlide3,
       btn1Key: "slides.3.btn1",
       btn1Route: "chatbot" as PageRoute,
       btn2Key: "slides.3.btn2",
@@ -70,7 +75,7 @@ export default function App() {
       id: 4,
       titleKey: "slides.4.title",
       subtitleKey: "slides.4.subtitle",
-      bgImage: "/src/assets/images/hero_slide_4_1780660023541.png",
+      bgImage: heroSlide4,
       btn1Key: "slides.4.btn1",
       btn1Route: "remedies" as PageRoute,
       btn2Key: "slides.4.btn2",
