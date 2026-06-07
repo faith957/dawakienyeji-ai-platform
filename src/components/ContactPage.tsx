@@ -56,7 +56,7 @@ export default function ContactPage() {
       <div className="bg-stone-50 p-6 md:p-8 rounded-3xl border border-stone-250/80 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="max-w-2xl space-y-2">
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">Get In Touch</span>
-          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-sans">Contact our Ethnobotanical Guardians</h1>
+          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-sans">Contact Us</h1>
           <p className="text-sm text-stone-500 leading-relaxed font-normal">
             Have questions about plant safety, sustainability regulations, or native seeds? Write or visit us at our highlands model gardens.
           </p>
