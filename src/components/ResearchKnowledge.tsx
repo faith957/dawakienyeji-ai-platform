@@ -129,7 +129,7 @@ export default function ResearchKnowledge() {
               Ethics & Preservation Guideline
             </h3>
             <p className="text-xs text-stone-500 leading-relaxed font-normal">
-              To protect bark trees (like Pygeum/Mũcorai) from death via complete phloem ring destruction, harvesters must strictly follow the **Vertical Strip Striping Protocol**:
+              To protect bark trees (like Pygeum/Mũcorai) from death via complete phloem ring destruction, harvesters must strictly follow the <span className="font-bold text-stone-800">Vertical Strip Striping Protocol</span>:
             </p>
 
             {/* Simulated ASCII/SVG vertical strip diagram */}

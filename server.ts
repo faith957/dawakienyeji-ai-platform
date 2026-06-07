@@ -47,21 +47,21 @@ let dbMessages: ContactMessage[] = [
 // Default security PIN for admin operations
 const ADMIN_SECURITY_PIN = "dawa2026";
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+app.use(express.json());
 
-  app.use(express.json());
+// Global storage in-memory for email newsletter subscriptions
+let dbSubscriptions: { id: string; email: string; timestamp: string }[] = [];
 
-  // Admin authentication helper middleware
-  const verifyAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const pin = req.headers["x-admin-pin"] || req.body.adminPin;
-    if (pin === ADMIN_SECURITY_PIN) {
-      next();
-    } else {
-      res.status(401).json({ error: "Unauthorized. Invalid administrative PIN." });
-    }
-  };
+// Admin authentication helper middleware
+const verifyAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const pin = req.headers["x-admin-pin"] || req.body.adminPin;
+  if (pin === ADMIN_SECURITY_PIN) {
+    next();
+  } else {
+    res.status(401).json({ error: "Unauthorized. Invalid administrative PIN." });
+  }
+};
 
   // --- API ENDPOINTS ---
 
@@ -105,9 +105,6 @@ async function startServer() {
     dbMessages.unshift(newMessage);
     res.json({ success: true, message: newMessage });
   });
-
-  // Global storage in-memory for email newsletter subscriptions
-  let dbSubscriptions: { id: string; email: string; timestamp: string }[] = [];
 
   // Post subscription email
   app.post("/api/subscribe", (req, res) => {
@@ -497,30 +494,37 @@ ${matchedRemedies.map(r => {
   });
 
 
-  // --- VITE DEV SERVER OR STATIC ASSET SERVER HANDLER ---
+  // --- STANDALONE OR CONTAINER DIRECT EXECUTION LISTENER ---
 
-  if (process.env.NODE_ENV !== "production") {
-    console.log("Starting in development Mode with Vite Middleware...");
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    // Standard Production Build Asset serving
-    console.log("Starting in production Mode static asset server...");
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+  if (process.env.VERCEL !== "1") {
+    const PORT = 3000;
+    const setupAndListen = async () => {
+      if (process.env.NODE_ENV !== "production") {
+        console.log("Starting in development Mode with Vite Middleware...");
+        const { createServer: createViteServer } = await import("vite");
+        const vite = await createViteServer({
+          server: { middlewareMode: true },
+          appType: "spa",
+        });
+        app.use(vite.middlewares);
+      } else {
+        // Standard Production Build Asset serving
+        console.log("Starting in production Mode static asset server...");
+        const distPath = path.join(process.cwd(), "dist");
+        app.use(express.static(distPath));
+        app.get("*", (req, res) => {
+          res.sendFile(path.join(distPath, "index.html"));
+        });
+      }
+
+      app.listen(PORT, "0.0.0.0", () => {
+        console.log(`DawaKienyeji backend server running successfully at http://0.0.0.0:${PORT}`);
+      });
+    };
+
+    setupAndListen().catch((e) => {
+      console.error("Critical: Failed to boot DawaKienyeji Full-Stack App Server.", e);
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`DawaKienyeji backend server running successfully at http://0.0.0.0:${PORT}`);
-  });
-}
-
-startServer().catch((e) => {
-  console.error("Critical: Failed to boot DawaKienyeji Full-Stack App Server.", e);
-});
+export default app;

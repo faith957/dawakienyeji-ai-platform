@@ -7,6 +7,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { INITIAL_HERBS, INITIAL_BLOGS } from "./data/herbalDatabase";
 import { useLanguage } from "./utils/LanguageContext";
+import { getPlantImage } from "./utils/herbImages";
 import LanguageSelector from "./components/LanguageSelector";
 import PlantsCatalog from "./components/PlantsCatalog";
 import TraditionalRemedies from "./components/TraditionalRemedies";
@@ -138,12 +139,16 @@ export default function App() {
             onClick={() => navigateTo('home')}
             className="flex items-center gap-2 cursor-pointer group"
           >
-            <div className="p-2 bg-emerald-950 text-emerald-200 rounded-full shadow-inner transform group-hover:rotate-12 transition">
-              <Leaf className="w-5 h-5" />
+            <div className="w-10 h-10 overflow-hidden rounded-full shadow bg-emerald-950 flex items-center justify-center p-0.5 border border-emerald-800/20 transform group-hover:scale-105 transition duration-300">
+              <img 
+                src="https://i.postimg.cc/VkwT0rck/Chat-GPT-Image-Jun-7-2026-09-17-26-PM.png" 
+                alt="DawaKienyeji Logo" 
+                className="w-full h-full object-cover rounded-full animate-pulse-slow"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <span className="font-extrabold text-lg tracking-tight font-sans text-emerald-950 block">DawaKienyeji</span>
-              <span className="text-[9px] uppercase font-bold tracking-widest text-emerald-700 block leading-none">Indegenous Heritage AI</span>
             </div>
           </div>
 
@@ -229,7 +234,7 @@ export default function App() {
             >
               <Bot className="w-4 h-4 text-emerald-300 animate-pulse" />
               <span className="hidden sm:inline">{t("nav.askBot")}</span>
-              <span className="inline sm:hidden">Ask Bot</span>
+              <span className="inline sm:hidden">Get Help</span>
             </button>
 
             <button
@@ -483,12 +488,53 @@ export default function App() {
                   return (
                     <div 
                       key={th.id} 
-                      className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between"
+                      className="bg-white border border-stone-200 hover:border-emerald-700/40 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-350 flex flex-col justify-between group cursor-pointer"
                     >
-                      <div className={`p-6 bg-gradient-to-br ${th.imageColor} text-white space-y-1`}>
-                        <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 bg-white/20 rounded-full">{th.category}</span>
-                        <h3 className="text-xl font-extrabold uppercase tracking-tight">{th.kikuyuName}</h3>
-                        <p className="text-[10px] italic opacity-80">{th.scientificName} • {th.commonName}</p>
+                      {/* Botanical Image with Premium Blend Overlays */}
+                      <div className="h-44 relative overflow-hidden">
+                        <img 
+                          src={getPlantImage(herb)}
+                          alt={th.kikuyuName}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          referrerPolicy="no-referrer"
+                        />
+                        {/* Subtle rich gradient overlay mask to guarantee readability and high contrast */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-emerald-950/45 to-stone-900/10 z-1" />
+                        
+                        {/* Floating header badges */}
+                        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
+                          {/* Category Pill Tag */}
+                          <span className="text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 bg-emerald-950/90 text-emerald-100 border border-emerald-800/40 rounded-full shadow-sm">
+                            {th.category}
+                          </span>
+
+                          {/* Safety Indicator Badge */}
+                          {th.severityRating && (
+                            <span className={`text-[9px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border shadow-sm ${
+                              th.severityRating === 'Safe' 
+                                ? 'bg-emerald-900/90 text-emerald-100 border-emerald-700/50' 
+                                : th.severityRating === 'Caution' 
+                                  ? 'bg-amber-900/90 text-amber-100 border-amber-700/50' 
+                                  : 'bg-red-900/90 text-red-100 border-red-700/50'
+                            }`}>
+                              {th.severityRating}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Subtle label explaining verified vs illustration placeholder source to user */}
+                        <div className="absolute top-11 left-3 z-10">
+                          <span className="text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 bg-black/60 backdrop-blur-sm text-stone-200 rounded border border-white/5">
+                            {herb.imageUrl ? "📷 Verified Specimen" : "🎨 Botanical Illustration"}
+                          </span>
+                        </div>
+
+                        {/* Overlaid Title Copy */}
+                        <div className="absolute bottom-3 left-3 right-3 z-10 text-left">
+                          <p className="text-[10px] font-mono text-emerald-250 font-bold uppercase tracking-wider drop-shadow-sm">{th.commonName || 'Indigenous Flora'}</p>
+                          <h3 className="text-xl font-black tracking-tight font-sans text-white uppercase drop-shadow">{th.kikuyuName}</h3>
+                        </div>
                       </div>
 
                       <div className="p-5 space-y-4 flex-grow flex flex-col justify-between">
@@ -519,10 +565,10 @@ export default function App() {
                   <span className="text-[10px] bg-emerald-50 text-emerald-800 font-extrabold uppercase px-2 py-1 rounded">Our Mission</span>
                   <h2 className="text-3xl font-extrabold text-emerald-950 tracking-tight leading-tight">Preserving African Herbal Knowledge</h2>
                   <p className="text-stone-700 text-xs md:text-sm leading-relaxed font-semibold">
-                    The slopes of central Kenya grow a biological library of plants that traditional sages (*Muthamaki wa Mithĩga*) spent millenniums testing and classifying. But oral recipes pass away if not written down.
+                    The slopes of central Kenya grow a biological library of plants that traditional sages <span className="italic">Muthamaki wa Mithĩga</span> spent millenniums testing and classifying. But oral recipes pass away if not written down.
                   </p>
                   <p className="text-stone-600 text-xs leading-relaxed font-normal">
-                    **DawaKienyeji** represents an educational initiative to catalog regional medicinal plants with their correct Kikuyu characters (Ũ, Ĩ), scientific botanical taxonomy, sustainable vertical cutting guidelines, and defensive parameters to ensure safety. We integrate conversational AI to foster modern digital preservation.
+                    <span className="font-extrabold text-stone-850">DawaKienyeji</span> represents an educational initiative to catalog regional medicinal plants with their correct Kikuyu characters (Ũ, Ĩ), scientific botanical taxonomy, sustainable vertical cutting guidelines, and defensive parameters to ensure safety. We integrate conversational AI to foster modern digital preservation.
                   </p>
                   <button
                     onClick={() => navigateTo('about')}
@@ -638,45 +684,57 @@ export default function App() {
 
         {/* Tab 2: About full page content */}
         {currentRoute === 'about' && (
-          <div className="max-w-4xl mx-auto px-4 space-y-12 font-sans">
-            
-            <div className="space-y-4 text-center">
-              <span className="text-xs uppercase font-extrabold tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full">Background History</span>
-              <h1 className="text-4xl font-extrabold tracking-tight text-stone-900 leading-none">About DawaKienyeji</h1>
-              <p className="text-stone-500 text-sm max-w-xl mx-auto">Blending ancient Gĩkũyũ botanical medicine, indigenous highland preservation, and modern AI models.</p>
-            </div>
+          <div 
+            className="relative max-w-5xl mx-auto px-6 py-12 md:py-16 rounded-3xl overflow-hidden bg-cover bg-center shadow-lg font-sans border border-stone-200"
+            style={{ backgroundImage: `url('https://i.postimg.cc/y8QrWf1v/Chat-GPT-Image-Jun-7-2026-08-35-28-PM.png')` }}
+          >
+            {/* Elegant overlay/vignette mask ensuring high contrast and modern feel */}
+            <div className="absolute inset-0 bg-gradient-to-b from-stone-900/60 via-stone-900/50 to-stone-950/70 z-0" />
 
-            <div className="bg-white border border-stone-250 p-6 md:p-8 rounded-3xl shadow-sm space-y-6">
-              <h2 className="text-xl font-extrabold text-emerald-950 tracking-tight leading-tight">Preserving Ethnobotanical Chronicles</h2>
-              <p className="text-xs md:text-sm text-stone-600 leading-relaxed font-normal">
-                Kikuyu herbal medicine (*Dawa za Kienyeji*) has existed under forest canopies for centuries. In our hills, trees like the peppery **Mũthĩga** (*Warburgia ugandensis*) served as our emergency clinics for colds and fevers. Urination issues in older men were solved with tea brewed from the reddish bark of **Mũcorai** (*Prunus africana* / Pygeum). Toothaches were temporarily anesthetized with Sodom Apple (**Mũtongu**) roots. Saps from sacred Strangler Figs (**Mũgũmo**) served as instant surgical coagulants on cuts.
-              </p>
+            <div className="relative z-10 space-y-12 max-w-4xl mx-auto">
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-stone-100 border border-stone-200 rounded-2xl">
-                <div className="space-y-1.5">
-                  <h3 className="font-extrabold text-stone-900 text-xs flex items-center gap-1.5 uppercase">
-                    <Landmark className="w-4 h-4 text-emerald-800" />
-                    Our Integrity Philosophy
-                  </h3>
-                  <p className="text-[11px] text-stone-600 leading-relaxed font-normal">We prioritize clinical safety and exact species mapping. Traditional heritage is respected inside our parameters to ensure children or pregnant mothers avoid toxic saps.</p>
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="font-extrabold text-stone-900 text-xs flex items-center gap-1.5 uppercase">
-                    <TreePine className="w-4 h-4 text-emerald-800" />
-                    Ecology & Sustainability
-                  </h3>
-                  <p className="text-[11px] text-stone-600 leading-relaxed font-normal">We mandate vertical Opposite Striping harvesting so that bark trees remain alive and forests continue to thrive. We are ecological preservationists first.</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold uppercase text-emerald-850">The Role of RAG Technology</h3>
-                <p className="text-xs text-stone-500 leading-relaxed font-semibold">
-                  With the passing of elder practitioners (*Muthamaki wa Mithĩga*), oral records suffer memory erosion. This website serves as a clinical digital library. Our conversational AI companion—**DawaBot**—utilizes Retrieval-Augmented Generation (RAG) mapped directly containing verified Kikuyu botanical records to ensure exact scientific and traditional answers. In doing so, we don't duplicate books; we teach young Kenyans their botanical lineage.
+              <div className="space-y-4 text-center">
+                <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-100 bg-emerald-950/80 backdrop-blur-md border border-emerald-800/30 px-3 py-1.5 rounded-full shadow-sm inline-block">
+                  Background History
+                </span>
+                <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white drop-shadow-md uppercase">About DawaKienyeji</h1>
+                <p className="text-stone-100 text-sm md:text-base max-w-xl mx-auto drop-shadow font-medium leading-relaxed">
+                  Blending ancient Gĩkũyũ botanical medicine, indigenous highland preservation, and modern AI models.
                 </p>
               </div>
-            </div>
 
+              <div id="preserving-ethnobotanical-chronicles-card" className="bg-white border border-stone-250 p-6 md:p-8 rounded-3xl shadow-sm space-y-6">
+                <h2 className="text-xl font-extrabold text-emerald-950 tracking-tight leading-tight">Preserving Ethnobotanical Chronicles</h2>
+                <p className="text-xs md:text-sm text-stone-600 leading-relaxed font-normal">
+                  Kikuyu herbal medicine <span className="italic">Dawa za Kienyeji</span> has existed under forest canopies for centuries. In our hills, trees like the peppery <strong className="font-bold">Mũthĩga</strong> (<span className="italic">Warburgia ugandensis</span>) served as our emergency clinics for colds and fevers. Urination issues in older men were solved with tea brewed from the reddish bark of <strong className="font-bold">Mũcorai</strong> (<span className="italic">Prunus africana</span> / Pygeum). Toothaches were temporarily anesthetized with Sodom Apple (<strong className="font-bold">Mũtongu</strong>) roots. Saps from sacred Strangler Figs (<strong className="font-bold">Mũgũmo</strong>) served as instant surgical coagulants on cuts.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-stone-100 border border-stone-200 rounded-2xl">
+                  <div className="space-y-1.5">
+                    <h3 className="font-extrabold text-stone-900 text-xs flex items-center gap-1.5 uppercase">
+                      <Landmark className="w-4 h-4 text-emerald-800" />
+                      Our Integrity Philosophy
+                    </h3>
+                    <p className="text-[11px] text-stone-600 leading-relaxed font-normal">We prioritize clinical safety and exact species mapping. Traditional heritage is respected inside our parameters to ensure children or pregnant mothers avoid toxic saps.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="font-extrabold text-stone-900 text-xs flex items-center gap-1.5 uppercase">
+                      <TreePine className="w-4 h-4 text-emerald-800" />
+                      Ecology & Sustainability
+                    </h3>
+                    <p className="text-[11px] text-stone-600 leading-relaxed font-normal">We mandate vertical Opposite Striping harvesting so that bark trees remain alive and forests continue to thrive. We are ecological preservationists first.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold uppercase text-emerald-850">The Role of RAG Technology</h3>
+                  <p className="text-xs text-stone-500 leading-relaxed font-semibold">
+                    With the passing of elder practitioners <span className="italic">Muthamaki wa Mithĩga</span>, oral records suffer memory erosion. This website serves as a clinical digital library. Our conversational AI companion—<strong className="font-bold">DawaBot</strong>—utilizes Retrieval-Augmented Generation (RAG) mapped directly containing verified Kikuyu botanical records to ensure exact scientific and traditional answers. In doing so, we don't duplicate books; we teach young Kenyans their botanical lineage.
+                  </p>
+                </div>
+              </div>
+
+            </div>
           </div>
         )}
 
@@ -700,8 +758,7 @@ export default function App() {
 
       </main>
 
-      {/* Shared Footer panel on all pages */}
-      <footer id="main-footer" className="bg-[#0a1e15] text-[#F5E6C8] border-t-2 border-[#D4A017]/30 mt-20 font-sans p-8 md:p-16 transition-colors duration-300">
+      <footer id="main-footer" className="bg-[#0a1e15] text-white border-t-2 border-[#D4A017]/30 mt-20 font-sans p-8 md:p-16 transition-colors duration-300">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8 pb-10 border-b border-[#1a3a2a]">
           
           {/* Column 1: Website Branding & Philosophy. Occupies 3 grid cols on large screens. */}
@@ -710,12 +767,16 @@ export default function App() {
               onClick={() => navigateTo('home')}
               className="flex items-center gap-3 cursor-pointer group"
             >
-              <div className="p-2.5 bg-[#D4A017] text-[#0a1e15] rounded-full shadow-md transform group-hover:rotate-12 transition-all duration-300">
-                <Leaf className="w-5 h-5 text-[#0a1e15]" />
+              <div className="w-11 h-11 overflow-hidden rounded-full shadow-md bg-[#D4A017] flex items-center justify-center p-0.5 border border-[#D4A017]/30 transform group-hover:scale-105 transition-all duration-300">
+                <img 
+                  src="https://i.postimg.cc/VkwT0rck/Chat-GPT-Image-Jun-7-2026-09-17-26-PM.png" 
+                  alt="DawaKienyeji Logo" 
+                  className="w-full h-full object-cover rounded-full"
+                  referrerPolicy="no-referrer"
+                />
               </div>
               <div>
-                <span className="font-extrabold text-xl tracking-tight text-[#F5E6C8] block group-hover:text-[#D4A017] transition-colors duration-200">DawaKienyeji</span>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-[#D4A017]/80 block leading-none">Indigenous Heritage AI</span>
+                <span className="font-extrabold text-xl tracking-tight text-white block group-hover:text-[#D4A017] transition-colors duration-200">DawaKienyeji</span>
               </div>
             </div>
             <p className="text-sm text-white leading-relaxed font-light">
@@ -727,16 +788,16 @@ export default function App() {
               <h5 className="text-xs uppercase font-extrabold tracking-widest text-[#D4A017] mb-3">Connect With Us</h5>
               <div className="flex items-center gap-3">
                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="p-2 bg-[#122e20] hover:bg-[#D4A017] hover:text-[#0a1e15] transition-all duration-300 rounded-full border border-[#1a3a2a] group" aria-label="Facebook">
-                  <Facebook className="w-4 h-4 text-[#F5E6C8] group-hover:text-[#0a1e15]" />
+                  <Facebook className="w-4 h-4 text-white group-hover:text-[#0a1e15]" />
                 </a>
                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="p-2 bg-[#122e20] hover:bg-[#D4A017] hover:text-[#0a1e15] transition-all duration-300 rounded-full border border-[#1a3a2a] group" aria-label="Twitter">
-                  <Twitter className="w-4 h-4 text-[#F5E6C8] group-hover:text-[#0a1e15]" />
+                  <Twitter className="w-4 h-4 text-white group-hover:text-[#0a1e15]" />
                 </a>
                 <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="p-2 bg-[#122e20] hover:bg-[#D4A017] hover:text-[#0a1e15] transition-all duration-300 rounded-full border border-[#1a3a2a] group" aria-label="Instagram">
-                  <Instagram className="w-4 h-4 text-[#F5E6C8] group-hover:text-[#0a1e15]" />
+                  <Instagram className="w-4 h-4 text-white group-hover:text-[#0a1e15]" />
                 </a>
                 <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="p-2 bg-[#122e20] hover:bg-[#D4A017] hover:text-[#0a1e15] transition-all duration-300 rounded-full border border-[#1a3a2a] group" aria-label="YouTube">
-                  <Youtube className="w-4 h-4 text-[#F5E6C8] group-hover:text-[#0a1e15]" />
+                  <Youtube className="w-4 h-4 text-white group-hover:text-[#0a1e15]" />
                 </a>
               </div>
             </div>
@@ -749,7 +810,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('home')} 
-                  className="group flex items-center gap-1.5 text-[#EAD9C0] hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>Home</span>
@@ -758,7 +819,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('about')} 
-                  className="group flex items-center gap-1.5 text-[#EAD9C0] hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>About</span>
@@ -767,7 +828,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('plants')} 
-                  className="group flex items-center gap-1.5 text-[#EAD9C0] hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>Herbal Plants</span>
@@ -776,7 +837,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('remedies')} 
-                  className="group flex items-center gap-1.5 text-[#EAD9C0] hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>Traditional Remedies</span>
@@ -792,7 +853,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('knowledge')} 
-                  className="group flex items-center gap-1.5 text-[#EAD9C0] hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>Knowledge Base</span>
@@ -801,7 +862,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('blog')} 
-                  className="group flex items-center gap-1.5 text-[#EAD9C0] hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>Blog</span>
@@ -810,16 +871,16 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('chatbot')} 
-                  className="group flex items-center gap-1.5 text-[#EAD9C0] hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span className="font-bold text-[#D4A017] hover:underline hover:decoration-wavy">Ask DawaBot</span>
+                  <span className="font-bold text-[#D4A017] hover:underline hover:decoration-wavy">Get Help</span>
                 </button>
               </li>
               <li>
                 <button 
                   onClick={() => navigateTo('contact')} 
-                  className="group flex items-center gap-1.5 text-[#EAD9C0] hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>Contact</span>
@@ -831,18 +892,18 @@ export default function App() {
           {/* Column 4: Contact Information. Occupies 3 grid cols on large screens. */}
           <div className="lg:col-span-3 space-y-4">
             <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">Nursery & Highlands</h4>
-            <div className="text-xs md:text-sm text-[#F5E6C8] space-y-3 font-normal">
-              <p className="flex items-start gap-2 group text-[#EAD9C0]">
+            <div className="text-xs md:text-sm text-white space-y-3 font-normal">
+              <p className="flex items-start gap-2 group text-white">
                 <MapPin className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-200" />
                 <span>Nyeri County slopes, Central Province, Kenya</span>
               </p>
-              <p className="flex items-start gap-2 group text-[#EAD9C0]">
+              <p className="flex items-start gap-2 group text-white">
                 <Phone className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-200" />
-                <span>+254 711 00DAWA (003292)</span>
+                <span>+254 141 063 174</span>
               </p>
-              <p className="flex items-start gap-2 group text-[#EAD9C0]">
+              <p className="flex items-start gap-2 group text-white">
                 <Mail className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-200" />
-                <span>info@mojatu.com</span>
+                <span>info@dawakienyenji.com</span>
               </p>
             </div>
           </div>
@@ -850,10 +911,10 @@ export default function App() {
         </div>
 
         {/* Copyright and lower meta row */}
-        <div className="max-w-7xl mx-auto pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[#EAD9C0]/70 font-semibold tracking-wide">
+        <div className="max-w-7xl mx-auto pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white font-semibold tracking-wide">
           <p>© {new Date().getFullYear()} DawaKienyeji. Digitalized with support from Mojatu Foundation.</p>
           <div className="flex gap-4 items-center">
-            <span className="text-[#EAD9C0]/50 uppercase font-medium">Educational Project only</span>
+            <span className="text-white/80 uppercase font-medium">Educational Project only</span>
           </div>
         </div>
       </footer>

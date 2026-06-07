@@ -120,7 +120,7 @@ export default function PlantsCatalog() {
           <HelpCircle className="w-12 h-12 text-emerald-600 mx-auto animate-bounce" />
           <h3 className="text-md font-bold text-emerald-950">No exact matches found</h3>
           <p className="text-xs text-stone-500 leading-relaxed font-normal">
-            There are currently no plants matching "{searchTerm}" under this tab. Check spelling, try Gĩkũyũ letters, or click the <strong>Ask DawaBot</strong> panel for real-time generative library searches!
+            There are currently no plants matching "{searchTerm}" under this tab. Check spelling, try Gĩkũyũ letters, or click the <strong>Get Help</strong> panel for real-time generative library searches!
           </p>
         </div>
       ) : (

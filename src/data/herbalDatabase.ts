@@ -20,6 +20,7 @@ export const INITIAL_HERBS: Herb[] = [
     precautions: 'Extremely strong. Avoid taking on an empty stomach. Highly discouraged for pregnant women as it may stimulate uterine contractions. Keep doses limited to 1 cup twice daily.',
     category: 'Respiratory',
     imageColor: 'from-emerald-800 via-green-900 to-teal-950',
+    imageUrl: 'https://i.postimg.cc/FzRGZDqb/Warburgia-ugandensis.webp',
     severityRating: 'Caution'
   },
   {
@@ -40,6 +41,7 @@ export const INITIAL_HERBS: Herb[] = [
     precautions: 'The orange/yellow fruits are highly TOXIC if swallowed. Apply fruit sap topically with high caution—avoid contact with eyes and open wounds. Children should not handle the fruits.',
     category: 'Pain relief',
     imageColor: 'from-amber-600 via-yellow-700 to-stone-800',
+    imageUrl: 'https://i.postimg.cc/LsgpyVdd/Solanum-incanum.webp',
     severityRating: 'Medicinal Only'
   },
   {
@@ -60,6 +62,7 @@ export const INITIAL_HERBS: Herb[] = [
     precautions: 'Generally safe and non-toxic, but should only be consumed by adults. Limit use to one week consecutively.',
     category: 'Pain relief',
     imageColor: 'from-teal-700 via-green-800 to-emerald-950',
+    imageUrl: 'https://i.postimg.cc/HnR0tHbj/Teclea-nobilis.jpg',
     severityRating: 'Safe'
   },
   {
@@ -79,6 +82,7 @@ export const INITIAL_HERBS: Herb[] = [
     precautions: 'Prostate symptoms can be indicators of serious diseases and need professional evaluation. Harvesting must only use sustainable vertical strips to avoid girdling (killing) the tree.',
     category: 'Prostate & Urinary',
     imageColor: 'from-amber-800 via-orange-950 to-stone-950',
+    imageUrl: 'https://i.postimg.cc/LsxyGJPW/Prunus-africana.jpg',
     severityRating: 'Medicinal Only'
   },
   {
@@ -99,6 +103,7 @@ export const INITIAL_HERBS: Herb[] = [
     precautions: 'Extremely bitter, which might trigger temporary nausea in sensitive individuals. Safe for children over 5 years in diluted half-portions.',
     category: 'Digestive',
     imageColor: 'from-lime-800 via-green-800 to-emerald-900',
+    imageUrl: 'https://i.postimg.cc/8kWNhGMG/Vernonia-lasiopus.jpg',
     severityRating: 'Safe'
   },
   {
@@ -118,6 +123,7 @@ export const INITIAL_HERBS: Herb[] = [
     precautions: 'Extremely strong laxative when ingested. Do NOT swallow any leaf teas without direct guidance from an elder practitioner, and limit ingestion to avoid strong stomach cramps.',
     category: 'Skin & Wounds',
     imageColor: 'from-yellow-500 via-teal-700 to-green-950',
+    imageUrl: 'https://i.postimg.cc/QCj49ccF/Senna-didymobotrya.jpg',
     severityRating: 'Caution'
   },
   {
@@ -138,6 +144,7 @@ export const INITIAL_HERBS: Herb[] = [
     precautions: 'Strong emetic context—will cause vomiting if taken internally in high doses. Keep dosages under careful observation.',
     category: 'Digestive',
     imageColor: 'from-lime-900 via-emerald-800 to-zinc-950',
+    imageUrl: 'https://i.postimg.cc/zvPCzhj6/Trichilia-emetica.jpg',
     severityRating: 'Caution'
   },
   {
@@ -158,6 +165,7 @@ export const INITIAL_HERBS: Herb[] = [
     precautions: 'Harvesting must be done minimally, with clean tools. Do not strip bark in large volumes. Highly safe but spiritually protected.',
     category: 'General Vitality',
     imageColor: 'from-emerald-900 via-stone-800 to-slate-950',
+    imageUrl: 'https://i.postimg.cc/Zqhr5489/Ficus-thonningii.jpg',
     severityRating: 'Safe'
   },
   {
@@ -177,6 +185,7 @@ export const INITIAL_HERBS: Herb[] = [
     precautions: 'Berries have high anthelmintic potency. Avoid taking daily for more than 3 days. Can cause mild stomach rumbling as worms are expelled.',
     category: 'Digestive',
     imageColor: 'from-red-900 via-amber-800 to-stone-900',
+    imageUrl: 'https://i.postimg.cc/528CGThd/Myrsine-africana.jpg',
     severityRating: 'Caution'
   },
   {
@@ -197,6 +206,7 @@ export const INITIAL_HERBS: Herb[] = [
     precautions: 'Highly aromatic; can cause temporary sweating and warmth (which is desired to break fevers). Avoid giving to infants or children under 3 years.',
     category: 'Respiratory',
     imageColor: 'from-lime-900 via-amber-700 to-emerald-950',
+    imageUrl: 'https://i.postimg.cc/X7CGGt72/Zanthoxylum-chalybeum.jpg',
     severityRating: 'Caution'
   }
 ];
@@ -349,7 +359,7 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBaseArticle[] = [
     excerpt: 'An academic and cultural primer explaining the ecosystems of central Kenya and why the region grew some of the most potent medicinal shrubs in Africa.',
     content: `Central Kenyan highlands around Mt. Kenya, Aberdare Ranges (Nyandarua), and the sacred groves are biological hotspots. The rich volcanic soil, cold altitudes, and seasonal rains force mountain plants to develop dense secondary metabolites as survival mechanisms.
 
-These secondary metabolites—such as alkaloids, saponins, tannins, and terpenoids—are the active medicinal chemicals in traditional medicine. For instance, the **Mũthĩga** tree thrives in these high forest reserves, synthesizing powerful sesquiterpene dialdehydes which are heavily anti-fungal and bronchodilating. 
+These secondary metabolites—such as alkaloids, saponins, tannins, and terpenoids—are the active medicinal chemicals in traditional medicine. For instance, the Mũthĩga tree thrives in these high forest reserves, synthesizing powerful sesquiterpene dialdehydes which are heavily anti-fungal and bronchodilating. 
 
 By understanding our regional geography and soils, we begin to comprehend why Gĩkũyũ medicine is uniquely suited for respiratory and viral treatments.`,
     category: 'Ethnobotany',
@@ -360,13 +370,13 @@ By understanding our regional geography and soils, we begin to comprehend why G�
     id: 'k2',
     title: 'Safety, Toxicity, and Dosage Guidelines',
     excerpt: 'Herbs are natural but they are also chemicals. A definitive clinical safety guide for evaluating dosage, dangerous plants, and childhood exclusions.',
-    content: `A common and modern misconception is that "because an herb is natural, it is 100% safe." Traditional healers knew this was false. Many plants, such as **Mũtongu** (*Solanum incanum*), are highly poison-active and must be used with precise pharmaceutical care.
+    content: `A common and modern misconception is that "because an herb is natural, it is 100% safe." Traditional healers knew this was false. Many plants, such as Mũtongu (Solanum incanum), are highly poison-active and must be used with precise pharmaceutical care.
 
-### Universal Safety Core Rules:
-1. **Never Ingest Topical Sap**: Saps like that of Chrome-Apple (Mũtongu) contain toxic solasodine and solanine glycoalkaloids which destroy stomach lining and induce liver failure if ingested.
-2. **Child and Pregnancy Exclusions**: High-activity oils or peppery decoctions like Mũthĩga must never be administered to infants, and are strictly contraindicated for pregnant women as they can induce miscarriage.
-3. **Interactions with Modern Meds**: If taking high blood-pressure or anti-coagulant medications, herbs like Pygeum (Mũcorai) may compound blood pressure drops. consult both a local practitioner and a cardiological specialist.
-4. **Clean Water Sourcing**: Always boil your tea using pure, spring water. Contaminated farm runoff in streams can introduce pesticides into your brewed medicine.`,
+Universal Safety Core Rules:
+1. Never Ingest Topical Sap: Saps like that of Chrome-Apple (Mũtongu) contain toxic solasodine and solanine glycoalkaloids which destroy stomach lining and induce liver failure if ingested.
+2. Child and Pregnancy Exclusions: High-activity oils or peppery decoctions like Mũthĩga must never be administered to infants, and are strictly contraindicated for pregnant women as they can induce miscarriage.
+3. Interactions with Modern Meds: If taking high blood-pressure or anti-coagulant medications, herbs like Pygeum (Mũcorai) may compound blood pressure drops. consult both a local practitioner and a cardiological specialist.
+4. Clean Water Sourcing: Always boil your tea using pure, spring water. Contaminated farm runoff in streams can introduce pesticides into your brewed medicine.`,
     category: 'Dosage & Safety',
     author: 'Pharmacy Council of Kenya',
     lastUpdated: 'March 2026'

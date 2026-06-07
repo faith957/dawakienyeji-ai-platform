@@ -20,6 +20,13 @@ interface ChatbotPageProps {
   onBackToHome: () => void;
 }
 
+const VOICE_LANGUAGES = [
+  { id: "en", code: "en-US", name: "English", flag: "🇬🇧", label: "English" },
+  { id: "sw", code: "sw-KE", name: "Kiswahili", flag: "🇰🇪", label: "Kiswahili" },
+  { id: "ki", code: "sw-KE", name: "Gĩkũyũ / Kikuyu", flag: "⛰️", label: "Gĩkũyũ" },
+  { id: "fr", code: "fr-FR", name: "Français", flag: "🇫🇷", label: "Français" }
+];
+
 export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -29,6 +36,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
   const [isListening, setIsListening] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [ratings, setRatings] = useState<{ [msgId: string]: 'good' | 'bad' }>({});
+  const [voiceLang, setVoiceLang] = useState(VOICE_LANGUAGES[0]);
   
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const listEndRef = useRef<HTMLDivElement | null>(null);
@@ -41,15 +49,20 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
       const rec = new SpeechRecognition();
       rec.continuous = false;
       rec.interimResults = false;
-      rec.lang = "en-US";
+      rec.lang = voiceLang.code;
       
       rec.onresult = (event: any) => {
         const text = event.results[0][0].transcript;
-        setInputText(prev => prev ? `${prev} ${text}` : text);
+        if (text && text.trim()) {
+          setInputText(text);
+          // Automatically trigger send message to DawaBot with transcribed text
+          handleSendMessage(text);
+        }
         setIsListening(false);
       };
 
-      rec.onerror = () => {
+      rec.onerror = (e: any) => {
+        console.error("Speech Recognition Error:", e);
         setIsListening(false);
       };
 
@@ -59,7 +72,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
 
       recognitionRef.current = rec;
     }
-  }, []);
+  }, [voiceLang, sessions, currentSessionId]);
 
   // Initialize state with default session
   useEffect(() => {
@@ -71,7 +84,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         {
           id: 'welcome',
           role: 'model',
-          text: "Hello! I am DawaBot. Ask me anything about medicinal plants, herbal remedies, traditional medicine, or Gĩkũyũ botanical knowledge.\n\nYou can query about specific plants like **MŨTHĨGA**, **MŨTONGU**, or **MŨCORAI**, or ask about ailments like stomach pain or fever.",
+          text: "Hello! I am DawaBot. Ask me anything about medicinal plants, herbal remedies, traditional medicine, or Gĩkũyũ botanical knowledge.\n\nYou can query about specific plants like MŨTHĨGA, MŨTONGU, or MŨCORAI, or ask about ailments like stomach pain or fever.",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           suggestions: SUGGESTED_QUESTIONS
         }
@@ -316,7 +329,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
           isDark ? 'bg-zinc-900/80 border-amber-950 text-amber-500' : 'bg-amber-50/70 border-amber-100 text-amber-800'
         } flex items-center justify-center gap-2`}>
           <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-          <span>Powered by RAG directly aligned to traditional **Kikuyu Ethnobotany** database.</span>
+          <span>Powered by RAG directly aligned to traditional <span className="font-bold">Kikuyu Ethnobotany</span> database.</span>
         </div>
 
         {/* Conversation flow arena */}
@@ -481,8 +494,100 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         {/* Input panel deck */}
         <div className={`p-4 border-t ${
           isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-stone-100/70 border-stone-200'
-        } backdrop-blur-md sticky bottom-0`}>
-          <div className="max-w-3xl mx-auto">
+        } backdrop-blur-md sticky bottom-0 z-10`}>
+          <div className="max-w-3xl mx-auto space-y-3">
+            
+            {/* Real-time Voice Controller Dashboard */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pb-1.5 border-b border-dashed border-emerald-950/10">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className={`text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-zinc-400' : 'text-emerald-900'}`}>
+                  Speech Language:
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {VOICE_LANGUAGES.map((lang) => {
+                    const isSel = voiceLang.id === lang.id;
+                    return (
+                      <button
+                        key={lang.id}
+                        type="button"
+                        onClick={() => {
+                          setVoiceLang(lang);
+                          if (isListening) {
+                            recognitionRef.current?.stop();
+                            setIsListening(false);
+                            setTimeout(() => {
+                              setIsListening(true);
+                              recognitionRef.current?.start();
+                            }, 300);
+                          }
+                        }}
+                        className={`text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 transition-all duration-250 ${
+                          isSel 
+                            ? 'bg-emerald-700 text-white shadow-sm scale-105' 
+                            : isDark ? 'bg-zinc-800 text-zinc-400 hover:text-white' : 'bg-white hover:bg-stone-200 text-emerald-900 border border-stone-200'
+                        }`}
+                        title={`Speak in ${lang.name}`}
+                      >
+                        <span>{lang.flag}</span>
+                        <span>{lang.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="text-[10px] opacity-70 font-semibold flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Active Language: <strong className="font-extrabold text-[#D4A017]">{voiceLang.name}</strong></span>
+              </div>
+            </div>
+
+            {/* Glowing active listening overlay / status wave */}
+            <AnimatePresence>
+              {isListening && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className={`p-3 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4 border overflow-hidden ${
+                    isDark ? 'bg-zinc-950/90 border-emerald-900/40 text-emerald-200' : 'bg-emerald-50/90 border-emerald-200 text-emerald-950'
+                  } shadow-md`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative">
+                      <span className="h-3 w-3 rounded-full bg-rose-600 block animate-ping absolute -top-0.5 -left-0.5"></span>
+                      <span className="h-2 w-2 rounded-full bg-rose-600 block"></span>
+                    </div>
+                    <div className="space-y-0.5 text-left">
+                      <p className="text-xs font-black uppercase tracking-wider animate-pulse text-rose-500">Listening...</p>
+                      <p className="text-[10px] opacity-75">Speak details of standard herbs (e.g. Mũthĩga, Mũtongu, or remedies)</p>
+                    </div>
+                  </div>
+
+                  {/* Simulated interactive Soundwave representation */}
+                  <div className="flex items-center gap-0.5 h-6">
+                    <motion.div animate={{ height: [4, 18, 4] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} className="w-1 bg-rose-500 rounded-full" />
+                    <motion.div animate={{ height: [6, 22, 6] }} transition={{ repeat: Infinity, duration: 0.5, delay: 0.1 }} className="w-1 bg-emerald-600 rounded-full" />
+                    <motion.div animate={{ height: [4, 14, 4] }} transition={{ repeat: Infinity, duration: 0.7, delay: 0.2 }} className="w-1 bg-yellow-500 rounded-full" />
+                    <motion.div animate={{ height: [8, 24, 8] }} transition={{ repeat: Infinity, duration: 0.4, delay: 0.05 }} className="w-1 bg-rose-600 rounded-full" />
+                    <motion.div animate={{ height: [5, 16, 5] }} transition={{ repeat: Infinity, duration: 0.8, delay: 0.15 }} className="w-1 bg-[#D4A017] rounded-full" />
+                    <motion.div animate={{ height: [6, 20, 6] }} transition={{ repeat: Infinity, duration: 0.55, delay: 0.25 }} className="w-1 bg-emerald-600 rounded-full" />
+                    <motion.div animate={{ height: [4, 12, 4] }} transition={{ repeat: Infinity, duration: 0.9, delay: 0.3 }} className="w-1 bg-red-500 rounded-full" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsListening(false);
+                      recognitionRef.current?.stop();
+                    }}
+                    className="px-2.5 py-1 rounded bg-rose-600 text-white font-black text-[10px] uppercase hover:bg-rose-700 transition"
+                  >
+                    Cancel speaking
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <form
               id="chat-send-frm"
               onSubmit={(e) => {
@@ -495,36 +600,40 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Ask about MŨTHĨGA, what cures stomach ache, sustainable harvesting..."
-                className={`w-full py-3.5 pl-4 pr-24 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-700/60 transition-all text-xs md:text-sm ${
+                placeholder={isListening ? "Listening silently... speak now" : "Ask about MŨTHĨGA, what cures stomach ache, sustainable harvesting..."}
+                className={`w-full py-4 pl-4 pr-24 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-700/60 transition-all text-xs md:text-sm shadow-inner ${
                   isDark 
                     ? 'bg-zinc-950 border-zinc-800 text-white placeholder-zinc-500' 
                     : 'bg-white border-stone-300 text-emerald-950 placeholder-stone-500'
                 }`}
               />
 
-              <div className="absolute right-2.5 flex items-center gap-1.5">
-                {/* Micro dictation button using Speech Recognition */}
+              <div className="absolute right-2 flex items-center gap-1.5">
+                {/* Advanced dictation toggle button */}
                 <button
                   type="button"
                   onClick={handleStartVoice}
-                  className={`p-2 rounded-lg transition-all ${
+                  className={`p-2 rounded-lg transition-all shadow-md transform active:scale-95 duration-200 relative flex items-center justify-center ${
                     isListening 
-                      ? 'bg-red-500 text-white animate-pulse' 
-                      : isDark ? 'text-zinc-400 hover:text-white bg-zinc-800/60' : 'text-emerald-900 hover:bg-stone-200 bg-stone-100'
+                      ? 'bg-rose-600 text-white animate-pulse ring-4 ring-rose-500/30' 
+                      : isDark ? 'text-emerald-400 bg-zinc-800 hover:bg-zinc-700 hover:text-white' : 'text-emerald-950 bg-stone-100 hover:bg-emerald-50 hover:text-emerald-950'
                   }`}
-                  title={isListening ? "Listening... click to stop" : "Use dictation mic input"}
+                  title={isListening ? "Stop listening and transcribe" : "Click to speak in real-time"}
                 >
-                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  {isListening ? (
+                    <Mic className="w-4 h-4 text-white animate-spin" style={{ animationDuration: '3s' }} />
+                  ) : (
+                    <Mic className="w-4 h-4" />
+                  )}
                 </button>
 
                 <button
                   type="submit"
                   disabled={!inputText.trim()}
-                  className={`p-2 rounded-lg transition-all ${
+                  className={`p-2 rounded-lg transition-all shadow-md ${
                     inputText.trim()
-                      ? 'bg-emerald-700 hover:bg-emerald-600 text-white shadow-sm'
-                      : isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-stone-200 text-stone-400'
+                      ? 'bg-emerald-700 hover:bg-emerald-650 text-white active:scale-95 transform'
+                      : isDark ? 'bg-zinc-800 text-zinc-650' : 'bg-stone-200 text-stone-400'
                   }`}
                 >
                   <Send className="w-4 h-4" />

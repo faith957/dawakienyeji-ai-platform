@@ -839,7 +839,7 @@ export default function AdminDashboard() {
                     How RAG integration Operates
                   </h3>
                   <p className="font-normal text-stone-500">
-                    When visitors enter prompts inside **DawaBot**, the server does not just call general LLM training sets. 
+                    When visitors enter prompts inside <strong className="font-semibold text-stone-750">DawaBot</strong>, the server does not just call general LLM training sets. 
                   </p>
                   <p className="font-normal text-stone-500">
                     Instead, our backend performs keyword mapping against all indexed documents you publish here. The relevant treatises are fed into the prompt, giving the AI companion strict, grounded safe boundaries.

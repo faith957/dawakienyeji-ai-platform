@@ -63,10 +63,10 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
     fr: "Contact"
   },
   "nav.askBot": {
-    en: "Ask DawaBot",
-    sw: "Uliza DawaBot",
-    ki: "Ũria DawaBot",
-    fr: "Demander à DawaBot"
+    en: "Get Help",
+    sw: "Pata Msaada",
+    ki: "Teithio",
+    fr: "Obtenir de l'aide"
   },
   "nav.signUp": {
     en: "Sign Up",
@@ -237,10 +237,10 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
     fr: "Explorer les Plantes"
   },
   "slides.1.btn2": {
-    en: "Ask DawaBot",
-    sw: "Uliza DawaBot",
-    ki: "Ũria DawaBot",
-    fr: "Demander à DawaBot"
+    en: "Get Help",
+    sw: "Pata Msaada",
+    ki: "Teithio",
+    fr: "Obtenir de l'aide"
   },
   "slides.2.title": {
     en: "Preserving African Herbal Knowledge for Future Generations",
