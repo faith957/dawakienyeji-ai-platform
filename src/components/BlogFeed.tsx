@@ -116,10 +116,10 @@ export default function BlogFeed() {
       {/* Title Header Banner Deck */}
       <div className="bg-stone-50 p-6 md:p-8 rounded-3xl border border-stone-250/80 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="max-w-2xl space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">Editorial Columns</span>
-          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-sans">The DawaKienyeji Chronicles</h1>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">{t("blog.editorialColumns") || "Editorial Columns"}</span>
+          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-sans">{t("blog.chroniclesTitle") || "The DawaKienyeji Chronicles"}</h1>
           <p className="text-sm text-stone-500 leading-relaxed font-normal">
-            Weekly research essays, indigenous botanical lore, and ecological forestry updates of central Kenya. Explore real stories behind ancestral wisdom.
+            {t("blog.chroniclesDesc") || "Weekly research essays, indigenous botanical lore, and ecological forestry updates of central Kenya. Explore real stories behind ancestral wisdom."}
           </p>
         </div>
       </div>
@@ -203,8 +203,8 @@ export default function BlogFeed() {
                   >
                     <Bookmark className={`w-3.5 h-3.5 ${bookmarks[blog.id] ? 'fill-emerald-800' : ''}`} />
                   </button>
-                  <span className="text-emerald-850 hover:text-emerald-700 inline-flex items-center gap-0.5 group-hover:translate-x-1 duration-255 font-extrabold">
-                    Read Essay
+                  <span className="text-emerald-850 hover:text-emerald-700 inline-flex items-center gap-0.5 group-hover:translate-x-1 duration-255 font-extrabold cursor-pointer">
+                    {t("home.readEssay") || "Read Essay"}
                     <ArrowRight className="w-3.5 h-3.5" />
                   </span>
                 </div>
@@ -246,7 +246,7 @@ export default function BlogFeed() {
                       {ab.title}
                     </h2>
                     <div className="flex items-center gap-4 text-xs text-emerald-200 font-bold">
-                      <span>By: {ab.author}</span>
+                      <span>{t("blog.byAuthor") || "By: "}{ab.author}</span>
                       <span>•</span>
                       <span>{ab.date}</span>
                       <span>•</span>
@@ -264,8 +264,8 @@ export default function BlogFeed() {
                   </div>
 
                   <div className="pt-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-400 font-bold">
-                    <span>DawaKienyeji Educational Registry</span>
-                    <span>License: CC Creative Commons Attribution</span>
+                    <span>{t("blog.educationalRegistry") || "DawaKienyeji Educational Registry"}</span>
+                    <span>{t("blog.licenseText") || "License: CC Creative Commons Attribution"}</span>
                   </div>
                 </div>
 
@@ -278,13 +278,13 @@ export default function BlogFeed() {
                 <div className="p-4 border-b border-stone-200">
                   <h4 className="text-xs font-extrabold uppercase text-emerald-850 tracking-wider flex items-center gap-1.5">
                     <MessageSquare className="w-4 h-4 text-emerald-700 animate-pulse" />
-                    Discussions ({comments.length + pendingComments.length})
+                    {t("blog.discussions") || "Discussions"} ({comments.length + pendingComments.length})
                   </h4>
                 </div>
 
                 {/* Comment logs scroll */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
-                  {commentsLoading && <p className="text-center text-[10px] text-stone-400">Loading comments...</p>}
+                  {commentsLoading && <p className="text-center text-[10px] text-stone-400">{t("blog.loadingComments") || "Loading comments..."}</p>}
                   
                   {pendingComments.map((com) => (
                     <div key={com.id} className="bg-emerald-50/50 border border-emerald-200/50 p-3 rounded-2xl space-y-1 block relative">
@@ -294,7 +294,7 @@ export default function BlogFeed() {
                           {com.author}
                         </span>
                         <span className="text-[8px] bg-amber-100 text-amber-800 font-extrabold rounded px-1.5 py-0.5 uppercase tracking-wide">
-                          Pending Approval
+                          {t("blog.pendingApproval") || "Pending Approval"}
                         </span>
                       </div>
                       <p className="text-stone-700 text-xs font-semibold leading-relaxed">
@@ -322,7 +322,7 @@ export default function BlogFeed() {
                         <div className="mt-2 p-2 px-2.5 bg-stone-100 border border-stone-150 rounded-xl flex items-start gap-1.5">
                           <CornerDownRight className="w-3.5 h-3.5 text-emerald-800 shrink-0 mt-0.5" />
                           <div className="space-y-0.5">
-                            <span className="text-[9px] font-extrabold text-emerald-950 uppercase tracking-wider block">Admin Advice</span>
+                            <span className="text-[9px] font-extrabold text-emerald-950 uppercase tracking-wider block">{t("blog.adminAdvice") || "Admin Advice"}</span>
                             <p className="text-stone-600 text-[11px] leading-relaxed font-semibold">{com.replyText}</p>
                           </div>
                         </div>
@@ -332,7 +332,7 @@ export default function BlogFeed() {
 
                   {comments.length === 0 && pendingComments.length === 0 && !commentsLoading && (
                     <p className="text-center py-10 text-[10px] text-stone-400 italic">
-                      No discussions yet. Ask a question or share your ancestral reflections!
+                      {t("blog.noCommentsYet") || "No discussions yet."}
                     </p>
                   )}
                 </div>
@@ -342,7 +342,7 @@ export default function BlogFeed() {
                   <input
                     type="text"
                     required
-                    placeholder="Your Name (e.g. Kiprop Waithera)"
+                    placeholder={t("blog.commentNamePlaceholder") || "Your Name"}
                     value={commentAuthor}
                     onChange={(e) => setCommentAuthor(e.target.value)}
                     className="w-full p-2 border border-stone-300 rounded-lg text-xs bg-white text-stone-900 font-semibold focus:outline-none"
@@ -351,7 +351,7 @@ export default function BlogFeed() {
                     <textarea
                       rows={2}
                       required
-                      placeholder="Ask a question or add a recipe reflection..."
+                      placeholder={t("blog.commentTextPlaceholder") || "Ask a question..."}
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
                       className="w-full p-2.5 pr-12 border border-stone-300 rounded-lg text-xs bg-white text-stone-900 font-normal leading-relaxed focus:outline-none"
@@ -360,7 +360,7 @@ export default function BlogFeed() {
                       type="submit"
                       className="absolute right-2 px-2.5 py-1 bg-emerald-950 text-white hover:bg-emerald-800 rounded font-bold text-[10px]"
                     >
-                      Post
+                      {t("blog.postButton") || "Post"}
                     </button>
                   </div>
                 </form>

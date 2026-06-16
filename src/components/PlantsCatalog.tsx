@@ -145,6 +145,36 @@ export default function PlantsCatalog() {
         sw: "Vipimo vyote vya matibabu vimeorodheshwa kutoka kwa ripoti zilizothibitishwa. Daima shughulikia mimea asilia kwa maadili.",
         ki: "Ũũgĩ ũcio wothe wandĩkĩtwo nĩ makũgũanĩra na andũ a tene. Teithĩka na mĩthĩga na njĩra ya gĩtĩo.",
         fr: "Tous les paramètres thérapeutiques proviennent de rapports vérifiés. Manipulez toujours les plantes avec éthique."
+      },
+      "scientificName": {
+        en: "Scientific Name",
+        sw: "Jina la Kisayansi",
+        ki: "Rĩĩtwa rĩa Sayansi",
+        fr: "Nom Scientifique"
+      },
+      "commonEnglishName": {
+        en: "Common English Name",
+        sw: "Jina la Kawaida la Kiingereza",
+        ki: "Rĩĩtwa rĩa Gĩthũngũ",
+        fr: "Nom Anglais Courant"
+      },
+      "symptomTabCategory": {
+        en: "Symptom Tab Category",
+        sw: "Kitengo cha Kichupo",
+        ki: "Mũthemba wa Mĩrimu",
+        fr: "Catégorie de Symptôme"
+      },
+      "verifiedLive": {
+        en: "Verified Live Specimen",
+        sw: "Sampuli Hai Iliyothibitishwa",
+        ki: "Kĩonereria mũgũgũ kĩrũmĩru",
+        fr: "Spécimen Réel Vérifié"
+      },
+      "botanicalApprox": {
+        en: "Botanical Illustration Approximation",
+        sw: "Mchoro wa Makadirio wa Kibotania",
+        ki: "Mbica ya kũerekeza mũgũgũ",
+        fr: "Illustration Botanique Approximative"
       }
     };
     return dicts[key]?.[language] || dicts[key]?.['en'] || key;
@@ -288,8 +318,8 @@ export default function PlantsCatalog() {
 
                   {/* Overlaid Title Copy */}
                   <div className="absolute bottom-4 left-4 right-4 z-10 text-left">
-                    <p className="text-[10px] font-mono text-emerald-250 font-bold uppercase tracking-wider drop-shadow-sm">
-                      {language === 'ki' ? (plant.commonName || 'Indigenous Flora') : plant.kikuyuName}
+                    <p className="text-[10px] font-mono text-amber-400 font-extrabold uppercase tracking-wider drop-shadow-sm">
+                      {language === 'ki' ? (plant.commonName || 'Indigenous Flora') : `Kikuyu: ${plant.kikuyuName}`}
                     </p>
                     <h3 className="text-xl font-black tracking-tight font-sans text-white uppercase drop-shadow">
                       {language === 'ki' ? plant.kikuyuName : (plant.commonName || 'Indigenous Flora')}
@@ -369,8 +399,15 @@ export default function PlantsCatalog() {
                     <h2 className="text-2xl font-extrabold text-stone-900 mt-2 tracking-tight uppercase flex items-center gap-2">
                       {language === 'ki' ? p.kikuyuName : p.commonName}
                     </h2>
+                    {language !== 'ki' && (
+                      <p className="text-xs text-stone-500 font-semibold mt-1">
+                        ({t("label.kikuyuLanguage") || "Kikuyu"}: {p.kikuyuName})
+                      </p>
+                    )}
                     {language === 'ki' && (
-                      <p className="text-xs text-stone-500 font-medium mt-1">{p.commonName}</p>
+                      <p className="text-xs text-stone-500 font-semibold mt-1">
+                        ({t("label.englishLanguage") || "English"}: {p.commonName})
+                      </p>
                     )}
                   </div>
                   <button
@@ -394,7 +431,7 @@ export default function PlantsCatalog() {
                   <div className="absolute bottom-3.5 left-3.5 bg-black/50 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 shadow flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
                     <span className="text-[10px] font-extrabold text-stone-100 uppercase tracking-wider">
-                      {selectedPlant.imageUrl ? "Verified Live Specimen" : "Botanical Illustration Approximation"}
+                      {selectedPlant.imageUrl ? getLabelText("verifiedLive") : getLabelText("botanicalApprox")}
                     </span>
                   </div>
                 </div>
@@ -402,11 +439,11 @@ export default function PlantsCatalog() {
                 {/* Floating metadata tag info summary */}
                 <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
                   <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-400">Scientific Name</span>
+                    <span className="text-[9px] uppercase font-bold text-stone-400">{getLabelText("scientificName")}</span>
                     <p className="font-mono text-emerald-850 italic font-bold">{p.scientificName}</p>
                   </div>
                   <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-400">Common English Name</span>
+                    <span className="text-[9px] uppercase font-bold text-stone-400">{getLabelText("commonEnglishName")}</span>
                     <p className="text-stone-850 font-bold">{p.commonName || 'Indigenous Shrub'}</p>
                   </div>
                   <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1">
@@ -414,8 +451,8 @@ export default function PlantsCatalog() {
                     <p className="text-stone-850 font-bold">{p.partUsed}</p>
                   </div>
                   <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-400">Symptom Tab Category</span>
-                    <p className="text-stone-850 font-bold">{p.category}</p>
+                    <span className="text-[9px] uppercase font-bold text-stone-400">{getLabelText("symptomTabCategory")}</span>
+                    <p className="text-stone-850 font-bold">{getCategoryLabel(p.category)}</p>
                   </div>
                 </div>
 

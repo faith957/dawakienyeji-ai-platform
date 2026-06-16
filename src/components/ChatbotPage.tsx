@@ -23,13 +23,13 @@ const VOICE_LANGUAGES = [
 const getWelcomeText = (lang: string) => {
   switch (lang) {
     case "sw":
-      return "Karibu kwenye msaada wa DawaBot. Uliza chochote kuhusu mazingira ya mimea ya tiba, tiba za asili, au maarifa ya mitishamba ya Gĩkũyũ. Unaweza kuuliza kuhusu mimea maalum kama vile MŨTHĨGA, MŨTONGU, au MŨCORAI, au kuulizia dalili mbalimbali kama maumivu ya tumbo au homa.";
+      return "Karibu kwenye msaada wa DawaBot. Uliza chochote kuhusu mazingira ya mimea ya tiba, tiba za asili, au maarifa ya mitishamba ya Gĩkũyũ. Unaweza kuuliza kuhusu mimea maalum kama vile MŨTHĨGA, MŨTONGU, au MŨCOROI, au kuulizia dalili mbalimbali kama maumivu ya tumbo au homa.";
     case "ki":
-      return "Ũhoro mwega, ndari-inĩ ya NdawaBot. Ũria kĩndũ o gĩothe kĩĩgĩĩ mĩgũgũ ya tawa na kĩĩgĩĩ mĩthĩga ya tene na ũgĩ wa gĩkũyũ. Gĩmia wandĩke kĩĩgĩĩ mĩthĩga ta MŨTHĨGA, MŨTONGU, kana MŨCORAI, kana mĩrimu ya nda na homa.";
+      return "Ũhoro mwega, ndari-inĩ ya NdawaBot. Ũria kĩndũ o gĩothe kĩĩgĩĩ mĩgũgũ ya tawa na kĩĩgĩĩ mĩthĩga ya tene na ũgĩ wa gĩkũyũ. Gĩmia wandĩke kĩĩgĩĩ mĩthĩga ta MŨTHĨGA, MŨTONGU, kana MŨCOROI, kana mĩrimu ya nda na homa.";
     case "fr":
-      return "Bienvenue dans l'assistant DawaBot. Posez toutes vos questions sur les plantes médicinales, les remèdes traditionnels ou les connaissances botaniques de Gĩkũyũ. Interrogez notre base de données sur des plantes comme MŨTHĨGA, MŨTONGU ou MŨCORAI, ou posez des questions sur des maux comme les douleurs abdominales ou la fièvre.";
+      return "Bienvenue dans l'assistant DawaBot. Posez toutes vos questions sur les plantes médicinales, les remèdes traditionnels ou les connaissances botaniques de Gĩkũyũ. Interrogez notre base de données sur des plantes comme MŨTHĨGA, MŨTONGU ou MŨCOROI, ou posez des questions sur des maux comme les douleurs abdominales ou la fièvre.";
     default:
-      return "Welcome to the DawaBot botanical assistant. Ask anything about medicinal plants, herbal remedies, traditional medicine, or Gĩkũyũ botanical knowledge. Query directly about specific plants like MŨTHĨGA, MŨTONGU, or MŨCORAI, or ask about ailments like stomach pain or fever.";
+      return "Welcome to the DawaBot botanical assistant. Ask anything about medicinal plants, herbal remedies, traditional medicine, or Gĩkũyũ botanical knowledge. Query directly about specific plants like MŨTHĨGA, MŨTONGU, or MŨCOROI, or ask about ailments like stomach pain or fever.";
   }
 };
 
@@ -148,14 +148,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
     const initialSession: ChatSession = {
       id: defaultSessionId,
       title: "Botanical Wisdom Chat",
-      messages: [
-        {
-          id: 'welcome',
-          role: 'model',
-          text: getWelcomeText(language || "en"),
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]
+      messages: []
     };
     setSessions([initialSession]);
     setCurrentSessionId(defaultSessionId);
@@ -267,14 +260,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
     const newSession: ChatSession = {
       id: newId,
       title: "New Herb Inquiry",
-      messages: [
-        {
-          id: `welcome-${newId}`,
-          role: 'model',
-          text: getWelcomeText(language),
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]
+      messages: []
     };
     setSessions(prev => [...prev, newSession]);
     setCurrentSessionId(newId);
@@ -286,14 +272,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
       const initialSession: ChatSession = {
         id: defaultSessionId,
         title: "Botanical Wisdom Chat",
-        messages: [
-          {
-            id: 'welcome-reset',
-            role: 'model',
-            text: getWelcomeText(language),
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ]
+        messages: []
       };
       setSessions([initialSession]);
       setCurrentSessionId(defaultSessionId);
@@ -351,8 +330,8 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
             <Bot className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-bold text-sm tracking-tight">DawaBot Assistant</h1>
-            <p className="text-[10px] opacity-70">Ethnobotany Knowledge Base</p>
+            <h1 className="font-bold text-sm tracking-tight">{t("chat.dawaBotAssistant") || "DawaBot Assistant"}</h1>
+            <p className="text-[10px] opacity-70">{t("chat.ethnobotanyKB") || "Ethnobotany Knowledge Base"}</p>
           </div>
         </div>
 
@@ -362,12 +341,12 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
           className="w-full mb-4 py-2.5 px-4 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white rounded-lg font-semibold text-xs transition duration-200 flex items-center justify-center gap-2 shadow-sm"
         >
           <Leaf className="w-3.5 h-3.5 animate-leaf-hover" />
-          New Herb Session
+          {t("chat.newHerbSession") || "New Herb Session"}
         </button>
 
         {/* Sessions list */}
         <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-48 md:max-h-full">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700/80 mb-2">History Sessions</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700/80 mb-2">{t("chat.historySessions") || "History Sessions"}</p>
           {sessions.map(s => {
             const isActive = s.id === currentSessionId;
             return (
@@ -387,14 +366,14 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         </div>
 
         <div className="mt-4 pt-4 border-t border-stone-300/40 md:border-t flex items-center justify-between">
-          <p className="text-[10px] opacity-60">Status: Secure Sandbox</p>
+          <p className="text-[10px] opacity-60">{t("chat.statusSecure") || "Status: Secure Sandbox"}</p>
           <button
             id="clear-hist-btn"
             onClick={handleClearHistory}
             className="text-[10px] text-red-600 hover:text-red-500 font-bold flex items-center gap-1 transition"
           >
             <Trash2 className="w-3 h-3" />
-            Clear Sessions
+            {t("chat.clearSessions") || "Clear Sessions"}
           </button>
         </div>
       </div>
@@ -406,13 +385,42 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
           isDark ? 'bg-zinc-900/80 border-amber-950 text-amber-500' : 'bg-amber-50/70 border-amber-100 text-amber-800'
         } flex items-center justify-center gap-2`}>
           <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-          <span>Powered by RAG directly aligned to traditional <span className="font-bold">Kikuyu Ethnobotany</span> database.</span>
+          <span>{t("chat.poweredByRAG") || "Powered by RAG directly aligned to traditional Kikuyu Ethnobotany database."}</span>
         </div>
 
         {/* Conversation flow arena */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
           <div className="max-w-3xl mx-auto space-y-6">
             
+            {/* Dynamic Welcome Message Header (appears only once at top of feed) */}
+            <div className={`p-6 rounded-3xl border text-left space-y-3 ${
+              isDark 
+                ? 'bg-zinc-900/40 border-zinc-850 text-zinc-100' 
+                : 'bg-emerald-50/40 border-emerald-100/60 text-emerald-950'
+            }`}>
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-emerald-700 rounded-lg text-white">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <h2 className="text-sm font-bold tracking-tight leading-none uppercase">
+                  {language === 'sw' ? 'Karibu kwenye DawaBot' :
+                   language === 'ki' ? 'Ũhoro mwega na kũgĩa thome wa DawaBot' :
+                   language === 'fr' ? 'Bienvenue sur DawaBot' :
+                   'Welcome to DawaBot'}
+                </h2>
+              </div>
+              
+              <p className="text-xs leading-relaxed font-semibold opacity-90">
+                {language === 'sw' ? 
+                 'Mimi ni msaidizi wako wa AI kwa ajili ya DawaKienyeji. Uliza maswali kuhusu mimea ya kitiba, tiba za asili, maarifa ya ethnobotaniki, mbinu za uhifadhi, na habari zilizopo kwenye hifadhi ya maarifa ya DawaKienyeji.' :
+                 language === 'ki' ? 
+                 'Nĩ niĩ mũteithia waku wa AI wa muthemba wa DawaKienyeji. Ũria kĩndũ kĩĩgĩĩ mĩthĩga ya tene, mĩrimu ya nda, ũrĩndĩri wa mĩgũmo, na ũgĩ wothe rũrĩ thĩnĩ wa DawaKienyeji.' :
+                 language === 'fr' ? 
+                 'Je suis votre assistant IA pour DawaKienyeji. Posez vos questions sur les plantes médicinales, les remèdes traditionnels, les connaissances ethnobotaniques, les pratiques de conservation et les informations disponibles dans la base de connaissances DawaKienyeji.' :
+                 'I am your AI assistant for DawaKienyeji. Ask questions about medicinal plants, traditional remedies, ethnobotanical knowledge, conservation practices, and information available in the DawaKienyeji knowledge base.'}
+              </p>
+            </div>
+
             <AnimatePresence>
               {activeMessages.map((msg, i) => {
                 const isUser = msg.role === 'user';
@@ -484,12 +492,12 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
                               {copiedId === msg.id ? (
                                 <>
                                   <Check className="w-2.5 h-2.5 text-green-500" />
-                                  <span className="text-green-500">Copied</span>
+                                  <span className="text-green-500">{t("chat.copied") || "Copied"}</span>
                                 </>
                               ) : (
                                 <>
                                   <Copy className="w-2.5 h-2.5" />
-                                  <span>Copy</span>
+                                  <span>{t("chat.copy") || "Copy"}</span>
                                 </>
                               )}
                             </button>
@@ -551,50 +559,6 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         } sticky bottom-0 z-10 shadow-[0_-8px_32px_rgba(0,0,0,0.04)]`}>
           <div className="max-w-3xl mx-auto space-y-3">
             
-            {/* Real-time Voice Controller Dashboard */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pb-1.5 border-b border-dashed border-emerald-950/10">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className={`text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-zinc-400' : 'text-emerald-900'}`}>
-                  Speech Language:
-                </span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {VOICE_LANGUAGES.map((lang) => {
-                    const isSel = voiceLang.id === lang.id;
-                    return (
-                      <button
-                        key={lang.id}
-                        type="button"
-                        onClick={() => {
-                          setVoiceLang(lang);
-                          if (isListening) {
-                            recognitionRef.current?.stop();
-                            setIsListening(false);
-                            setTimeout(() => {
-                              setIsListening(true);
-                              recognitionRef.current?.start();
-                            }, 300);
-                          }
-                        }}
-                        className={`text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 transition-all duration-250 ${
-                          isSel 
-                            ? 'bg-emerald-700 text-white shadow-sm scale-105' 
-                            : isDark ? 'bg-zinc-800 text-zinc-400 hover:text-white' : 'bg-white hover:bg-stone-200 text-emerald-900 border border-stone-200'
-                        }`}
-                        title={`Speak in ${lang.name}`}
-                      >
-                        <span>{lang.flag}</span>
-                        <span>{lang.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="text-[10px] opacity-70 font-semibold flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Active Language: <strong className="font-extrabold text-[#D4A017]">{voiceLang.name}</strong></span>
-              </div>
-            </div>
-
             {/* Voice error alert */}
             {voiceError && (
               <div className="p-3 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-center justify-between text-[11px] font-semibold animate-fade-in shadow-sm">
@@ -672,9 +636,10 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
             >
               <input
                 type="text"
+                autoFocus
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={isListening ? "Listening silently... speak now" : "Ask about MŨTHĨGA, what cures stomach ache, sustainable harvesting..."}
+                placeholder=""
                 className={`w-full py-4 pl-4 pr-24 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-700/60 transition-all text-xs md:text-sm shadow-inner ${
                   isDark 
                     ? 'bg-zinc-950 border-zinc-800 text-white placeholder-zinc-500' 

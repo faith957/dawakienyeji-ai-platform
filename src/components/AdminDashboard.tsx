@@ -1091,7 +1091,7 @@ export default function AdminDashboard() {
                       <input
                         type="text"
                         required
-                        placeholder="e.g. MŨCORAI"
+                        placeholder="e.g. MŨCOROI"
                         value={plantForm.kikuyuName}
                         onChange={(e) => setPlantForm({ ...plantForm, kikuyuName: e.target.value })}
                         className="w-full p-2 border border-stone-300 rounded-xl text-stone-100 focus:text-stone-900 bg-white"
@@ -1690,9 +1690,9 @@ export default function AdminDashboard() {
 
                           <div className="shrink-0 flex items-center gap-1.5">
                             {com.approved ? (
-                              <span className="bg-emerald-100/70 border border-emerald-250 text-emerald-800 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide">Approved & Public</span>
+                              <span className="bg-emerald-100/70 border border-emerald-200 text-emerald-800 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide">Approved & Public</span>
                             ) : (
-                              <span className="bg-amber-100/70 border border-amber-250 text-amber-800 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide">Pending Approval</span>
+                              <span className="bg-amber-100/70 border border-amber-200 text-amber-800 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide">Pending Approval</span>
                             )}
                           </div>
                         </div>
@@ -2038,9 +2038,9 @@ export default function AdminDashboard() {
                                 msg.status === 'unread' 
                                   ? 'bg-red-50 text-red-800 border-red-200 animate-pulse' 
                                   : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-150'
-                              }`}
-                            >
-                              {msg.status === 'unread' ? "New" : "Mark Unread"}
+                                }`}
+                              >
+                                {msg.status === 'unread' ? "New" : "Mark Unread"}
                             </button>
                             <button
                               onClick={async () => {
@@ -2055,7 +2055,7 @@ export default function AdminDashboard() {
                               className={`px-2 py-0.5 border text-[9px] font-extrabold rounded-full cursor-pointer transition ${
                                 msg.resolved 
                                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-                                  : 'bg-amber-50 text-amber-800 border-amber-250 animate-pulse'
+                                  : 'bg-amber-50 text-amber-800 border-amber-200 animate-pulse'
                               }`}
                             >
                               {msg.resolved ? "✓ Resolved" : "⚠ Unresolved"}

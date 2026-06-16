@@ -4,7 +4,7 @@ export const INITIAL_HERBS: Herb[] = [
   {
     id: '1',
     kikuyuName: 'MŨTHĨGA',
-    commonName: 'East African Greenheart',
+    commonName: 'Pepper Bark Tree',
     scientificName: 'Warburgia ugandensis',
     partUsed: 'Inner Bark, Leaves',
     description: 'A stately evergreen forest tree found throughout East African highlands. It is highly aromatic, characterized by a hot, pepper-like taste in all parts.',
@@ -67,8 +67,8 @@ export const INITIAL_HERBS: Herb[] = [
   },
   {
     id: '4',
-    kikuyuName: 'MŨCORAI',
-    commonName: 'Red Stinkwood / Pygeum',
+    kikuyuName: 'MŨCOROI',
+    commonName: 'African Cherry',
     scientificName: 'Prunus africana',
     partUsed: 'Reddish-brown Bark',
     description: 'A handsome, tall canopy tree native to montane forests, with dark glossy leaves and red-brown rough bark that gives off a distinct bitter almond scent when cut.',
@@ -150,7 +150,7 @@ export const INITIAL_HERBS: Herb[] = [
   {
     id: '8',
     kikuyuName: 'MŨGŨMO',
-    commonName: 'Strangler Fig',
+    commonName: 'Sacred Fig Tree',
     scientificName: 'Ficus thonningii',
     partUsed: 'Sticky Milky Latex, Inner Bark',
     description: 'A giant, sacred parasite fig tree starting as an epiphyte, with a massive trunk, sprawling crown, and extensive aerial breathing roots cascading downwards.',
@@ -259,9 +259,9 @@ export const INITIAL_REMEDIES: TraditionalRemedy[] = [
     title: 'Prostate Urination Balance Brew',
     category: 'Men\'s Health & prostate',
     symptoms: ['Weak urinary flow in aging men', 'Frequent nighttime urination', 'Bladder tension'],
-    recommendedHerbs: ['MŨCORAI'],
+    recommendedHerbs: ['MŨCOROI'],
     steps: [
-      'Obtain sustainably harvested reddish-brown bark shavings of MŨCORAI (Prunus africana).',
+      'Obtain sustainably harvested reddish-brown bark shavings of MŨCOROI (Prunus africana).',
       'Boil 1 small handful of bark in 4 cups of pure water for 45 minutes.',
       'The water will turn to a beautiful dark mahogany red color.',
       'Strain the red tea and store in a clean thermos.'
@@ -288,7 +288,7 @@ export const INITIAL_REMEDIES: TraditionalRemedy[] = [
 export const INITIAL_BLOGS: BlogPost[] = [
   {
     id: 'b1',
-    title: 'Preserving Gĩkũyũ Ethnobotanical Wisdom in the Digital Age',
+    title: 'Preserving Indigenous Ethnobotanical Wisdom in the Digital Age',
     category: 'Ethnobotany',
     excerpt: 'As elders pass on, an architectural treasure of medicinal plant knowledge faces extinction. How modern AI and digitalization can help preserve Kenyan traditional healing lore.',
     content: `Historically, the medical records of the Gĩkũyũ community were not stored in bound books, but within the sharp memories of elders (*Muthamaki wa Mithĩga* / medicine guardians) and handed down orally over woodfires. Each ridge had its specialists, often healers who worked with natural laws and local shrubs.
@@ -307,7 +307,7 @@ Using technology like Retrieval-Augmented Generation (RAG) and conversational AI
   },
   {
     id: 'b2',
-    title: 'The Sacred Mũgũmo: Spirituality and Medicine Combined',
+    title: 'The Sacred Fig Tree: Spirituality and Medicine Combined',
     category: 'Kikuyu Traditions',
     excerpt: 'Exploring the Strangler Fig (Ficus thonningii)—a tree so sacred in Kikuyu history that it served as an altar, a weather forecast station, and an emergency hospital.',
     content: `No discussion of Gĩkũyũ ethnobotany is complete without the majestic **Mũgũmo** (*Ficus thonningii* / Strangler Fig). This towering parasite fig, which wraps its roots around host trees until they dissolve, is more than just a biological marvel; it is the spiritual compass of Gĩkũyũ history.
@@ -335,7 +335,7 @@ Because of the absolute spiritual prohibition on cutting Mũgũmo trees, they be
     content: `A true traditional herbalist does not enter the forest with a ruthless machete. In ancient Kikuyu customs, harvesting medicine was accompanied by prayer, small offerings (such as pouring milk or oil at the root), and a strict set of ethical rules. No forest was entered purely out of greed.
 
 ### The Threat of Girdling (Ring-Barking)
-When trees like **Mũcorai** (*Prunus africana*) became commercially desired for global prostate medications, international collectors stripped whole bands of bark around the trunks. This process—known as girdling—cuts off the phloem channels carrying nutrition. Within seasons, the entire tree dies.
+When trees like **Mũcoroi** (*Prunus africana*) became commercially desired for global prostate medications, international collectors stripped whole bands of bark around the trunks. This process—known as girdling—cuts off the phloem channels carrying nutrition. Within seasons, the entire tree dies.
 
 ### The Traditional Code of Harvesting Bark
 Ancestral Kikuyu medicinal harvesters followed a strict ethical manual:
@@ -375,7 +375,7 @@ By understanding our regional geography and soils, we begin to comprehend why G�
 Universal Safety Core Rules:
 1. Never Ingest Topical Sap: Saps like that of Chrome-Apple (Mũtongu) contain toxic solasodine and solanine glycoalkaloids which destroy stomach lining and induce liver failure if ingested.
 2. Child and Pregnancy Exclusions: High-activity oils or peppery decoctions like Mũthĩga must never be administered to infants, and are strictly contraindicated for pregnant women as they can induce miscarriage.
-3. Interactions with Modern Meds: If taking high blood-pressure or anti-coagulant medications, herbs like Pygeum (Mũcorai) may compound blood pressure drops. consult both a local practitioner and a cardiological specialist.
+3. Interactions with Modern Meds: If taking high blood-pressure or anti-coagulant medications, herbs like Pygeum (Mũcoroi) may compound blood pressure drops. consult both a local practitioner and a cardiological specialist.
 4. Clean Water Sourcing: Always boil your tea using pure, spring water. Contaminated farm runoff in streams can introduce pesticides into your brewed medicine.`,
     category: 'Dosage & Safety',
     author: 'Pharmacy Council of Kenya',

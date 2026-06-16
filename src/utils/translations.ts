@@ -130,6 +130,162 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
     ki: "Tiga",
     fr: "Annuler"
   },
+  "btn.learnMore": {
+    en: "Learn More",
+    sw: "Jifunze Zaidi",
+    ki: "Menya Maingi",
+    fr: "En savoir plus"
+  },
+  "label.verifiedSpecimen": {
+    en: "📷 Verified Specimen",
+    sw: "📷 Sampuli Iliyothibitishwa",
+    ki: "📷 Kĩonereria Kĩrũmĩru",
+    fr: "📷 Spécimen Vérifié"
+  },
+  "label.botanicalIllustration": {
+    en: "🎨 Botanical Illustration",
+    sw: "🎨 Mchoro wa Kibotania",
+    ki: "🎨 Mĩhianano ya mĩthĩga",
+    fr: "🎨 Illustration Botanique"
+  },
+  "label.kikuyuLanguage": {
+    en: "Kikuyu",
+    sw: "Kikuyu",
+    ki: "Gĩkũyũ",
+    fr: "Kikuyu"
+  },
+  "label.englishLanguage": {
+    en: "English",
+    sw: "Kiingereza",
+    ki: "Gĩthũngũ",
+    fr: "Anglais"
+  },
+  "label.indigenousFlora": {
+    en: "Indigenous Flora",
+    sw: "Mimea ya Asili",
+    ki: "M mĩthĩga ya Kĩbũrĩ",
+    fr: "Flore Indigène"
+  },
+  "blog.discussions": {
+    en: "Discussions",
+    sw: "Mazungumzo",
+    ki: "Kwarĩria",
+    fr: "Discussions"
+  },
+  "blog.byAuthor": {
+    en: "By: ",
+    sw: "Na: ",
+    ki: "Nĩ: ",
+    fr: "Par : "
+  },
+  "blog.pendingApproval": {
+    en: "Pending Approval",
+    sw: "Inasubiri Kuidhinishwa",
+    ki: "Iragondia kwarĩrio",
+    fr: "En attente de validation"
+  },
+  "blog.noCommentsYet": {
+    en: "No discussions yet. Ask a question or share your ancestral reflections!",
+    sw: "Bado hakuna mazungumzo. Uliza swali au ushiriki tafakari zako za kiasili!",
+    ki: "Gũtirĩ kĩongerero o gĩothe rĩu. Ũria kĩũria kana ũheane mĩtugo yaku!",
+    fr: "Aucune discussion pour l'instant. Posez une question ou partagez vos réflexions ancestrales !"
+  },
+  "blog.commentNamePlaceholder": {
+    en: "Your Name (e.g. Kiprop Waithera)",
+    sw: "Jina Lako (mfano Kiprop Waithera)",
+    ki: "Rĩĩtwa Rĩaku (ta Kiprop Waithera)",
+    fr: "Votre Nom (ex. Kiprop Waithera)"
+  },
+  "blog.commentTextPlaceholder": {
+    en: "Ask a question or add a recipe reflection...",
+    sw: "Uliza swali au uongeze tafakari ya mapishi...",
+    ki: "Ũria kĩũria kana ũheane ndũmĩrĩri njoru...",
+    fr: "Posez une question ou ajoutez une réflexion sur la recette..."
+  },
+  "blog.postButton": {
+    en: "Post",
+    sw: "Chapisha",
+    ki: "Rehe",
+    fr: "Publier"
+  },
+  "blog.educationalRegistry": {
+    en: "DawaKienyeji Educational Registry",
+    sw: "Sajili ya Elimu ya DawaKienyeji",
+    ki: "Kĩgĩna kĩa rĩandĩko rĩa DawaKienyeji",
+    fr: "Registre Éducatif de DawaKienyeji"
+  },
+  "blog.licenseText": {
+    en: "License: CC Creative Commons Attribution",
+    sw: "Leseni: CC Creative Commons Attribution",
+    ki: "Rũtha: CC Creative Commons Attribution",
+    fr: "Licence : CC Creative Commons Attribution"
+  },
+  "blog.loadingComments": {
+    en: "Loading comments...",
+    sw: "Inapakia maoni...",
+    ki: "Iragondia ndũmĩrĩri...",
+    fr: "Chargement des commentaires..."
+  },
+  "blog.adminAdvice": {
+    en: "Admin Advice",
+    sw: "Ushauri wa Msimamizi",
+    ki: "Ũtaaro wa Admin",
+    fr: "Conseil de l'Admin"
+  },
+  "chat.dawaBotAssistant": {
+    en: "DawaBot Assistant",
+    sw: "Msaidizi wa DawaBot",
+    ki: "Mũteithia wa DawaBot",
+    fr: "Assistant DawaBot"
+  },
+  "chat.ethnobotanyKB": {
+    en: "Ethnobotany Knowledge Base",
+    sw: "Hifadhi ya Maarifa ya Etnobotaniki",
+    ki: "Ũgĩ wa mĩthĩga ya kĩbũrĩ",
+    fr: "Base de Connaissance Ethnobotanique"
+  },
+  "chat.newHerbSession": {
+    en: "New Herb Session",
+    sw: "Kipindi Kipya cha Mitishamba",
+    ki: "Kĩgongona Kĩerũ kĩa Mĩthĩga",
+    fr: "Nouvelle Session"
+  },
+  "chat.historySessions": {
+    en: "History Sessions",
+    sw: "Historia ya Vikindi",
+    ki: "Kĩgũnyo kĩa thitakĩ",
+    fr: "Historique"
+  },
+  "chat.poweredByRAG": {
+    en: "Powered by RAG directly aligned to traditional Kikuyu Ethnobotany database.",
+    sw: "Inaendeshwa na RAG iliyooanishwa moja kwa moja na hifadhi ya Kikuyu Etnobotaniki.",
+    ki: "Iragondio nĩ RAG ĩcongetwo kĩa rĩandĩko rĩa mĩthĩga ya Gĩkũyũ.",
+    fr: "Propulsé par RAG aligné directement avec la base de données ethnobotanique Kikuyu."
+  },
+  "chat.statusSecure": {
+    en: "Status: Secure Sandbox",
+    sw: "Hali: Sandbox Iliyo salama",
+    ki: "Ũhoro: Gĩcigo kĩa mĩno",
+    fr: "Statut : Bac à sable Sécurisé"
+  },
+  "chat.clearSessions": {
+    en: "Clear Sessions",
+    sw: "Futa Vikindi Zote",
+    ki: "Niina Gĩgongona",
+    fr: "Effacer les Sessions"
+  },
+  "chat.copy": {
+    en: "Copy",
+    sw: "Nakili",
+    ki: "Kobia",
+    fr: "Copier"
+  },
+  "chat.copied": {
+    en: "Copied",
+    sw: "Imenakiliwa",
+    ki: "Kobitũ",
+    fr: "Copié"
+  },
   "label.category": {
     en: "Category",
     sw: "Kitengo",
@@ -217,7 +373,7 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
     fr: "Connaissances Ethnobotaniques"
   },
   "home.pillarEthText": {
-    en: "Preserving maternal milk, sacred Mũgũmo altars, and deep central Kenya highland cultural customs.",
+    en: "Preserving maternal milk, sacred Sacred Fig Tree altars, and deep central Kenya highland cultural customs.",
     sw: "Kuhifadhi maziwa ya mama, madhabahu takatifu ya Mũgũmo, na mila za kitamaduni za nyanda za juu za Kenya.",
     ki: "Kũbũra tũmĩrĩri twa maziwa ma mwendwa, Mũgũmo ũrĩa mũtheru wega na kĩ-mũtũũro kĩa Gĩkũyũ.",
     fr: "Préserver l'allaitement maternel, les autels du Mũgũmo sacré et les coutumes des montagnes du Kenya."
@@ -337,10 +493,52 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
     fr: "Préserver le Savoir des Plantes d'Afrique"
   },
   "home.preservingText": {
-    en: "The slopes of central Kenya grow a biological library of plants that traditional sages Muthamaki wa Mithĩga spent millenniums testing... Oral recipes pass away if not written down.",
+    en: "Traditional herbal medicine has existed under forest canopies for centuries. In our hills, trees like the peppery Pepper Bark Tree (Kikuyu: Mũthĩga) served as our emergency clinics for colds and fevers. Urination issues in older men were solved with tea brewed from the reddish bark of African Cherry (Kikuyu: Mũcoroi). Toothaches were temporarily anesthetized with Sodom Apple (Kikuyu: Mũtongu) roots. Saps from sacred Sacred Fig Trees (Kikuyu: Mugumo) served as instant surgical coagulants on cuts.",
     sw: "Miteremko ya Kenya ya kati inakuza maktaba ya mimea ambayo wazazi wetu walijaribu na kuainisha kwa milenia... Mapishi ya mdomo yanapotea yasipoandikwa.",
     ki: "Andũ a gũkũra makĩgũa matũũra, ũgĩ wa mĩthĩga wetekaga wega tondũ rita rũ mĩthĩga ndĩmwandikiĩ.",
     fr: "Les pentes du Kenya central abritent une bibliothèque biologique de plantes que les sages traditionnels ont mis des millénaires à classifier... Les recettes s'éteignent sans écrits."
+  },
+  "home.featuredFlora": {
+    en: "Featured Medicinal Flora",
+    sw: "Mimea Teule ya Dawa ya Kiasili",
+    ki: "Mĩthĩga ya Kĩ-Bũrĩĩno kĩa Thome",
+    fr: "Flore Médicale en Vedette"
+  },
+  "home.aboutSectionTitle": {
+    en: "Preserving African Herbal Knowledge",
+    sw: "Kuhifadhi Maarifa ya Dawa za Kiafrika",
+    ki: "Kũbũra Ũgĩ wa mĩthĩga ya tene",
+    fr: "Préserver le Savoir des Plantes d'Afrique"
+  },
+  "home.missionIntro": {
+    en: "The slopes of central Kenya grow a biological library of plants that traditional sages Muthamaki wa Mithĩga spent millenniums testing and classifying. But oral recipes pass away if not written down.",
+    sw: "Miteremko ya Kenya ya kati inakuza maktaba ya mimea ambayo wazazi wetu walijaribu na kuainisha kwa milenia... Mapishi ya mdomo yanapotea yasipoandikwa.",
+    ki: "Andũ a gũkũra makĩgũa matũũra, ũgĩ wa mĩthĩga wetekaga wega tondũ rita rũ mĩthĩga ndĩmwandikiĩ.",
+    fr: "Les pentes du Kenya central abritent une bibliothèque biologique de plantes que les sages traditionnels ont mis des millénaires à classifier... Les recettes s'éteignent sans écrits."
+  },
+  "home.ourPhilosophy": {
+    en: "Our Philosophy",
+    sw: "Falsafa Yetu",
+    ki: "Watho Witũ",
+    fr: "Notre Philosophie"
+  },
+  "blog.editorialColumns": {
+    en: "Editorial Columns",
+    sw: "Majarida",
+    ki: "Mabuku mĩromo",
+    fr: "Colonnes Éditoriales"
+  },
+  "blog.chroniclesTitle": {
+    en: "The DawaKienyeji Chronicles",
+    sw: "Historia za DawaKienyeji",
+    ki: "Maũhoro ma DawaKienyeji",
+    fr: "Les Chroniques DawaKienyeji"
+  },
+  "blog.chroniclesDesc": {
+    en: "Weekly research essays, indigenous botanical lore, and ecological forestry updates of central Kenya. Explore real stories behind ancestral wisdom.",
+    sw: "Insha za hivi karibuni, maarifa ya asili ya mimea, na taarifa za ulinzi wa misitu ya Kenya ya kati.",
+    ki: "Makala ma tene, ũgĩ wa kĩbũrĩ thome rera wega na kũbũra mĩthĩga thutha andũ kwarĩria.",
+    fr: "Essais de recherche hebdomadaires, traditions botaniques indigènes et mises à jour écologiques."
   },
   "home.integrityHeading": {
     en: "Our Integrity Philosophy",
@@ -504,7 +702,7 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
   "slides.2.btn2": {
     en: "Learn More",
     sw: "Jifunze Zaidi",
-    ki: "Soma makiri",
+    ki: "Menya Maingi",
     fr: "En savoir plus"
   },
   "slides.3.title": {
@@ -644,46 +842,100 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
 
   // Contact / Message page
   "contact.title": {
-    en: "Sovereign Botanical Consultation Inquiry",
-    sw: "Fomu ya Ushauri Unaosimamiwa wa Mimea",
-    ki: "Gũceeria hamwe na andũ a Ndari",
-    fr: "Demande de Consultation Botanique Souveraine"
+    en: "Contact Us",
+    sw: "Wasiliana Nasi",
+    ki: "Kwarĩria Na Ithuĩ",
+    fr: "Contactez-nous"
   },
   "contact.subtitle": {
-    en: "Any critical botanical seeds, sustainable farming queries, or conservation audits can be submitted directly back to the Mount Kenya database registrars below.",
-    sw: "Mbegu zozote muhimu za mimea, maswali ya kilimo endelevu, au ukaguzi wa uhifadhi zinaweza kuwasilishwa moja kwa moja kwa wasajili hapa chini.",
-    ki: "Mbeũ ciothe cia mĩthĩga ya rũũgĩ, andũ arĩmi mĩthĩga matũũra, na mĩhĩnda nĩmũrehe rũgongo fomuĩno kũrĩa kamo andũ a Ndari Nyandarũa.",
-    fr: "Toutes les semences, demandes d'agriculture durable ou audits de conservation peuvent être soumis directement aux registraires ci-dessous."
+    en: "Have questions about plant safety, sustainability regulations, or native seeds? Write or visit us at our highlands model gardens.",
+    sw: "Una maswali kuhusu usalama vya mimea, kanuni za uendelevu, au mbegu za kienyeji? Tuandikie au ututembelee kwenye bustani zetu za mfano.",
+    ki: "Mũri wa kĩ-ndari, mĩtĩ na mbeũ cia tene? Rehe mbarũthi haha kana ũũke tũceere kĩ-mũtũũro gĩa gĩcigo.",
+    fr: "Vous avez des questions sur la sécurité des plantes, les réglementations de durabilité ou les semences indigènes ? Écrivez-nous ou visitez nos jardins de démonstration."
   },
   "contact.name": {
-    en: "Your Professional / Tribal Name *",
-    sw: "Jina Lako la Kitaaluma au Asili *",
-    ki: "Rĩĩtwa rĩaku rĩa Kaborĩ / Wĩra *",
-    fr: "Votre Nom / Appellation Professionnelle *"
+    en: "Full Name *",
+    sw: "Jina Kamili *",
+    ki: "Rĩĩtwa Rĩothe *",
+    fr: "Nom Complet *"
   },
   "contact.email": {
-    en: "Your Active Correspondence Email *",
-    sw: "Barua Pepe yako inayofanya kazi *",
-    ki: "Mbarũthi yaku kũramatwo *",
-    fr: "Votre Courriel Correspondant *"
+    en: "Email *",
+    sw: "Barua Pepe *",
+    ki: "Mbarũthi *",
+    fr: "Courriel *"
   },
   "contact.subject": {
-    en: "Subject Context / Inquiry Purpose",
-    sw: "Mada au Lengo la Swali",
-    ki: "Ũhoro ũkũrehe / Mwanya",
-    fr: "Sujet / Motif de l'Enquête"
+    en: "Subject *",
+    sw: "Mada *",
+    ki: "Ũhoro *",
+    fr: "Sujet *"
   },
   "contact.messageHint": {
-    en: "Write detailed messages. For screening projects or seeds, dictate specific vertical coordinates or county coordinates...",
-    sw: "Andika ujumbe kwa kina. Kwa maswali ya mbegu au tafiti, taja maeneo maalum...",
-    ki: "Andĩka ũhoro wothe wega. Atĩrĩ kũria andũ a wĩmbore kana mbeũ handũ...",
-    fr: "Écrivez un message détaillé. Pour des projets de criblage ou de semences, spécifiez..."
+    en: "Message *",
+    sw: "Ujumbe *",
+    ki: "Ũhoro *",
+    fr: "Message *"
   },
   "contact.success": {
-    en: "Traditional consultation dispatched! DawaKienyeji Mount Kenya Registrars will reach out shortly.",
-    sw: "Swali lako limetumwa kwa ufanisi! Wasajili wetu wa Mlima Kenya watawasiliana nawe hivi karibuni.",
-    ki: "Ũhoro nĩũtũmĩtwo na rũũrĩ! Gĩcigo kĩa andũ a Ndari Kĩrĩnyaga nĩmagũkuonera riũ hĩndĩ...",
-    fr: "Consultation traditionnelle envoyée ! Les registraires du Mont Kenya vous répondront sous peu."
+    en: "Your message has been sent successfully! We will reach out shortly.",
+    sw: "Ujumbe wako umetumwa kwa ufanisi! Tutawasiliana nawe hivi karibuni.",
+    ki: "Ũhoro waku nĩũtũmĩtwo na wega! Andũ a ndari nĩmagũkuonera riũ hĩndĩ thutha.",
+    fr: "Votre message a été envoyé avec succès ! Nous vous recontacterons sous peu."
+  },
+  "contact.subject.general": {
+    en: "General Inquiry",
+    sw: "Maswali ya Jumla",
+    ki: "Mũri wa Kwarĩria",
+    fr: "Renseignement Général"
+  },
+  "contact.subject.plants": {
+    en: "Medicinal Plants Information",
+    sw: "Taarifa za Mimea ya Kitiba",
+    ki: "Mĩthĩga ya kĩ-ndari",
+    fr: "Information sur les Plantes Médicinales"
+  },
+  "contact.subject.remedies": {
+    en: "Traditional Remedies",
+    sw: "Tiba za Asili",
+    ki: "Ndawa cia Kienyeji/Tene",
+    fr: "Remèdes Traditionnels"
+  },
+  "contact.subject.research": {
+    en: "Research & Collaboration",
+    sw: "Utafiti na Usafiri",
+    ki: "Ũthũthũria na Ũgwatanĩro",
+    fr: "Recherche & Collaboration"
+  },
+  "contact.subject.conservation": {
+    en: "Conservation & Sustainability",
+    sw: "Uhifadhi na Uendelevu",
+    ki: "Ũgitĩri wa mĩtĩ na Mbeũ",
+    fr: "Conservation & Durabilité"
+  },
+  "contact.subject.outreach": {
+    en: "Community Outreach",
+    sw: "Ufikiaji wa Jamii",
+    ki: "Kũrĩmĩra andũ a matũũra",
+    fr: "Sensibilisation Communautaire"
+  },
+  "contact.subject.support": {
+    en: "Technical Support",
+    sw: "Msaada wa Kiufundi",
+    ki: "Ũteithia wa fĩndũ",
+    fr: "Support Technique"
+  },
+  "contact.subject.advisory": {
+    en: "Advisory Request",
+    sw: "Ombi la Ushauri",
+    ki: "Adũĩsĩ rwa Ndari",
+    fr: "Demande de Conseil"
+  },
+  "contact.subject.other": {
+    en: "Other",
+    sw: "Nyingine",
+    ki: "Ingĩ",
+    fr: "Autre"
   },
 
   // Chatbot Page
@@ -1288,11 +1540,11 @@ const REMEDY_TRANSLATIONS: Record<string, Partial<Record<Language, Partial<Tradi
   },
   "r4": {
     sw: {
-      title: "Chai ya Mũcorai kwa Afya ya Tezi Dume",
+      title: "Chai ya African Cherry (Mũcoroi) kwa Afya ya Tezi Dume",
       category: "Afya ya Wanaume & Tezi",
       symptoms: ["Kukojoa kwa shida kwa wazee", "Kukojoa mara kwa mara usiku", "Maumivu ya kibofu cha mkojo"],
       steps: [
-        "Chukua gamba jekundu la MŨCORAI (Prunus Africana) lililovunwa kwa njia ya maadili.",
+        "Chukua gamba jekundu la MŨCOROI (Prunus Africana) lililovunwa kwa njia ya maadili.",
         "Chemsha mfuko mmoja mdogo wa gamba hilo kwenye vikombe 4 vya maji kwa dakika 45.",
         "Kioevu kitakuwa na rangi nyekundu nzuri kama mti wa mahogany.",
         "Chuja chai nyekundu na uihifadhi kwenye chupa safi."
@@ -1304,7 +1556,7 @@ const REMEDY_TRANSLATIONS: Record<string, Partial<Record<Language, Partial<Tradi
       category: "Hinya wa arũme nda",
       symptoms: ["Weak urinary flow in aging men", "Frequent nighttime urination", "Bladder tension"],
       steps: [
-        "Rehe ruthumo rwa rangi ya kĩgĩtondu rwa MŨCORAI.",
+        "Rehe ruthumo rwa rangi ya kĩgĩtondu rwa MŨCOROI.",
         "Boili ruthumo kĩrĩ gĩa rũũgĩ gwa dakika mĩrongo ĩna na tano.",
         "Tea nĩĩkũrũgwo rangi ta kĩgĩtondu wega.",
         "Mĩeri nyoorũ nymĩ nyua rũũgĩ na hwaĩ-ĩnĩ kahora."
@@ -1312,11 +1564,11 @@ const REMEDY_TRANSLATIONS: Record<string, Partial<Record<Language, Partial<Tradi
       dose: "Gĩkombe gĩmwe rũũgĩ thutha kũgĩa, na gĩkombe hwaĩ-ĩnĩ gwa mĩthenya 14 kana mĩrongo ĩrĩ na ũmwe."
     },
     fr: {
-      title: "Décoction de Mũcorai pour l'Équilibre de la Prostate",
+      title: "Décoction d'African Cherry (Mũcoroi) pour l'Équilibre de la Prostate",
       category: "Santé de l'homme & prostate",
       symptoms: ["Débit urinaire faible chez l'homme mûr", "Uriner fréquemment la nuit", "Tension vésicale"],
       steps: [
-        "Obtenir des écorces de MŨCORAI (Pygeum) récoltées de manière durable.",
+        "Obtenir des écorces de MŨCOROI (Pygeum) récoltées de manière durable.",
         "Faire bouillir une poignée dans 4 tasses d'eau pendant 45 minutes.",
         "L'eau prendra une magnifique couleur acajou.",
         "Filtrer et conserver au chaud."
@@ -1414,7 +1666,7 @@ const BLOG_TRANSLATIONS: Record<string, Partial<Record<Language, Partial<BlogPos
     fr: {
       title: "Récolte Responsable : Le Code Éthique de l'Herboriste",
       excerpt: "La phytothérapie traditionnelle ne dépend pas seulement de ce que vous récoltez, mais de la manière éthique dont vous le faites.",
-      content: "Un herboriste traditionnel ne pénètre pas la forêt avec une machette destructive. Pour sauvegarder l'arbre Pygeum (Mũcorai), l'extraction verticale par bandes opposées est prescrite (Opposite Striping), éliminant tout blocage nutritionnel susceptible de faire périr l'arbre."
+      content: "Un herboriste traditionnel ne pénètre pas la forêt avec une machette destructive. Pour sauvegarder l'arbre Pygeum (Mũcoroi), l'extraction verticale par bandes opposées est prescrite (Opposite Striping), éliminant tout blocage nutritionnel susceptible de faire périr l'arbre."
     }
   }
 };

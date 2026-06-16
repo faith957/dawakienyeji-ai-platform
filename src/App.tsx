@@ -296,13 +296,13 @@ export default function App() {
       </AnimatePresence>
 
       {/* Primary Routing Arena */}
-      <main className="flex-grow py-8 md:py-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow w-full">
         
         {currentRoute === 'home' && (
-          <div className="space-y-16">
+          <div className="space-y-16 pb-16 md:pb-24">
             
             {/* HERO SLIDER SECTION */}
-            <section id="hero-carousel" className="mx-4 relative overflow-hidden rounded-[40px] h-[540px] md:h-[620px] bg-stone-950 shadow-2xl flex items-center group border border-stone-200/10">
+            <section id="hero-carousel" className="relative overflow-hidden h-[540px] md:h-[620px] lg:h-[680px] bg-stone-950 flex items-center group w-full">
               
               {/* Background Images with Zoom Parallax Effect and Dark Greens Overlays */}
               <div className="absolute inset-0 w-full h-full z-0 select-none">
@@ -347,8 +347,9 @@ export default function App() {
               </div>
 
               {/* Foreground slide text copy & container */}
-              <div className="w-full max-w-4xl px-8 md:px-20 z-20 relative text-white">
-                <AnimatePresence mode="wait">
+              <div className="max-w-7xl mx-auto w-full px-6 md:px-8 z-20 relative text-white">
+                <div className="max-w-4xl">
+                  <AnimatePresence mode="wait">
                   {heroSlides.map((slide, idx) => idx === currentSlide && (
                     <motion.div
                       key={slide.id}
@@ -358,14 +359,9 @@ export default function App() {
                       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                       className="space-y-6 md:space-y-8 text-left"
                     >
-                      {/* Glassmorphism Category Header Tag */}
+                      {/* Slide Indicator Tag */}
                       <div className="inline-flex items-center gap-2.5">
-                        <span className="inline-flex items-center gap-1.5 text-[10px] md:text-xs tracking-wider uppercase font-extrabold text-amber-300 px-4 py-1.5 bg-white/5 backdrop-blur-md rounded-full border border-white/10 shadow-sm">
-                          <Sparkles className="w-3.5 h-3.5 animate-pulse text-[#D4A017]" />
-                          {t("nav.heroTitle")}
-                        </span>
-                        <div className="h-px w-10 bg-amber-300/30" />
-                        <span className="text-[11px] font-mono font-bold text-stone-400 tracking-widest">0{slide.id} / 04</span>
+                        <span className="text-[11px] font-mono font-bold text-amber-300 bg-amber-300/10 px-3 py-1 rounded-full tracking-widest uppercase border border-amber-300/20">Slide 0{slide.id} / 04</span>
                       </div>
 
                       {/* Display Headings with deep bold typeface */}
@@ -397,6 +393,7 @@ export default function App() {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+                </div>
               </div>
 
               {/* Manual Arrow Nav buttons */}
@@ -432,8 +429,10 @@ export default function App() {
 
             </section>
 
-            {/* FEATURES SECTION Display cards */}
-            <section id="features" className="mx-4 space-y-8">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-16 md:space-y-24">
+
+              {/* FEATURES SECTION Display cards */}
+              <section id="features" className="space-y-8">
               <div className="text-center max-w-2xl mx-auto space-y-3.5">
                 <span className="inline-flex items-center gap-1.5 text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-100 font-extrabold uppercase px-3.5 py-1.5 rounded-full tracking-wider">
                   <TreePine className="w-3.5 h-3.5" />
@@ -550,7 +549,7 @@ export default function App() {
 
 
             {/* POPULAR HERBS SECTION */}
-            <section id="popular-herbs" className="mx-4 space-y-8 text-left">
+            <section id="popular-herbs" className="space-y-8 text-left">
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-stone-200/50 pb-6">
                 <div>
                   <span className="inline-flex items-center gap-1 text-[10px] bg-amber-100/60 text-amber-900 border border-amber-200 font-extrabold uppercase px-2.5 py-1.5 rounded tracking-wider">
@@ -613,17 +612,17 @@ export default function App() {
                         {/* Subtle label explaining verified vs illustration placeholder source to user */}
                         <div className="absolute top-12 left-4 z-10">
                           <span className="text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 bg-black/60 backdrop-blur-sm text-stone-200 rounded border border-white/5">
-                            {herb.imageUrl ? "📷 Verified Specimen" : "🎨 Botanical Illustration"}
+                            {herb.imageUrl ? t("label.verifiedSpecimen") : t("label.botanicalIllustration")}
                           </span>
                         </div>
 
                         {/* Overlaid Title Copy */}
                         <div className="absolute bottom-4 left-4 right-4 z-10 text-left">
-                          <p className="text-[10px] font-mono text-emerald-250 font-bold uppercase tracking-wider drop-shadow-sm">
-                            {language === 'ki' ? (th.commonName || 'Indigenous Flora') : th.kikuyuName}
+                          <p className="text-[10px] font-mono text-amber-400 font-extrabold uppercase tracking-wider drop-shadow-sm">
+                            {language === 'ki' ? (th.commonName || t("label.indigenousFlora")) : `${t("label.kikuyuLanguage")}: ${th.kikuyuName}`}
                           </p>
                           <h3 className="text-xl font-black tracking-tight font-sans text-white uppercase drop-shadow">
-                            {language === 'ki' ? th.kikuyuName : (th.commonName || 'Indigenous Flora')}
+                            {language === 'ki' ? th.kikuyuName : (th.commonName || t("label.indigenousFlora"))}
                           </h3>
                         </div>
                       </div>
@@ -633,7 +632,9 @@ export default function App() {
                           <p className="text-xs text-stone-500 line-clamp-3 leading-relaxed font-normal">{th.description}</p>
                           <div className="h-px bg-stone-150 w-full" />
                           <div className="text-[11px] font-semibold text-stone-700 flex items-center gap-1.5 leading-none bg-stone-50 p-2.5 rounded-lg border border-stone-200/20">
-                            <span className="text-emerald-955 uppercase text-[9px] font-extrabold tracking-wider bg-emerald-55/70 px-1.5 py-0.5 rounded border border-emerald-100/50">Common use</span>
+                            <span className="text-emerald-900 uppercase text-[9px] font-extrabold tracking-wider bg-emerald-100/75 px-1.5 py-0.5 rounded border border-emerald-200/50">
+                              {t("home.commonUseLabel") || "Common use:"}
+                            </span>
                             <span className="truncate max-w-[150px]">{th.medicinalUses && th.medicinalUses[0]}</span>
                           </div>
                         </div>
@@ -642,7 +643,7 @@ export default function App() {
                           onClick={() => setSelectedPlantForModal(herb)}
                           className="w-full mt-2 py-2.5 bg-stone-100 hover:bg-[#D4A017] hover:text-emerald-950 hover:border-[#D4A017] text-emerald-950 font-extrabold border border-stone-250/90 rounded-xl text-xs transition cursor-pointer"
                         >
-                          Learn More
+                          {t("btn.learnMore") || "Learn More"}
                         </button>
                       </div>
                     </div>
@@ -652,7 +653,7 @@ export default function App() {
             </section>
 
             {/* ABOUT SECTION SUMMARY */}
-            <section id="about" className="mx-4 bg-stone-100/95 border border-stone-200/80 rounded-[40px] p-8 md:p-14 text-left relative overflow-hidden shadow-sm">
+            <section id="about" className="bg-stone-100/95 border border-stone-200/80 rounded-[40px] p-8 md:p-14 text-left relative overflow-hidden shadow-sm">
               <div className="absolute right-0 bottom-0 opacity-5 pointer-events-none transform translate-x-1/4 translate-y-1/4 select-none">
                 <Leaf className="w-96 h-96 text-emerald-900" />
               </div>
@@ -696,7 +697,7 @@ export default function App() {
             </section>
 
             {/* BLOG PREVIEW SECTION */}
-            <section id="blog-preview" className="mx-4 space-y-6 text-left">
+            <section id="blog-preview" className="space-y-6 text-left">
               <div className="flex items-center justify-between border-b pb-4 border-stone-200">
                 <h2 className="text-2xl font-extrabold tracking-tight">{t("home.recentChronicles") || "Recent Chronicles & Essays"}</h2>
                 <button
@@ -731,7 +732,7 @@ export default function App() {
             </section>
 
             {/* NATURAL TONES NEWSLETTER SUBSCRIPTION FORM */}
-            <section id="homepage-newsletter" className="mx-4 bg-stone-100/60 border border-stone-250 p-6 md:p-10 rounded-[32px] font-sans flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 shadow-sm">
+            <section id="homepage-newsletter" className="bg-stone-100/60 border border-stone-250 p-6 md:p-10 rounded-[32px] font-sans flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 shadow-sm">
               <div className="max-w-xl space-y-2.5 text-left">
                 <span className="inline-flex items-center gap-1.5 text-[10px] uppercase font-extrabold tracking-widest text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
                   <Mail className="w-3.5 h-3.5" />
@@ -785,15 +786,17 @@ export default function App() {
               </div>
             </section>
 
+            </div>
           </div>
         )}
 
         {/* Tab 2: About full page content */}
         {currentRoute === 'about' && (
-          <div 
-            className="relative max-w-5xl mx-auto px-6 py-12 md:py-16 rounded-3xl overflow-hidden bg-cover bg-center shadow-lg font-sans border border-stone-200"
-            style={{ backgroundImage: `url('https://i.postimg.cc/y8QrWf1v/Chat-GPT-Image-Jun-7-2026-08-35-28-PM.png')` }}
-          >
+          <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+            <div 
+              className="relative max-w-5xl mx-auto px-6 py-12 md:py-16 rounded-3xl overflow-hidden bg-cover bg-center shadow-lg font-sans border border-stone-200"
+              style={{ backgroundImage: `url('https://i.postimg.cc/y8QrWf1v/Chat-GPT-Image-Jun-7-2026-08-35-28-PM.png')` }}
+            >
             {/* Elegant overlay/vignette mask ensuring high contrast and modern feel */}
             <div className="absolute inset-0 bg-gradient-to-b from-stone-900/60 via-stone-900/50 to-stone-950/70 z-0" />
 
@@ -816,7 +819,7 @@ export default function App() {
                   {t("home.aboutHeading") || "Preserving Ethnobotanical Chronicles"}
                 </h2>
                 <p className="text-xs md:text-sm text-stone-600 leading-relaxed font-normal">
-                  {t("home.preservingText") || "Kikuyu herbal medicine Dawa za Kienyeji has existed under forest canopies for centuries. In our hills, trees like the peppery Mũthĩga (Warburgia ugandensis) served as our emergency clinics for colds and fevers. Urination issues in older men were solved with tea brewed from the reddish bark of Mũcorai (Prunus africana / Pygeum). Toothaches were temporarily anesthetized with Sodom Apple (Mũtongu) roots. Saps from sacred Strangler Figs (Mũgũmo) served as instant surgical coagulants on cuts."}
+                  {t("home.preservingText") || "Traditional herbal medicine has existed under forest canopies for centuries. In our hills, trees like the peppery Pepper Bark Tree (Kikuyu: Mũthĩga) served as our emergency clinics for colds and fevers. Urination issues in older men were solved with tea brewed from the reddish bark of African Cherry (Kikuyu: Mũcoroi). Toothaches were temporarily anesthetized with Sodom Apple (Kikuyu: Mũtongu) roots. Saps from sacred Sacred Fig Trees (Kikuyu: Mugumo) served as instant surgical coagulants on cuts."}
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-stone-100 border border-stone-200 rounded-2xl">
@@ -851,24 +854,45 @@ export default function App() {
               </div>
 
             </div>
+            </div>
           </div>
         )}
 
 
         {/* Tab 3: Plants catalog (Main browsable cards) */}
-        {currentRoute === 'plants' && <PlantsCatalog />}
+        {currentRoute === 'plants' && (
+          <div className="py-8 md:py-12">
+            <PlantsCatalog />
+          </div>
+        )}
 
         {/* Tab 4: Traditional Remedies listing */}
-        {currentRoute === 'remedies' && <TraditionalRemedies />}
+        {currentRoute === 'remedies' && (
+          <div className="py-8 md:py-12">
+            <TraditionalRemedies />
+          </div>
+        )}
 
         {/* Tab 6: Blog Feed list */}
-        {currentRoute === 'blog' && <BlogFeed />}
+        {currentRoute === 'blog' && (
+          <div className="py-8 md:py-12">
+            <BlogFeed />
+          </div>
+        )}
 
         {/* Tab 7: Contact Page */}
-        {currentRoute === 'contact' && <ContactPage />}
+        {currentRoute === 'contact' && (
+          <div className="py-8 md:py-12">
+            <ContactPage />
+          </div>
+        )}
 
         {/* Tab 8: Security Admin dashboard */}
-        {currentRoute === 'admin' && <AdminDashboard />}
+        {currentRoute === 'admin' && (
+          <div className="py-8 md:py-12">
+            <AdminDashboard />
+          </div>
+        )}
 
       </main>
 
@@ -1041,8 +1065,15 @@ export default function App() {
                   <h3 className="text-xl font-extrabold text-stone-950 mt-1.5 uppercase leading-none">
                     {language === 'ki' ? pm.kikuyuName : pm.commonName}
                   </h3>
+                  {language !== 'ki' && (
+                    <p className="text-xs text-stone-500 font-semibold mt-1">
+                      (Kikuyu: {pm.kikuyuName})
+                    </p>
+                  )}
                   {language === 'ki' && (
-                    <p className="text-xs text-stone-500 font-medium mt-1">{pm.commonName}</p>
+                    <p className="text-xs text-stone-500 font-semibold mt-1">
+                      (English: {pm.commonName})
+                    </p>
                   )}
                 </div>
                 <button 

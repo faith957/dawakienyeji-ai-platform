@@ -3,6 +3,18 @@ import { Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2, ShieldCheck, Tr
 import { postMessage } from "../utils/api";
 import { useLanguage } from "../utils/LanguageContext";
 
+const SUBJECT_OPTIONS = [
+  { value: "General Inquiry", labelKey: "contact.subject.general" },
+  { value: "Medicinal Plants Information", labelKey: "contact.subject.plants" },
+  { value: "Traditional Remedies", labelKey: "contact.subject.remedies" },
+  { value: "Research & Collaboration", labelKey: "contact.subject.research" },
+  { value: "Conservation & Sustainability", labelKey: "contact.subject.conservation" },
+  { value: "Community Outreach", labelKey: "contact.subject.outreach" },
+  { value: "Technical Support", labelKey: "contact.subject.support" },
+  { value: "Advisory Request", labelKey: "contact.subject.advisory" },
+  { value: "Other", labelKey: "contact.subject.other" }
+];
+
 export default function ContactPage() {
   const { t, language } = useLanguage();
   const [name, setName] = useState("");
@@ -83,16 +95,16 @@ export default function ContactPage() {
       fr: "Nos spécialistes analyseront votre demande et vous répondront très bientôt."
     },
     sendInquiry: {
-      en: "Send secure consultative Inquiry",
-      sw: "Tuma Swali la Ushauri Salama",
-      ki: "Tũma mũri rũũgĩ rwa muthĩga wega",
-      fr: "Envoyer une Demande de Consultation Sécurisée"
+      en: "Get In Touch",
+      sw: "Wasiliana Nasi",
+      ki: "Kwarĩria Na Ithuĩ",
+      fr: "Contactez-nous"
     },
     placeholderName: {
-      en: "e.g. Kiprop Waithera",
-      sw: "Mfano: Kiprop Waithera",
-      ki: "ta: Kiprop Waithera",
-      fr: "ex. Kiprop Waithera"
+      en: "e.g. Jane Doe",
+      sw: "Mfano: Jane Doe",
+      ki: "ta: Jane Doe",
+      fr: "ex. Jane Doe"
     },
     placeholderEmail: {
       en: "e.g. user@domain.com",
@@ -100,17 +112,17 @@ export default function ContactPage() {
       ki: "ta: user@domain.com",
       fr: "ex. mickael@domain.com"
     },
-    placeholderSubject: {
-      en: "e.g., Sustainability report for Pygeum or DawaBot queries",
-      sw: "Mfano: Ripoti ya Pygeum au maswali ya DawaBot",
-      ki: "ta: Ripoti ya mĩthĩga kana DawaBot",
-      fr: "ex. Rapport de Pygeum ou questions DawaBot"
-    },
     placeholderMessage: {
-      en: "Tell us about the tree species, ailments or seed propagation queries you require...",
-      sw: "Tuambie kuhusu spishi za mti, magonjwa au maswali ya uenezi wa mbegu...",
-      ki: "Andĩka kĩĩgĩĩ mĩthemba ya mĩthĩga na mbeũ mĩtĩ-inĩ...",
-      fr: "Parlez-nous des espèces, des maladies ou de la propagation de semences dont vous avez besoin..."
+      en: "Write your message here...",
+      sw: "Andika ujumbe wako hapa...",
+      ki: "Andĩka ũhoro waku haha...",
+      fr: "Écrivez votre message ici..."
+    },
+    selectSubjectOption: {
+      en: "Select a subject...",
+      sw: "Chagua mada...",
+      ki: "Thuura ũhoro...",
+      fr: "Sélectionnez un sujet..."
     }
   };
 
@@ -123,71 +135,57 @@ export default function ContactPage() {
     <div id="contact-viewport" className="space-y-8 font-sans max-w-7xl mx-auto px-4">
       
       {/* Title Header Banner Deck */}
-      <div className="bg-stone-50 p-6 md:p-8 rounded-3xl border border-stone-250/80 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="max-w-2xl space-y-2">
+      <div className="bg-stone-50 p-6 md:p-8 rounded-3xl border border-stone-250/80 flex flex-col items-center justify-center text-center gap-4">
+        <div className="max-w-2xl space-y-3 flex flex-col items-center text-center">
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
             {t("nav.contact")}
           </span>
-          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-sans">
+          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-sans text-center">
             {t("contact.title") || "Contact Us"}
           </h1>
-          <p className="text-sm text-stone-500 leading-relaxed font-normal text-left">
+          <p className="text-sm text-stone-500 leading-relaxed font-normal text-center">
             {t("contact.subtitle") || "Have questions about plant safety, sustainability regulations, or native seeds? Write or visit us at our highlands model gardens."}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* 2 Centered Contact Channels row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto w-full">
         
-        {/* Left column: Contact Info card */}
-        <div className="lg:col-span-4 bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900 text-white p-6 md:p-8 rounded-3xl shadow-xl flex flex-col justify-center space-y-8 min-h-[380px] text-left">
-          
-          <div className="space-y-6">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#D4A017] px-2.5 py-1 bg-emerald-900 rounded border border-emerald-800">
-              {t("nav.contact") || "GET IN TOUCH"}
-            </span>
-            <h2 className="text-2xl font-extrabold tracking-tight">
-              {getL("channels")}
-            </h2>
-            <p className="text-xs text-emerald-100 leading-relaxed font-semibold">
-              {getL("channelsDesc")}
-            </p>
-
-            <div className="space-y-6 pt-4 text-xs font-semibold">
-              <div className="flex items-start gap-4">
-                <div className="p-2.5 bg-emerald-900/40 rounded-xl border border-emerald-800">
-                  <Phone className="w-5 h-5 text-[#D4A017] shrink-0 animate-pulse" />
-                </div>
-                <div>
-                  <p className="font-extrabold text-stone-200 uppercase text-[9px] tracking-widest mb-0.5">
-                    {getL("hotline")}
-                  </p>
-                  <p className="font-black text-white text-sm tracking-wide">+254 141 063 174</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4 border-t border-emerald-900/55 pt-5">
-                <div className="p-2.5 bg-emerald-900/40 rounded-xl border border-emerald-800">
-                  <Mail className="w-5 h-5 text-[#D4A017] shrink-0" />
-                </div>
-                <div>
-                  <p className="font-extrabold text-stone-200 uppercase text-[9px] tracking-widest mb-0.5">
-                    {getL("correspondence")}
-                  </p>
-                  <p className="font-black text-white text-sm tracking-wide">info@dawakienyenji.com</p>
-                </div>
-              </div>
-            </div>
+        {/* Hotline Card */}
+        <div className="bg-gradient-to-br from-emerald-950 to-green-950 text-white p-6 rounded-3xl shadow-md border border-emerald-800/40 flex flex-col items-center text-center space-y-3">
+          <div className="p-3 bg-emerald-900/40 rounded-full border border-emerald-800">
+            <Phone className="w-5 h-5 text-[#D4A017] animate-pulse" />
           </div>
-
+          <div className="space-y-1">
+            <p className="font-extrabold text-stone-300 uppercase text-[9px] tracking-widest">
+              {getL("hotline")}
+            </p>
+            <p className="font-black text-white text-sm md:text-base tracking-wide">+254 141 063 174</p>
+          </div>
         </div>
 
-        {/* Right column: Interactive message form */}
-        <div className="lg:col-span-8 bg-white border border-stone-250 p-6 md:p-8 rounded-3xl shadow-sm space-y-6 text-left">
-          <h2 className="text-lg font-bold text-emerald-950 uppercase border-b border-stone-100 pb-3 flex items-center gap-1.5 font-sans">
-            <MessageSquare className="w-5 h-5 text-emerald-700" />
-            {getL("sendInquiry")}
-          </h2>
+        {/* Correspondence Card */}
+        <div className="bg-gradient-to-br from-emerald-950 to-green-950 text-white p-6 rounded-3xl shadow-md border border-emerald-800/40 flex flex-col items-center text-center space-y-3">
+          <div className="p-3 bg-emerald-900/40 rounded-full border border-emerald-800">
+            <Mail className="w-5 h-5 text-[#D4A017]" />
+          </div>
+          <div className="space-y-1">
+            <p className="font-extrabold text-stone-300 uppercase text-[9px] tracking-widest">
+              {getL("correspondence")}
+            </p>
+            <p className="font-black text-white text-sm md:text-base tracking-wide">info@dawakienyeji.com</p>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Centralized Interactive Message form */}
+      <div className="max-w-3xl mx-auto w-full bg-white border border-stone-250 p-6 md:p-10 rounded-3xl shadow-sm space-y-6">
+        <h2 className="text-lg font-bold text-emerald-950 uppercase border-b border-stone-100 pb-3 flex items-center justify-center gap-1.5 font-sans text-center">
+          <MessageSquare className="w-5 h-5 text-emerald-700" />
+          {getL("sendInquiry")}
+        </h2>
 
           {submitted ? (
             <div className="py-12 text-center text-xs font-semibold text-emerald-800 space-y-3.5 bg-emerald-50 rounded-2xl border border-emerald-100">
@@ -201,10 +199,10 @@ export default function ContactPage() {
             </div>
           ) : (
             <form onSubmit={handleContactSubmit} className="space-y-4 text-xs font-semibold text-stone-700">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block mb-1 font-bold text-stone-900 uppercase text-left">
-                    {t("contact.name") || "Your Name *"}
+                  <label className="block mb-1.5 font-bold text-stone-900 uppercase text-left">
+                    {t("contact.name") || "Full Name *"}
                   </label>
                   <input
                     type="text"
@@ -212,12 +210,12 @@ export default function ContactPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder={getL("placeholderName")}
-                    className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900"
+                    className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-1 focus:ring-emerald-700/60"
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 font-bold text-stone-900 uppercase text-left">
-                    {t("contact.email") || "Your Email *"}
+                  <label className="block mb-1.5 font-bold text-stone-900 uppercase text-left">
+                    {t("contact.email") || "Email *"}
                   </label>
                   <input
                     type="email"
@@ -225,35 +223,43 @@ export default function ContactPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={getL("placeholderEmail")}
-                    className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900"
+                    className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-1 focus:ring-emerald-700/60"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block mb-1 font-bold text-stone-900 uppercase text-left">
+                <label className="block mb-1.5 font-bold text-stone-900 uppercase text-left">
                   {t("contact.subject") || "Subject *"}
                 </label>
-                <input
-                  type="text"
+                <select
+                  required
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder={getL("placeholderSubject")}
-                  className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900"
-                />
+                  className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900 bg-white font-medium focus:outline-none focus:ring-1 focus:ring-emerald-700/60"
+                >
+                  <option value="" disabled className="text-stone-400">
+                    {getL("selectSubjectOption")}
+                  </option>
+                  {SUBJECT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {t(opt.labelKey) || opt.value}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="block mb-1 font-bold text-stone-900 uppercase text-left">
-                  {t("contact.messageHint") || "Explain details *"}
+                <label className="block mb-1.5 font-bold text-stone-900 uppercase text-left">
+                  {t("contact.messageHint") || "Message *"}
                 </label>
                 <textarea
                   required
-                  rows={4}
+                  rows={8}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={getL("placeholderMessage")}
-                  className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900 font-normal leading-relaxed text-xs"
+                  className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900 font-medium leading-relaxed text-xs focus:outline-none focus:ring-1 focus:ring-emerald-700/60"
                 />
               </div>
 
@@ -314,7 +320,5 @@ export default function ContactPage() {
         </div>
 
       </div>
-
-    </div>
-  );
-}
+    );
+  }
