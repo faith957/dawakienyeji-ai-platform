@@ -86,6 +86,18 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
     ki: "Gĩkundi kĩa Admin",
     fr: "Panneau Admin"
   },
+  "nav.quickLinks": {
+    en: "Quick Links",
+    sw: "Viungo vya Haraka",
+    ki: "Kariokoo",
+    fr: "Liens Rapides"
+  },
+  "nav.contactUs": {
+    en: "Contact Us",
+    sw: "Wasiliana Nasi",
+    ki: "Arĩria na ithuĩ",
+    fr: "Contactez-nous"
+  },
 
   // Buttons & Shared Labels
   "btn.search": {

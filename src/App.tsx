@@ -15,7 +15,7 @@ import BlogFeed from "./components/BlogFeed";
 
 import heroSlide1 from "./assets/images/hero_slide_1_1780659974970.png";
 import heroSlide2 from "./assets/images/hero_slide_2_1780659992793.png";
-import heroSlide3 from "./assets/images/hero_slide_3_1780660007523.png";
+import heroSlide3 from "./assets/images/african_scientist_1781630372002.jpg";
 import heroSlide4 from "./assets/images/hero_slide_4_1780660023541.png";
 import ContactPage from "./components/ContactPage";
 import ChatbotPage from "./components/ChatbotPage";
@@ -359,10 +359,7 @@ export default function App() {
                       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                       className="space-y-6 md:space-y-8 text-left"
                     >
-                      {/* Slide Indicator Tag */}
-                      <div className="inline-flex items-center gap-2.5">
-                        <span className="text-[11px] font-mono font-bold text-amber-300 bg-amber-300/10 px-3 py-1 rounded-full tracking-widest uppercase border border-amber-300/20">Slide 0{slide.id} / 04</span>
-                      </div>
+
 
                       {/* Display Headings with deep bold typeface */}
                       <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-white drop-shadow-md">
@@ -451,8 +448,22 @@ export default function App() {
                 
                 {/* Pillar 1 */}
                 <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">01</div>
-                  <div className="space-y-4">
+                  {/* Themed background graphic decoration relating to Pillar 1 (Database & Leaf node grid) */}
+                  <svg className="absolute -right-6 -bottom-6 w-48 h-48 text-stone-100/60 group-hover:text-emerald-800/10 group-hover:scale-110 transition-all duration-500 pointer-events-none select-none z-0" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2">
+                    <path d="M 10,90 Q 50,55 90,10" />
+                    <path d="M 30,70 Q 50,35 70,10" strokeDasharray="2 2" />
+                    <path d="M 10,50 Q 50,15 90,10" strokeDasharray="3 3"/>
+                    <circle cx="10" cy="90" r="3" fill="currentColor" />
+                    <circle cx="50" cy="55" r="4.5" fill="currentColor" />
+                    <circle cx="90" cy="10" r="3" fill="currentColor" />
+                    <circle cx="30" cy="70" r="2.5" fill="currentColor" />
+                    <circle cx="70" cy="10" r="2.5" fill="currentColor" />
+                    <path d="M 50,55 C 30,35 20,45 10,90 C 40,80 30,70 50,55 Z" />
+                    <path d="M 50,55 C 70,35 80,45 90,10 C 60,20 70,30 50,55 Z" />
+                  </svg>
+
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300 z-10">01</div>
+                  <div className="space-y-4 relative z-10">
                     <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
                       <Database className="w-5 h-5 text-emerald-700 group-hover:text-amber-305" />
                     </div>
@@ -467,8 +478,20 @@ export default function App() {
 
                 {/* Pillar 2 */}
                 <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">02</div>
-                  <div className="space-y-4">
+                  {/* Themed background graphic decoration relating to Pillar 2 (Traditional mortar & steam brewer) */}
+                  <svg className="absolute -right-6 -bottom-6 w-48 h-48 text-stone-100/60 group-hover:text-amber-800/10 group-hover:scale-110 transition-all duration-500 pointer-events-none select-none z-0" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2">
+                    <path d="M 25,60 C 25,85 75,85 75,60 C 75,55 70,50 65,50 L 35,50 C 30,50 25,55 25,60 Z" />
+                    <path d="M 20,50 L 80,50" strokeWidth="2" />
+                    <path d="M 35,40 Q 40,30 35,20" strokeDasharray="2 1.5" />
+                    <path d="M 50,35 Q 55,25 50,15" strokeDasharray="2 1.5" />
+                    <path d="M 65,40 Q 60,30 65,20" strokeDasharray="2 1.5" />
+                    <path d="M 50,50 C 45,65 55,65 50,80" />
+                    <path d="M 40,65 Q 48,60 48,55" />
+                    <path d="M 60,65 Q 52,60 52,55" />
+                  </svg>
+
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300 z-10">02</div>
+                  <div className="space-y-4 relative z-10">
                     <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
                       <BookOpen className="w-5 h-5 text-emerald-700 group-hover:text-amber-305" />
                     </div>
@@ -483,8 +506,26 @@ export default function App() {
 
                 {/* Pillar 3 */}
                 <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">03</div>
-                  <div className="space-y-4">
+                  {/* Themed background graphic decoration relating to Pillar 3 (AI digital circuit connections & neural nodes) */}
+                  <svg className="absolute -right-6 -bottom-6 w-48 h-48 text-stone-100/60 group-hover:text-teal-800/10 group-hover:scale-110 transition-all duration-500 pointer-events-none select-none z-0" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2">
+                    <circle cx="50" cy="50" r="20" strokeDasharray="3 3" />
+                    <circle cx="50" cy="50" r="6" />
+                    <path d="M 50,30 L 50,10" />
+                    <path d="M 50,70 L 50,90" />
+                    <path d="M 30,50 L 10,50" />
+                    <path d="M 70,50 L 90,50" />
+                    <circle cx="50" cy="10" r="3.5" fill="currentColor" />
+                    <circle cx="50" cy="90" r="3.5" fill="currentColor" />
+                    <circle cx="10" cy="50" r="3.5" fill="currentColor" />
+                    <circle cx="90" cy="50" r="3.5" fill="currentColor" />
+                    <path d="M 35,35 Q 20,20 15,35" />
+                    <path d="M 65,35 Q 80,20 85,35" />
+                    <path d="M 35,65 Q 20,80 15,65" />
+                    <path d="M 65,65 Q 80,80 85,65" />
+                  </svg>
+
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300 z-10">03</div>
+                  <div className="space-y-4 relative z-10">
                     <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
                       <BrainCircuit className="w-5 h-5 text-emerald-700 group-hover:text-amber-305" />
                     </div>
@@ -499,8 +540,20 @@ export default function App() {
 
                 {/* Pillar 4 */}
                 <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">04</div>
-                  <div className="space-y-4">
+                  {/* Themed background graphic decoration relating to Pillar 4 (Ancestral Mũgũmo tree branching and ancient temple columns) */}
+                  <svg className="absolute -right-6 -bottom-6 w-48 h-48 text-stone-100/60 group-hover:text-emerald-800/10 group-hover:scale-110 transition-all duration-500 pointer-events-none select-none z-0" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2">
+                    <path d="M 50,90 L 50,55" strokeWidth="2.5" />
+                    <path d="M 50,65 C 35,55 30,45 20,50" strokeWidth="1.8" />
+                    <path d="M 50,60 C 65,50 70,40 80,45" strokeWidth="1.8" />
+                    <circle cx="50" cy="35" r="18" strokeDasharray="3 2" />
+                    <circle cx="30" cy="45" r="12" strokeDasharray="3 2" />
+                    <circle cx="70" cy="40" r="14" strokeDasharray="3 2" />
+                    <path d="M 30,90 L 70,90" strokeWidth="2" />
+                    <path d="M 35,85 L 65,85" />
+                  </svg>
+
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300 z-10">04</div>
+                  <div className="space-y-4 relative z-10">
                     <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
                       <Landmark className="w-5 h-5 text-emerald-700 group-hover:text-amber-305" />
                     </div>
@@ -515,8 +568,18 @@ export default function App() {
 
                 {/* Pillar 5 */}
                 <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">05</div>
-                  <div className="space-y-4">
+                  {/* Themed background graphic decoration relating to Pillar 5 (Overlapping mount ridges with glowing collaborative signal waves) */}
+                  <svg className="absolute -right-6 -bottom-6 w-48 h-48 text-stone-100/60 group-hover:text-amber-800/10 group-hover:scale-110 transition-all duration-500 pointer-events-none select-none z-0" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2">
+                    <path d="M 10,90 L 40,40 L 55,60 L 75,30 L 95,90 Z" />
+                    <path d="M 25,90 L 45,55 L 65,90" strokeDasharray="2 2" />
+                    <circle cx="40" cy="40" r="6" strokeDasharray="1.5 1.5" />
+                    <circle cx="75" cy="30" r="8" strokeDasharray="1.5 1.5" />
+                    <path d="M 20,20 Q 50,10 80,20" strokeWidth="1" strokeDasharray="3 3" />
+                    <path d="M 30,25 Q 50,18 70,25" strokeWidth="1" strokeDasharray="3 3" />
+                  </svg>
+
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300 z-10">05</div>
+                  <div className="space-y-4 relative z-10">
                     <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
                       <Users className="w-5 h-5 text-emerald-700 group-hover:text-amber-305" />
                     </div>
@@ -531,8 +594,21 @@ export default function App() {
 
                 {/* Pillar 6 */}
                 <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">06</div>
-                  <div className="space-y-4">
+                  {/* Themed background graphic decoration relating to Pillar 6 (Global meridian coordinates and magnifier research target) */}
+                  <svg className="absolute -right-6 -bottom-6 w-48 h-48 text-stone-100/60 group-hover:text-emerald-800/10 group-hover:scale-110 transition-all duration-500 pointer-events-none select-none z-0" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2">
+                    <circle cx="50" cy="50" r="40" />
+                    <path d="M 10,50 L 90,50" />
+                    <path d="M 50,10 L 50,90" />
+                    <path d="M 15,30 C 35,45 65,45 85,30" strokeDasharray="2 2" />
+                    <path d="M 15,70 C 35,55 65,55 85,70" strokeDasharray="2 2" />
+                    <circle cx="65" cy="65" r="12" strokeWidth="2" />
+                    <path d="M 73.5,73.5 L 88,88" strokeWidth="3" />
+                    <path d="M 65,45 L 65,35" />
+                    <path d="M 35,65 L 25,65" />
+                  </svg>
+
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300 z-10">06</div>
+                  <div className="space-y-4 relative z-10">
                     <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
                       <Globe className="w-5 h-5 text-emerald-700 group-hover:text-amber-303" />
                     </div>
@@ -899,8 +975,8 @@ export default function App() {
       <footer id="main-footer" className="bg-[#0a1e15] text-white border-t-2 border-[#D4A017]/30 mt-20 font-sans p-8 md:p-16 transition-colors duration-300">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8 pb-10 border-b border-[#1a3a2a]">
           
-          {/* Column 1: Website Branding & Philosophy. Occupies 3 grid cols on large screens. */}
-          <div className="lg:col-span-3 space-y-5">
+          {/* Column 1: Website Branding & Philosophy. Occupies 4 grid cols on large screens. */}
+          <div className="lg:col-span-4 space-y-5">
             <div 
               onClick={() => navigateTo('home')}
               className="flex items-center gap-3 cursor-pointer group"
@@ -941,14 +1017,14 @@ export default function App() {
             </div>
           </div>
 
-          {/* Column 2: Navigation Links (Home, About, Herbal Plants, Traditional Remedies) */}
-          <div className="lg:col-span-3 space-y-4 text-left">
-            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">{t("nav.footerNav") || "Navigation"}</h4>
-            <ul className="flex flex-col gap-3 text-xs md:text-sm font-semibold">
+          {/* Column 2: Quick Links (combines all navigation links precisely as requested) */}
+          <div className="lg:col-span-4 space-y-4 text-center flex flex-col items-center">
+            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans w-full text-center">{t("nav.quickLinks") || "Quick Links"}</h4>
+            <ul className="flex flex-col items-center gap-2.5 text-xs md:text-sm font-semibold">
               <li>
                 <button 
                   onClick={() => navigateTo('home')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.home") || "Home"}</span>
@@ -957,7 +1033,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('about')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.about") || "About"}</span>
@@ -966,7 +1042,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('plants')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.plants") || "Herbal Plants"}</span>
@@ -975,32 +1051,25 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('remedies')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.remedies") || "Traditional Remedies"}</span>
                 </button>
               </li>
-            </ul>
-          </div>
-
-          {/* Column 3: Community & Support (Blog, Ask DawaBot, Contact) */}
-          <div className="lg:col-span-3 space-y-4 text-left">
-            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">{t("nav.footerResearch") || "Community & Help"}</h4>
-            <ul className="flex flex-col gap-3 text-xs md:text-sm font-semibold">
               <li>
                 <button 
                   onClick={() => navigateTo('blog')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span>{t("nav.blog") || "Blog"}</span>
+                  <span>{t("nav.blog") || "Blogs"}</span>
                 </button>
               </li>
               <li>
                 <button 
                   onClick={() => navigateTo('chatbot')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span className="font-bold text-[#D4A017] hover:underline hover:decoration-wavy">{t("nav.askBot") || "Get Help"}</span>
@@ -1009,7 +1078,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('contact')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.contact") || "Contact"}</span>
@@ -1018,9 +1087,9 @@ export default function App() {
             </ul>
           </div>
 
-          {/* Column 4: Contact Information. Occupies 3 grid cols on large screens. */}
-          <div className="lg:col-span-3 space-y-4">
-            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">Nursery & Highlands</h4>
+          {/* Column 3: Contact Us information. Occupies 4 grid cols. */}
+          <div className="lg:col-span-4 space-y-4 text-left">
+            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">{t("nav.contactUs") || "Contact Us"}</h4>
             <div className="text-xs md:text-sm text-white space-y-3 font-normal">
               <p className="flex items-start gap-2 group text-white">
                 <MapPin className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-200" />
