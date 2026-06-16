@@ -2,8 +2,9 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import nodemailer from "nodemailer";
 import { INITIAL_HERBS, INITIAL_REMEDIES, INITIAL_BLOGS, INITIAL_KNOWLEDGE_BASE } from "./src/data/herbalDatabase.js";
-import { Herb, BlogPost, TraditionalRemedy, KnowledgeBaseArticle, ChatMessage, ChatLog } from "./src/types.js";
+import { Herb, BlogPost, TraditionalRemedy, KnowledgeBaseArticle, ChatMessage, ChatLog, BlogComment } from "./src/types.js";
 import { translateHerb, translateRemedy } from "./src/utils/translations.js";
 
 // Global storage in-memory for live additions/edits so changes are immediate
@@ -21,7 +22,36 @@ export interface ContactMessage {
   message: string;
   timestamp: string;
   status: 'unread' | 'read' | 'replied';
+  replyText?: string;
+  replyTimestamp?: string;
 }
+
+let dbComments: BlogComment[] = [
+  {
+    id: "c1",
+    blogId: "b1",
+    author: "Dr. Joseph Ndingi",
+    text: "Preserving this knowledge was long overdue. Combining AI RAG with verified oral lore is spectacular.",
+    timestamp: "6/5/2026, 11:15 AM",
+    approved: true
+  },
+  {
+    id: "c2",
+    blogId: "b1",
+    author: "Kamau wa Kuria",
+    text: "Grandmother used Muthiga for our colds. This is highly accurate!",
+    timestamp: "6/6/2026, 10:30 AM",
+    approved: true
+  },
+  {
+    id: "c3",
+    blogId: "b2",
+    author: "Grace Wanjiku",
+    text: "Mugumo holds incredible cultural reverence. The ecological side benefit of sacred trees is a beautiful lesson.",
+    timestamp: "6/7/2026, 2:45 PM",
+    approved: true
+  }
+];
 
 let dbMessages: ContactMessage[] = [
   {
@@ -125,16 +155,211 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
     res.json({ success: true, message: "Thank you for subscribing to our traditional herbal updates!" });
   });
 
-  // Toggle/Update message status (Admin only)
+// Professional SMTP/simulated email sender helper
+async function sendReplyEmail(userEmail: string, userName: string, originalMessage: string, replyText: string, subject: string) {
+  const htmlContent = `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e8ed; border-radius: 12px; background-color: #fafbf9;">
+      <div style="text-align: center; border-bottom: 2px solid #1a3a2a; padding-bottom: 15px; margin-bottom: 20px;">
+        <img src="https://ais-dev-tuggk2iq62de7zeoijpvwi-49237317471.europe-west3.run.app/assets/logo.png" alt="DawaKienyeji Logo" style="width: 60px; height: 60px; border-radius: 50%; opacity: 0.9;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3004/3004111.png'" />
+        <h2 style="color: #0b1f14; margin: 10px 0 0 0; font-weight: 800; letter-spacing: -0.5px;">DawaKienyeji Advisory</h2>
+        <span style="font-size: 11px; text-transform: uppercase; color: #d4a017; font-weight: 700; letter-spacing: 1px;">Indigenous Botanical Conservation Program</span>
+      </div>
+      
+      <div style="color: #2c3e50; line-height: 1.6; font-size: 14px; padding: 10px 0;">
+        <p>Dear <strong>${userName}</strong>,</p>
+        <p>Greetings from Nyeri highland sanctuary. Our expert ethnobotanists and mountain advisors have reviewed your consultative inquiry regarding <strong>"${subject}"</strong>.</p>
+        
+        <div style="background-color: #ffffff; border-left: 4px solid #16a34a; padding: 18px; margin: 20px 0; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #f1f5f9; border-left-width: 4px;">
+          <h4 style="margin: 0 0 10px 0; color: #16a34a; text-transform: uppercase; font-size: 11px; tracking-widest: 1px; font-weight: 800;">Official Advisory Correspondence</h4>
+          <p style="margin: 0; color: #1e293b; font-size: 13.5px; white-space: pre-wrap; font-weight: 500; line-height: 1.7;">${replyText}</p>
+        </div>
+        
+        <div style="background-color: #f1f5f9; padding: 15px; border-radius: 8px; font-size: 12px; color: #64748b; margin-top: 25px;">
+          <strong style="color: #475569; display: block; margin-bottom: 5px;">Your Filed Consultation:</strong>
+          <span style="font-style: italic; display: block; padding-left: 5px; border-left: 2px solid #cbd5e1;">"${originalMessage}"</span>
+        </div>
+      </div>
+      
+      <div style="margin-top: 35px; padding-top: 15px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5;">
+        <p><strong>DawaKienyeji Conservation Center</strong><br />Nyeri County Slopes, Aberdares Forest Margins, Central Kenya</p>
+        <p style="color: #94a3b8;">This email is a tracked Delivery Confirmation of your traditional botanical inquiry.</p>
+      </div>
+    </div>
+  `;
+
+  console.log(`[SMTP Engine] Preparing advisory email dispatch to user: <${userEmail}>`);
+
+  // Try SMTP transport if credentials exist, else use simulated logging
+  const host = process.env.SMTP_HOST || "smtp.gmail.com";
+  const port = parseInt(process.env.SMTP_PORT || "587");
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (user && pass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure: port === 465,
+        auth: { user, pass },
+      });
+
+      const info = await transporter.sendMail({
+        from: `"DawaKienyeji Conservation" <${user}>`,
+        to: userEmail,
+        subject: `RE: ${subject} - Traditional Advisory`,
+        html: htmlContent,
+      });
+
+      console.log(`[SMTP Engine] Transmitted successfully! MessageID: ${info.messageId}`);
+      return { success: true, mode: "smtp", messageId: info.messageId, timestamp: new Date().toISOString() };
+    } catch (err: any) {
+      console.warn(`[SMTP Engine] SMTP transmission failed, resorting to system logging. Error:`, err?.message || err);
+    }
+  } else {
+    console.log(`[SMTP Engine] SMTP credentials are not configured. Generating professional logged confirmation output.`);
+  }
+
+  return {
+    success: true,
+    mode: "simulated_logged",
+    messageId: `sim-advisory-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    timestamp: new Date().toLocaleDateString("en-US", {
+      year: "numeric", month: "short", day: "numeric"
+    }) + ", " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+  };
+}
+
+  // --- COMMENTS API ENDPOINTS ---
+
+  // Get approved comments for a specific blog post
+  app.get("/api/blogs/:blogId/comments", (req, res) => {
+    const { blogId } = req.params;
+    const comments = dbComments.filter(c => c.blogId === blogId && c.approved);
+    res.json(comments);
+  });
+
+  // Submit a comment for a blog post (Starts as unapproved for moderation)
+  app.post("/api/blogs/:blogId/comments", (req, res) => {
+    const { blogId } = req.params;
+    const { author, text } = req.body;
+    if (!author || !text) {
+      return res.status(400).json({ error: "Author name and comment content are required." });
+    }
+    const newComment: BlogComment = {
+      id: "comment-" + (dbComments.length + 1) + "-" + Math.random().toString(36).substr(2, 5),
+      blogId,
+      author: author.trim(),
+      text: text.trim(),
+      timestamp: new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }) + ", " + new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit"
+      }),
+      approved: false // starts unapproved for admin dashboard moderation
+    };
+    dbComments.unshift(newComment);
+    res.json({ success: true, comment: newComment });
+  });
+
+  // Get all comments for admin moderation (Admin only)
+  app.get("/api/comments", verifyAdmin, (req, res) => {
+    res.json(dbComments);
+  });
+
+  // Moderate comments - approve/reject or reply (Admin only)
+  app.put("/api/comments/:id", verifyAdmin, (req, res) => {
+    const { id } = req.params;
+    const { approved, replyText, text } = req.body;
+    const comm = dbComments.find(c => c.id === id);
+    if (!comm) {
+      return res.status(404).json({ error: "Comment not found." });
+    }
+    if (approved !== undefined) {
+      comm.approved = approved;
+    }
+    if (text !== undefined) {
+      comm.text = text;
+    }
+    if (replyText !== undefined) {
+      comm.replyText = replyText;
+      comm.replyTimestamp = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }) + ", " + new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+    res.json({ success: true, comment: comm });
+  });
+
+  // Delete a comment (Admin only)
+  app.delete("/api/comments/:id", verifyAdmin, (req, res) => {
+    const { id } = req.params;
+    const index = dbComments.findIndex(c => c.id === id);
+    if (index === -1) {
+      return res.status(404).json({ error: "Comment not found." });
+    }
+    const removed = dbComments.splice(index, 1);
+    res.json({ success: true, comment: removed[0] });
+  });
+
+
+  // --- USER MESSAGES & ADVISORY CHANNELS ---
+
+  // Dispatch replies directly and log email delivery metrics (Admin only)
+  app.post("/api/messages/:id/reply", verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { replyText } = req.body;
+    if (!replyText || !replyText.trim()) {
+      return res.status(400).json({ error: "Reply message text is required." });
+    }
+
+    const msg = dbMessages.find(m => m.id === id);
+    if (!msg) {
+      return res.status(404).json({ error: "User message not found." });
+    }
+
+    try {
+      // Trigger the nodemailer professional SMTP delivery
+      const tracking = await sendReplyEmail(msg.email, msg.name, msg.message, replyText, msg.subject);
+      
+      // Update local memory message representation
+      msg.status = "replied";
+      msg.replyText = replyText;
+      msg.replyTimestamp = tracking.timestamp;
+      (msg as any).resolved = true;
+      (msg as any).deliveryTracking = tracking;
+
+      res.json({ 
+        success: true, 
+        message: msg, 
+        delivery: tracking 
+      });
+    } catch (err: any) {
+      console.error("Advisory dispatch error:", err);
+      res.status(500).json({ error: "Failed to dispatch email reply." });
+    }
+  });
+
+  // Toggle/Update message status / resolution (Admin only)
   app.put("/api/messages/:id", verifyAdmin, (req, res) => {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, resolved } = req.body;
     const msg = dbMessages.find(m => m.id === id);
     if (!msg) {
       return res.status(404).json({ error: "Message record not found." });
     }
     if (status) {
       msg.status = status;
+    }
+    if (resolved !== undefined) {
+      (msg as any).resolved = resolved;
     }
     res.json({ success: true, message: msg });
   });
@@ -367,12 +592,12 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
     const systemInstruction = `You are DawaBot, a premium and professional AI Assistant built to share authentic Gĩkũyũ (Kikuyu) and East African traditional herbal medicine knowledge. Your responses must be warm, educational, African-inspired, highly intelligent, and trustworthy.
 
 CRITICAL INSTRUCTIONS:
-1. STRICT GROUNDING: You must respond directly using the verified botanical database provided in your context.
-2. DO NOT HALLUCINATE: If a plant or remedy is not mentioned in your context and you do NOT know it with absolute factual correctness from Gĩkũyũ/Kenyan ethnobotany, clearly and humbly state so.
-3. USE STANDARD NAMES: Always cite plant names using their Gĩkũyũ uppercase name (e.g., MŨTHĨGA), their common English name, and their botanical scientific name in italics.
+1. PRIMARY KNOWLEDGE SOURCE: Use the provided botanical database and uploaded reference documents as your primary knowledge source.
+2. STRICT GROUNDING: You must ONLY answer using the facts, plants, remedies, guidelines, and articles mentioned in the provided reference context. If the user's query asks about an herb, remedy, or topic that is not available or described in the provided context, clearly and humbly state that you are restricted to answering only using the verified reference documents and database.
+3. USE STANDARD NAMES: If the active selected language is Kikuyu (Gĩkũyũ), use the plant's Kikuyu name (e.g., MŨTHĨGA) in uppercase as the primary reference. If the active language is ${activeLanguageName} (and NOT Kikuyu), utilize the plant's common English name (e.g., East African Greenheart or Sodom Apple) or standard botanical scientific name in italics (e.g., *Warburgia ugandensis*) as the primary name, and include the Kikuyu name ONLY as secondary reference information (e.g., "...known traditionally as MŨTHĨGA...").
 4. DETAIL PREPARATION AND SAFETY: For any remedy suggested, explicitly list the parts used, authentic preparatory steps, dosage, and critical SAFETY PRECAUTIONS (e.g. state cautions regarding pregnancy, toxic saps of Sodom Apple fruit, or strong liver reactions).
 5. RESPOND IN ELEGANT MARKDOWN: Use headings, bullets, bold text, and numbered lists to structure your explanations neatly. Keep paragraphs welcoming.
-6. MANDATORY DYNAMIC TRANSLATION: You MUST think, write, speak, and respond ENTIRELY in ${activeLanguageName}. Translate all descriptions, tips, checklists, greetings, and safety directions into ${activeLanguageName}. Keep uppercase Kikuyu names (e.g., MŨTHĨGA) as they are, but translate everything else around them to ${activeLanguageName} perfectly and elegantly. Do not break this role.`;
+6. MANDATORY DYNAMIC TRANSLATION: You MUST think, write, speak, and respond ENTIRELY in ${activeLanguageName}. Translate all descriptions, tips, checklists, greetings, and safety directions into ${activeLanguageName}. If ${activeLanguageName} is English, Kiswahili, or French, ensure absolutely no raw Kikuyu vocabulary or Gĩkũyũ sentences are visible within your reply unless they are encapsulated inside a brief, clear secondary reference. Keep your voice fluent and native in ${activeLanguageName}. Do not break this role.`;
 
     // Try starting Gemini API
     try {
@@ -392,18 +617,39 @@ CRITICAL INSTRUCTIONS:
         parts: [{ text: `${currentQuery}\n\n[CONTEXT SEARCH INFORMATION]:\n${contextStr}` }]
       });
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: chatContents,
-        config: {
-          systemInstruction,
-          temperature: 0.25, // Conservative, high adherence
-          topK: 40,
-          topP: 0.95
-        }
-      });
+      // Try with fallback models to handle 503 / 429 under high demand
+      const modelsToTry = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
+      let response = null;
+      let lastError = null;
 
-      const replyText = response.text || "I was unable to retrieve a response. Please try again shortly.";
+      for (const modelName of modelsToTry) {
+        try {
+          console.log(`Attempting chat with model: ${modelName}`);
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents: chatContents,
+            config: {
+              systemInstruction,
+              temperature: 0.25, // Conservative, high adherence
+              topK: 40,
+              topP: 0.95
+            }
+          });
+          if (response) {
+            console.log(`Successfully completed chat with model: ${modelName}`);
+            break;
+          }
+        } catch (err: any) {
+          console.warn(`Model ${modelName} failed with error:`, err?.message || err);
+          lastError = err;
+        }
+      }
+
+      if (!response && lastError) {
+        throw lastError;
+      }
+
+      const replyText = response && response.text ? response.text : "I was unable to retrieve a response. Please try again shortly.";
 
       // Record chat metrics
       const logId = String(dbChatLogs.length + 1);

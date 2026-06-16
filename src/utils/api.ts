@@ -1,4 +1,4 @@
-import { Herb, BlogPost, TraditionalRemedy, KnowledgeBaseArticle, ChatMessage, ContactMessage } from "../types";
+import { Herb, BlogPost, TraditionalRemedy, KnowledgeBaseArticle, ChatMessage, ContactMessage, BlogComment } from "../types";
 
 export async function fetchPlants(): Promise<Herb[]> {
   const res = await fetch("/api/plants");
@@ -172,15 +172,93 @@ export async function postMessage(message: Omit<ContactMessage, 'id' | 'timestam
   return data.message;
 }
 
-export async function updateMessageStatus(id: string, status: 'unread' | 'read' | 'replied', adminPin: string): Promise<boolean> {
+export async function updateMessageStatus(id: string, status: 'unread' | 'read' | 'replied', adminPin: string, resolved?: boolean): Promise<boolean> {
   const res = await fetch(`/api/messages/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
       "x-admin-pin": adminPin,
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, resolved }),
   });
   if (!res.ok) throw new Error("Failed to update inquiry status.");
+  return true;
+}
+
+export async function replyToMessage(id: string, replyText: string, adminPin: string): Promise<{ success: boolean; message: any; delivery: any }> {
+  const res = await fetch(`/api/messages/${id}/reply`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-pin": adminPin,
+    },
+    body: JSON.stringify({ replyText }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to dispatch email reply.");
+  }
+  return res.json();
+}
+
+// --- COMMENTS frontend API handlers ---
+
+export async function fetchBlogComments(blogId: string): Promise<BlogComment[]> {
+  const res = await fetch(`/api/blogs/${blogId}/comments`);
+  if (!res.ok) throw new Error("Failed to fetch blog discussions.");
+  return res.json();
+}
+
+export async function addBlogComment(blogId: string, author: string, text: string): Promise<BlogComment> {
+  const res = await fetch(`/api/blogs/${blogId}/comments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ author, text }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.error || "Failed to post comment.");
+  }
+  const data = await res.json();
+  return data.comment;
+}
+
+export async function fetchAllComments(adminPin: string): Promise<BlogComment[]> {
+  const res = await fetch("/api/comments", {
+    headers: {
+      "x-admin-pin": adminPin,
+    },
+  });
+  if (!res.ok) throw new Error("Failed to retrieve blog comments roster.");
+  return res.json();
+}
+
+export async function moderateComment(
+  id: string, 
+  params: { approved?: boolean; replyText?: string; text?: string }, 
+  adminPin: string
+): Promise<boolean> {
+  const res = await fetch(`/api/comments/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-pin": adminPin,
+    },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error("Failed to moderate comment.");
+  return true;
+}
+
+export async function deleteComment(id: string, adminPin: string): Promise<boolean> {
+  const res = await fetch(`/api/comments/${id}`, {
+    method: "DELETE",
+    headers: {
+      "x-admin-pin": adminPin,
+    },
+  });
+  if (!res.ok) throw new Error("Failed to delete comment.");
   return true;
 }

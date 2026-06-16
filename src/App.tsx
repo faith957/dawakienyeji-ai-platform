@@ -11,7 +11,6 @@ import { getPlantImage } from "./utils/herbImages";
 import LanguageSelector from "./components/LanguageSelector";
 import PlantsCatalog from "./components/PlantsCatalog";
 import TraditionalRemedies from "./components/TraditionalRemedies";
-import ResearchKnowledge from "./components/ResearchKnowledge";
 import BlogFeed from "./components/BlogFeed";
 
 import heroSlide1 from "./assets/images/hero_slide_1_1780659974970.png";
@@ -25,7 +24,7 @@ import AdminDashboard from "./components/AdminDashboard";
 type PageRoute = 'home' | 'about' | 'plants' | 'remedies' | 'knowledge' | 'blog' | 'contact' | 'admin' | 'chatbot';
 
 export default function App() {
-  const { t, translateHerb } = useLanguage();
+  const { t, translateHerb, language } = useLanguage();
   const [currentRoute, setCurrentRoute] = useState<PageRoute>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedPlantForModal, setSelectedPlantForModal] = useState<any | null>(null);
@@ -46,6 +45,7 @@ export default function App() {
       titleKey: "slides.1.title",
       subtitleKey: "slides.1.subtitle",
       bgImage: heroSlide1,
+      fallbackImage: "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=2000&q=80",
       btn1Key: "slides.1.btn1",
       btn1Route: "plants" as PageRoute,
       btn2Key: "slides.1.btn2",
@@ -56,8 +56,9 @@ export default function App() {
       titleKey: "slides.2.title",
       subtitleKey: "slides.2.subtitle",
       bgImage: heroSlide2,
+      fallbackImage: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=2000&q=80",
       btn1Key: "slides.2.btn1",
-      btn1Route: "knowledge" as PageRoute,
+      btn1Route: "remedies" as PageRoute,
       btn2Key: "slides.2.btn2",
       btn2Route: "about" as PageRoute,
     },
@@ -66,6 +67,7 @@ export default function App() {
       titleKey: "slides.3.title",
       subtitleKey: "slides.3.subtitle",
       bgImage: heroSlide3,
+      fallbackImage: "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&w=2000&q=80",
       btn1Key: "slides.3.btn1",
       btn1Route: "chatbot" as PageRoute,
       btn2Key: "slides.3.btn2",
@@ -76,10 +78,11 @@ export default function App() {
       titleKey: "slides.4.title",
       subtitleKey: "slides.4.subtitle",
       bgImage: heroSlide4,
+      fallbackImage: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=2000&q=80",
       btn1Key: "slides.4.btn1",
       btn1Route: "remedies" as PageRoute,
       btn2Key: "slides.4.btn2",
-      btn2Route: "knowledge" as PageRoute,
+      btn2Route: "about" as PageRoute,
     }
   ];
 
@@ -134,121 +137,127 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50/45 bg-grain text-emerald-950 flex flex-col font-sans">
+    <div className="min-h-screen bg-stone-50/45 bg-grain text-emerald-950 flex flex-col font-sans selection:bg-emerald-200 selection:text-emerald-905">
       
       {/* Top Header Navigation Panel */}
-      <header id="main-header" className="sticky top-0 bg-stone-50/80 backdrop-blur-md border-b border-stone-200/55 z-40 transition duration-200">
-        <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <header id="main-header" className="sticky top-0 bg-stone-50/85 backdrop-blur-md border-b border-stone-200/40 z-40 transition-all duration-300 shadow-sm shadow-stone-200/20">
+        {/* Subtle decorative nature line */}
+        <div className="h-[3px] w-full bg-gradient-to-r from-emerald-800 via-[#D4A017]/80 to-emerald-900" />
+        
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           
           <div 
             onClick={() => navigateTo('home')}
-            className="flex items-center gap-2 cursor-pointer group"
+            className="flex items-center gap-3.5 cursor-pointer group"
           >
-            <div className="w-10 h-10 overflow-hidden rounded-full shadow bg-emerald-950 flex items-center justify-center p-0.5 border border-emerald-800/20 transform group-hover:scale-105 transition duration-300">
-              <img 
-                src="https://i.postimg.cc/VkwT0rck/Chat-GPT-Image-Jun-7-2026-09-17-26-PM.png" 
-                alt="DawaKienyeji Logo" 
-                className="w-full h-full object-cover rounded-full animate-pulse-slow"
-                referrerPolicy="no-referrer"
-              />
+            <div className="relative">
+              <div className="absolute inset-0 bg-emerald-800/15 rounded-full blur group-hover:scale-110 transition duration-300" />
+              <div className="relative w-11 h-11 overflow-hidden rounded-full shadow-md bg-emerald-950 flex items-center justify-center p-0.5 border-2 border-amber-500/20 transform group-hover:rotate-[15deg] transition duration-500">
+                <img 
+                  src="https://i.postimg.cc/VkwT0rck/Chat-GPT-Image-Jun-7-2026-09-17-26-PM.png" 
+                  alt="DawaKienyeji Logo" 
+                  className="w-full h-full object-cover rounded-full"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
             </div>
             <div>
-              <span className="font-extrabold text-lg tracking-tight font-sans text-emerald-950 block">DawaKienyeji</span>
+              <span className="font-extrabold text-xl tracking-tight font-sans text-emerald-950 block transition group-hover:text-emerald-800">
+                Dawa<span className="text-[#D4A017] font-semibold">Kienyeji</span>
+              </span>
+              <span className="text-[9px] uppercase tracking-wider text-stone-400 block -mt-1 font-mono font-bold">Heritage Preservation</span>
             </div>
           </div>
 
           {/* Desktop Nav menu */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-stone-600/90 tracking-wide uppercase">
+          <nav className="hidden lg:flex items-center gap-7 text-[11px] font-extrabold text-stone-600/85 tracking-widest uppercase">
             <button 
               id="nav-home" 
               onClick={() => navigateTo('home')}
-              className={`hover:text-emerald-950 transition cursor-pointer py-1 border-b-2 ${currentRoute === 'home' ? 'border-emerald-700 text-emerald-950' : 'border-transparent'}`}
+              className={`hover:text-emerald-950 transition cursor-pointer py-1.5 relative flex items-center gap-1.5 ${currentRoute === 'home' ? 'text-emerald-950 font-black' : 'text-stone-550'}`}
             >
-              {t("nav.home")}
+              <span>{t("nav.home")}</span>
+              {currentRoute === 'home' && (
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+              )}
             </button>
             <button 
               id="nav-about" 
               onClick={() => navigateTo('about')}
-              className={`hover:text-emerald-950 transition cursor-pointer py-1 border-b-2 ${currentRoute === 'about' ? 'border-emerald-700 text-emerald-950' : 'border-transparent'}`}
+              className={`hover:text-emerald-950 transition cursor-pointer py-1.5 relative flex items-center gap-1.5 ${currentRoute === 'about' ? 'text-emerald-950 font-black' : 'text-stone-550'}`}
             >
-              About
+              <span>{t("nav.about") || "About"}</span>
+              {currentRoute === 'about' && (
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+              )}
             </button>
             <button 
               id="nav-plants" 
               onClick={() => navigateTo('plants')}
-              className={`hover:text-emerald-950 transition cursor-pointer py-1 border-b-2 ${currentRoute === 'plants' ? 'border-emerald-700 text-emerald-950' : 'border-transparent'}`}
+              className={`hover:text-emerald-950 transition cursor-pointer py-1.5 relative flex items-center gap-1.5 ${currentRoute === 'plants' ? 'text-emerald-950 font-black' : 'text-stone-550'}`}
             >
-              {t("nav.plants")}
+              <span>{t("nav.plants")}</span>
+              {currentRoute === 'plants' && (
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+              )}
             </button>
-            <div className="relative group py-2">
-              <button 
-                id="nav-remedies" 
-                onClick={() => navigateTo('remedies')}
-                className={`hover:text-emerald-950 transition cursor-pointer py-1 border-b-2 flex items-center gap-1 ${
-                  currentRoute === 'remedies' || currentRoute === 'knowledge' ? 'border-emerald-700 text-emerald-950' : 'border-transparent'
-                }`}
-              >
-                <span>{t("nav.remedies")}</span>
-                <span className="text-[9px] text-stone-400 font-sans">▼</span>
-              </button>
-              
-              {/* Dropdown Menu on hover */}
-              <div className="absolute top-full left-0 hidden group-hover:block pt-1.5 w-48 z-50 bg-white border border-stone-200/80 shadow-xl rounded-xl p-1.5 animate-fade-in">
-                <button
-                  onClick={() => navigateTo('remedies')}
-                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-stone-50 rounded-lg text-stone-700 transition font-bold"
-                >
-                  {t("nav.remedies")}
-                </button>
-                <button
-                  id="nav-dropdown-knowledge"
-                  onClick={() => navigateTo('knowledge')}
-                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-stone-50 rounded-lg text-stone-700 font-bold transition flex items-center justify-between border-t border-stone-100 pt-2 mt-1"
-                >
-                  <span>{t("nav.knowledge")}</span>
-                  <span className="bg-emerald-50 text-emerald-800 text-[8px] font-extrabold px-1.5 py-0.2 rounded-full border border-emerald-105">RAG</span>
-                </button>
-              </div>
-            </div>
+            <button 
+              id="nav-remedies" 
+              onClick={() => navigateTo('remedies')}
+              className={`hover:text-emerald-950 transition cursor-pointer py-1.5 relative flex items-center gap-1.5 ${currentRoute === 'remedies' ? 'text-emerald-950 font-black' : 'text-stone-500'}`}
+            >
+              <span>{t("nav.remedies")}</span>
+              {currentRoute === 'remedies' && (
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+              )}
+            </button>
 
             <button 
               id="nav-blog" 
               onClick={() => navigateTo('blog')}
-              className={`hover:text-emerald-950 transition cursor-pointer py-1 border-b-2 ${currentRoute === 'blog' ? 'border-emerald-700 text-emerald-950' : 'border-transparent'}`}
+              className={`hover:text-emerald-950 transition cursor-pointer py-1.5 relative flex items-center gap-1.5 ${currentRoute === 'blog' ? 'text-emerald-950 font-black' : 'text-stone-550'}`}
             >
-              {t("nav.blog")}
+              <span>{t("nav.blog")}</span>
+              {currentRoute === 'blog' && (
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+              )}
             </button>
             <button 
               id="nav-contact" 
               onClick={() => navigateTo('contact')}
-              className={`hover:text-emerald-950 transition cursor-pointer py-1 border-b-2 ${currentRoute === 'contact' ? 'border-emerald-700 text-emerald-950' : 'border-transparent'}`}
+              className={`hover:text-emerald-950 transition cursor-pointer py-1.5 relative flex items-center gap-1.5 ${currentRoute === 'contact' ? 'text-emerald-950 font-black' : 'text-stone-550'}`}
             >
-              {t("nav.contact")}
+              <span>{t("nav.contact")}</span>
+              {currentRoute === 'contact' && (
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+              )}
             </button>
           </nav>
 
           {/* Top-right CTAs: LanguageSelector, Ask DawaBot & Sign Up */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {/* Elegant Global Multilingual Language Selector dropdown */}
             <LanguageSelector />
 
             <button
               id="ask-dawabot-btn-header"
               onClick={() => navigateTo('chatbot')}
-              className="py-2 px-3.5 bg-emerald-950 hover:bg-emerald-800 active:bg-emerald-900 border border-emerald-900/40 text-emerald-100 rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5 shadow"
+              className="py-2 px-4 bg-emerald-950 hover:bg-emerald-900 active:bg-emerald-950 border border-emerald-900/50 text-emerald-100 rounded-full text-[11px] font-bold tracking-wider uppercase transition shadow-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] duration-150 cursor-pointer"
             >
-              <Bot className="w-4 h-4 text-emerald-300 animate-pulse" />
-              <span className="hidden sm:inline">{t("nav.askBot")}</span>
-              <span className="inline sm:hidden">Get Help</span>
+              <div className="relative flex items-center justify-center">
+                <span className="absolute animate-ping inline-flex h-1.5 w-1.5 rounded-full bg-amber-400 opacity-75" />
+                <Bot className="w-4 h-4 text-emerald-300 relative" />
+              </div>
+              <span>{t("nav.askBot")}</span>
             </button>
 
             <button
               id="signup-btn-header"
               onClick={() => navigateTo('admin')}
-              className={`py-2 px-3.5 border text-xs font-bold rounded-full transition shadow-sm ${
+              className={`py-2 px-4 transition border text-[11px] font-bold tracking-wider uppercase rounded-full shadow-sm hover:scale-[1.02] active:scale-[0.98] duration-150 cursor-pointer ${
                 currentRoute === 'admin' 
-                  ? 'bg-emerald-600 border-emerald-700 text-white shadow-inner' 
-                  : 'bg-white border-stone-300 text-stone-700 hover:bg-stone-50'
+                  ? 'bg-[#D4A017] border-[#D4A017] text-emerald-950 font-black shadow-inner' 
+                  : 'bg-white border-stone-250/90 text-stone-700 hover:bg-stone-50'
               }`}
             >
               {t("nav.signUp")}
@@ -257,7 +266,7 @@ export default function App() {
             {/* Hamburger Trigger */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-emerald-950 hover:bg-stone-100 rounded-lg lg:hidden"
+              className="p-2 text-emerald-950 bg-stone-100/50 hover:bg-stone-100 border border-stone-200/40 rounded-full lg:hidden transition cursor-pointer"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -276,10 +285,9 @@ export default function App() {
             className="lg:hidden bg-stone-100 border-b border-stone-200 text-emerald-950 flex flex-col p-4 space-y-3 font-semibold text-xs tracking-wider uppercase"
           >
             <button onClick={() => navigateTo('home')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.home")}</button>
-            <button onClick={() => navigateTo('about')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">About</button>
+            <button onClick={() => navigateTo('about')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.about") || "About"}</button>
             <button onClick={() => navigateTo('plants')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.plants")}</button>
             <button onClick={() => navigateTo('remedies')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.remedies")}</button>
-            <button onClick={() => navigateTo('knowledge')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.knowledge")}</button>
             <button onClick={() => navigateTo('blog')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.blog")}</button>
             <button onClick={() => navigateTo('contact')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.contact")}</button>
             <button onClick={() => navigateTo('admin')} className="py-2 text-left hover:text-emerald-700">{t("nav.admin")}</button>
@@ -294,7 +302,7 @@ export default function App() {
           <div className="space-y-16">
             
             {/* HERO SLIDER SECTION */}
-            <section id="hero-carousel" className="mx-4 relative overflow-hidden rounded-[36px] h-[520px] md:h-[580px] bg-stone-950 shadow-2xl flex items-center group">
+            <section id="hero-carousel" className="mx-4 relative overflow-hidden rounded-[40px] h-[540px] md:h-[620px] bg-stone-950 shadow-2xl flex items-center group border border-stone-200/10">
               
               {/* Background Images with Zoom Parallax Effect and Dark Greens Overlays */}
               <div className="absolute inset-0 w-full h-full z-0 select-none">
@@ -305,73 +313,84 @@ export default function App() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      transition={{ duration: 0.8 }}
+                      transition={{ duration: 0.9, ease: "easeInOut" }}
                       className="absolute inset-0 w-full h-full"
                     >
-                      {/* Dark gradient mask */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-stone-950/90 via-emerald-950/70 to-stone-950/45 z-10" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-transparent to-transparent z-10" />
+                      {/* Dual-layered professional ambient masks for perfect readability */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-stone-950 via-stone-950/75 to-transparent z-10" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/20 to-transparent z-10" />
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(26,47,26,0.15),transparent)] z-10" />
                       
                       <motion.img
                         src={slide.bgImage}
                         alt="African traditional herbs"
                         referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover origin-center"
-                        initial={{ scale: 1.05 }}
+                        className="w-full h-full object-cover origin-center filter brightness-[0.85] contrast-[1.05]"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (target.src !== slide.fallbackImage) {
+                            target.src = slide.fallbackImage;
+                          }
+                        }}
+                        initial={{ scale: 1.08 }}
                         animate={{ scale: 1 }}
-                        transition={{ duration: 7, ease: "linear" }}
+                        transition={{ duration: 7, ease: "easeOut" }}
                       />
                     </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
 
-              {/* Floating Leaf Ambient Deco elements */}
-              <div className="absolute right-10 bottom-10 opacity-10 pointer-events-none transform translate-x-10 scale-110 select-none z-10 animate-leaf-hover">
-                <Leaf className="w-64 h-64 text-emerald-100" />
+              {/* Floating Leaf Ambient Deco elements in absolute coordinates */}
+              <div className="absolute right-12 bottom-12 opacity-5 pointer-events-none transform translate-x-10 scale-110 select-none z-10 animate-leaf-hover">
+                <Leaf className="w-72 h-72 text-emerald-100" />
               </div>
 
               {/* Foreground slide text copy & container */}
-              <div className="w-full max-w-3xl px-6 md:px-16 z-20 relative text-white">
+              <div className="w-full max-w-4xl px-8 md:px-20 z-20 relative text-white">
                 <AnimatePresence mode="wait">
                   {heroSlides.map((slide, idx) => idx === currentSlide && (
                     <motion.div
                       key={slide.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.5, ease: "easeOut" }}
-                      className="space-y-6"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                      className="space-y-6 md:space-y-8 text-left"
                     >
                       {/* Glassmorphism Category Header Tag */}
-                      <span className="inline-flex items-center gap-1.5 text-[10px] md:text-xs tracking-widest uppercase font-extrabold text-emerald-300 px-3.5 py-1.5 bg-white/10 backdrop-blur-md rounded-full border border-white/10 shadow-sm">
-                        <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-400" />
-                        {t("nav.heroTitle")}
-                      </span>
+                      <div className="inline-flex items-center gap-2.5">
+                        <span className="inline-flex items-center gap-1.5 text-[10px] md:text-xs tracking-wider uppercase font-extrabold text-amber-300 px-4 py-1.5 bg-white/5 backdrop-blur-md rounded-full border border-white/10 shadow-sm">
+                          <Sparkles className="w-3.5 h-3.5 animate-pulse text-[#D4A017]" />
+                          {t("nav.heroTitle")}
+                        </span>
+                        <div className="h-px w-10 bg-amber-300/30" />
+                        <span className="text-[11px] font-mono font-bold text-stone-400 tracking-widest">0{slide.id} / 04</span>
+                      </div>
 
                       {/* Display Headings with deep bold typeface */}
-                      <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-white drop-shadow-md">
+                      <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-white drop-shadow-md">
                         {t(slide.titleKey)}
                       </h1>
 
                       {/* Descriptive supporting line */}
-                      <p className="text-stone-200 text-xs md:text-base leading-relaxed font-normal max-w-2xl drop-shadow">
+                      <p className="text-stone-300 text-xs md:text-base leading-relaxed font-medium max-w-2xl drop-shadow text-stone-200/90">
                         {t(slide.subtitleKey)}
                       </p>
 
                       {/* Styled Action CTA buttons */}
-                      <div className="pt-4 flex flex-wrap gap-3.5">
+                      <div className="pt-4 flex flex-wrap gap-4">
                         <button
                           onClick={() => navigateTo(slide.btn1Route)}
-                          className="py-3 px-6 md:py-3.5 md:px-8 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-2xl font-black text-xs md:text-sm shadow-lg hover:shadow-emerald-900/30 transition-all duration-150 hover:scale-[1.02] cursor-pointer"
+                          className="py-3 px-7 md:py-3.5 md:px-9 bg-[#D4A017] hover:bg-[#c09115] active:bg-[#e0b020] text-emerald-950 rounded-2xl font-black text-xs md:text-sm shadow-lg hover:shadow-[#D4A017]/10 transition-all duration-200 hover:scale-[1.03] cursor-pointer"
                         >
                           {t(slide.btn1Key)}
                         </button>
                         <button
                           onClick={() => navigateTo(slide.btn2Route)}
-                          className="py-3 px-6 md:py-3.5 md:px-8 bg-white/10 hover:bg-white/20 active:bg-white/25 text-white border border-white/15 hover:border-white rounded-2xl font-black text-xs md:text-sm backdrop-blur-sm transition-all duration-150 hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer"
+                          className="py-3 px-7 md:py-3.5 md:px-9 bg-white/10 hover:bg-white/15 active:bg-white/20 text-white border border-white/15 hover:border-white/30 rounded-2xl font-black text-xs md:text-sm backdrop-blur-md transition-all duration-200 hover:scale-[1.03] flex items-center justify-center gap-2.5 cursor-pointer"
                         >
-                          {slide.btn2Route === "chatbot" && <Bot className="w-4 h-4 text-emerald-300" />}
+                          {slide.btn2Route === "chatbot" && <Bot className="w-4 h-4 text-amber-305" />}
                           {t(slide.btn2Key)}
                         </button>
                       </div>
@@ -383,27 +402,28 @@ export default function App() {
               {/* Manual Arrow Nav buttons */}
               <button
                 onClick={() => setCurrentSlide((prev) => (prev === 0 ? 3 : prev - 1))}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/40 hover:bg-emerald-950 border border-white/10 hover:border-emerald-500/30 text-white hover:text-emerald-300 transition-all z-30 opacity-0 group-hover:opacity-100 hover:scale-105 duration-300 cursor-pointer shadow"
+                className="absolute left-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/45 hover:bg-emerald-950 border border-white/10 hover:border-amber-400/30 text-white hover:text-amber-300 transition-all z-35 opacity-0 group-hover:opacity-100 hover:scale-110 duration-300 cursor-pointer shadow"
                 aria-label="Previous Slide"
               >
                 <ChevronLeft className="w-5 h-5 md:w-6 h-6" />
               </button>
               <button
                 onClick={() => setCurrentSlide((prev) => (prev === 3 ? 0 : prev + 1))}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/40 hover:bg-emerald-950 border border-white/10 hover:border-emerald-500/30 text-white hover:text-emerald-300 transition-all z-30 opacity-0 group-hover:opacity-100 hover:scale-105 duration-300 cursor-pointer shadow"
+                className="absolute right-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/45 hover:bg-emerald-950 border border-white/10 hover:border-amber-400/30 text-white hover:text-amber-300 transition-all z-35 opacity-0 group-hover:opacity-100 hover:scale-110 duration-300 cursor-pointer shadow"
                 aria-label="Next Slide"
               >
                 <ChevronRight className="w-5 h-5 md:w-6 h-6" />
               </button>
 
               {/* Active Slide Bullet Pagination Indicators */}
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2.5 z-30 bg-black/35 backdrop-blur-md px-3.5 py-2 rounded-full border border-white/5 select-none">
+              <div className="absolute bottom-8 left-12 flex items-center gap-3 z-30 bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/5 select-none text-white">
+                <span className="text-[10px] font-mono font-bold text-stone-400 mr-1">TABS</span>
                 {heroSlides.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentSlide(index)}
                     className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                      index === currentSlide ? "w-6 bg-emerald-400" : "w-2 bg-stone-500/60 hover:bg-stone-400"
+                      index === currentSlide ? "w-7 bg-amber-400 shadow-sm" : "w-2 bg-stone-500/50 hover:bg-stone-400"
                     }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
@@ -413,77 +433,139 @@ export default function App() {
             </section>
 
             {/* FEATURES SECTION Display cards */}
-            <section id="features" className="mx-4 space-y-6">
-              <div className="text-center max-w-xl mx-auto space-y-2">
-                <span className="text-[10px] bg-emerald-50 text-emerald-800 font-extrabold uppercase px-2 py-1 rounded">Capabilities</span>
-                <h2 className="text-2xl md:text-3xl font-extrabold text-stone-900 tracking-tight">Our Platform Core Pillars</h2>
-                <p className="text-xs md:text-sm text-stone-500 font-normal">A modern library where thousand-year African healing remedies shake hands with dynamic vector databases.</p>
+            <section id="features" className="mx-4 space-y-8">
+              <div className="text-center max-w-2xl mx-auto space-y-3.5">
+                <span className="inline-flex items-center gap-1.5 text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-100 font-extrabold uppercase px-3.5 py-1.5 rounded-full tracking-wider">
+                  <TreePine className="w-3.5 h-3.5" />
+                  {t("home.capabilities") || "Capabilities"}
+                </span>
+                <h2 className="text-2xl md:text-4xl font-extrabold text-stone-900 tracking-tight leading-none">
+                  {t("home.pillarsTitle") || "Our Platform Core Pillars"}
+                </h2>
+                <div className="h-[2px] w-12 bg-[#D4A017] mx-auto mt-2" />
+                <p className="text-xs md:text-sm text-stone-500 font-medium max-w-lg mx-auto leading-relaxed">
+                  {t("home.pillarsSub") || "A modern library where thousand-year African healing remedies shake hands with dynamic vector databases."}
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="p-6 bg-white border border-stone-200 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition">
-                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-800 inline-block">
-                    <Database className="w-5 h-5 text-emerald-700" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                {/* Pillar 1 */}
+                <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">01</div>
+                  <div className="space-y-4">
+                    <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
+                      <Database className="w-5 h-5 text-emerald-700 group-hover:text-amber-305" />
+                    </div>
+                    <h3 className="font-extrabold text-stone-900 text-[15px] uppercase tracking-wide">
+                      {t("home.pillarDb") || "Medicinal Plants Database"}
+                    </h3>
+                    <p className="text-xs text-stone-500 leading-relaxed font-normal">
+                      {t("home.pillarDbText") || "Meticulously mapped indigenous flora profile indexes with botanical names, Gĩkũyũ names, and harvesting periods."}
+                    </p>
                   </div>
-                  <h3 className="font-extrabold text-stone-900 text-sm">Medicinal Plants Database</h3>
-                  <p className="text-xs text-stone-500 leading-relaxed font-normal">Meticulously mapped indigenous flora profile indexes with botanical names, Gĩkũyũ names, and harvesting periods.</p>
                 </div>
 
-                <div className="p-6 bg-white border border-stone-200 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition">
-                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-800 inline-block">
-                    <BookOpen className="w-5 h-5 text-emerald-700" />
+                {/* Pillar 2 */}
+                <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">02</div>
+                  <div className="space-y-4">
+                    <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
+                      <BookOpen className="w-5 h-5 text-emerald-700 group-hover:text-amber-305" />
+                    </div>
+                    <h3 className="font-extrabold text-stone-900 text-[15px] uppercase tracking-wide">
+                      {t("home.pillarRem") || "Traditional Remedies"}
+                    </h3>
+                    <p className="text-xs text-stone-500 leading-relaxed font-normal">
+                      {t("home.pillarRemText") || "Symptom-driven preparation recipes detail how grandparent healers prepared bark, roots, and flowers."}
+                    </p>
                   </div>
-                  <h3 className="font-extrabold text-stone-900 text-sm">Traditional Remedies</h3>
-                  <p className="text-xs text-stone-500 leading-relaxed font-normal">Symptom-driven preparation recipes detail how grandparent healers prepared bark, roots, and flowers.</p>
                 </div>
 
-                <div className="p-6 bg-white border border-stone-200 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition">
-                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-800 inline-block">
-                    <BrainCircuit className="w-5 h-5 text-emerald-700" />
+                {/* Pillar 3 */}
+                <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">03</div>
+                  <div className="space-y-4">
+                    <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
+                      <BrainCircuit className="w-5 h-5 text-emerald-700 group-hover:text-amber-305" />
+                    </div>
+                    <h3 className="font-extrabold text-stone-900 text-[15px] uppercase tracking-wide">
+                      {t("home.pillarBot") || "AI Herbal Assistant"}
+                    </h3>
+                    <p className="text-xs text-stone-500 leading-relaxed font-normal">
+                      {t("home.pillarBotText") || "Talk with DawaBot, a strict RAG-powered chatbot with strict context constraints to avoid model hallucinations."}
+                    </p>
                   </div>
-                  <h3 className="font-extrabold text-stone-900 text-sm">AI Herbal Assistant</h3>
-                  <p className="text-xs text-stone-500 leading-relaxed font-normal">Talk with DawaBot, a strict RAG-powered chatbot with strict context constraints to avoid model hallucinations.</p>
                 </div>
 
-                <div className="p-6 bg-white border border-stone-200 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition">
-                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-800 inline-block">
-                    <Landmark className="w-5 h-5 text-emerald-700" />
+                {/* Pillar 4 */}
+                <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">04</div>
+                  <div className="space-y-4">
+                    <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
+                      <Landmark className="w-5 h-5 text-emerald-700 group-hover:text-amber-305" />
+                    </div>
+                    <h3 className="font-extrabold text-stone-900 text-[15px] uppercase tracking-wide">
+                      {t("home.pillarEth") || "Ethnobotanical Knowledge"}
+                    </h3>
+                    <p className="text-xs text-stone-500 leading-relaxed font-normal">
+                      {t("home.pillarEthText") || "Preserving maternal milk, sacred Mũgũmo altars, and deep central Kenya highland cultural customs."}
+                    </p>
                   </div>
-                  <h3 className="font-extrabold text-stone-900 text-sm">Ethnobotanical Knowledge</h3>
-                  <p className="text-xs text-stone-500 leading-relaxed font-normal">Preserving maternal milk, sacred Mũgũmo altars, and deep central Kenya highland cultural customs.</p>
                 </div>
 
-                <div className="p-6 bg-white border border-stone-200 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition">
-                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-800 inline-block">
-                    <Users className="w-5 h-5 text-emerald-700" />
+                {/* Pillar 5 */}
+                <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">05</div>
+                  <div className="space-y-4">
+                    <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
+                      <Users className="w-5 h-5 text-emerald-700 group-hover:text-amber-305" />
+                    </div>
+                    <h3 className="font-extrabold text-stone-900 text-[15px] uppercase tracking-wide">
+                      {t("home.pillarComm") || "Community Learning"}
+                    </h3>
+                    <p className="text-xs text-stone-500 leading-relaxed font-normal">
+                      {t("home.pillarCommText") || "Active review columns and comments where readers can compare oral reports across mountain ridges."}
+                    </p>
                   </div>
-                  <h3 className="font-extrabold text-stone-900 text-sm">Community Learning</h3>
-                  <p className="text-xs text-stone-500 leading-relaxed font-normal">Active review columns and comments where readers can compare oral reports across mountain ridges.</p>
                 </div>
 
-                <div className="p-6 bg-white border border-stone-200 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition">
-                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-800 inline-block">
-                    <Globe className="w-5 h-5 text-emerald-700" />
+                {/* Pillar 6 */}
+                <div className="group p-8 bg-white border border-stone-200/80 rounded-[2rem] space-y-5 shadow-sm hover:shadow-md hover:border-emerald-700/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+                  <div className="absolute right-6 top-6 font-mono text-2xl font-black text-stone-200/60 select-none pointer-events-none group-hover:text-[#D4A017] group-hover:scale-110 transition duration-300">06</div>
+                  <div className="space-y-4">
+                    <div className="p-3 bg-emerald-50 text-emerald-800 rounded-2xl inline-block border border-emerald-100/50 group-hover:bg-emerald-950 group-hover:text-white transition duration-200">
+                      <Globe className="w-5 h-5 text-emerald-700 group-hover:text-amber-303" />
+                    </div>
+                    <h3 className="font-extrabold text-stone-900 text-[15px] uppercase tracking-wide">
+                      {t("home.pillarArch") || "Research Archive"}
+                    </h3>
+                    <p className="text-xs text-stone-500 leading-relaxed font-normal font-sans">
+                      {t("home.pillarArchText") || "Contains clinical reviews, sustainable forest vertical-stripping diagram guides, and safety tables."}
+                    </p>
                   </div>
-                  <h3 className="font-extrabold text-stone-900 text-sm">Research Archive</h3>
-                  <p className="text-xs text-stone-500 leading-relaxed font-normal font-sans">Contains clinical reviews, sustainable forest vertical-stripping diagram guides, and safety tables.</p>
                 </div>
               </div>
             </section>
 
+
             {/* POPULAR HERBS SECTION */}
-            <section id="popular-herbs" className="mx-4 space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <section id="popular-herbs" className="mx-4 space-y-8 text-left">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-stone-200/50 pb-6">
                 <div>
-                  <span className="text-[10px] bg-amber-50 text-amber-800 font-extrabold uppercase px-2 py-1 rounded">Heritage Profiles</span>
-                  <h2 className="text-2xl md:text-3xl font-extrabold text-stone-900 mt-1 tracking-tight font-sans">Featured Medicinal Flora</h2>
+                  <span className="inline-flex items-center gap-1 text-[10px] bg-amber-100/60 text-amber-900 border border-amber-200 font-extrabold uppercase px-2.5 py-1.5 rounded tracking-wider">
+                    {t("home.pillarEth") || "Heritage Profiles"}
+                  </span>
+                  <h2 className="text-2xl md:text-4xl font-extrabold text-stone-900 mt-2 tracking-tight font-sans">
+                    {t("home.featuredFlora") || "Featured Medicinal Flora"}
+                  </h2>
                 </div>
                 <button
                   onClick={() => navigateTo('plants')}
-                  className="py-2.5 px-4 rounded-xl border border-stone-350 hover:bg-stone-50 text-xs font-bold text-emerald-950 inline-flex items-center gap-1 shrink-0 bg-white"
+                  className="py-3 px-5 rounded-2xl border border-stone-250 hover:border-emerald-800/20 hover:bg-emerald-50/20 text-xs font-extrabold tracking-wider uppercase text-emerald-950 inline-flex items-center gap-2 shrink-0 bg-white shadow-sm transition active:scale-98 duration-150 cursor-pointer"
                 >
-                  Browse Full Database
-                  <ArrowRight className="w-4 h-4" />
+                  {t("home.browseFullDb") || "Browse Full Database"}
+                  <ArrowRight className="w-4 h-4 text-emerald-800" />
                 </button>
               </div>
 
@@ -493,22 +575,22 @@ export default function App() {
                   return (
                     <div 
                       key={th.id} 
-                      className="bg-white border border-stone-200 hover:border-emerald-700/40 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-350 flex flex-col justify-between group cursor-pointer"
+                      className="bg-white border border-stone-200/90 hover:border-[#D4A017]/30 rounded-[2.2rem] overflow-hidden shadow-sm hover:shadow-md transition-all duration-350 flex flex-col justify-between group cursor-pointer"
                     >
                       {/* Botanical Image with Premium Blend Overlays */}
-                      <div className="h-44 relative overflow-hidden">
+                      <div className="h-48 relative overflow-hidden">
                         <img 
                           src={getPlantImage(herb)}
                           alt={th.kikuyuName}
                           loading="lazy"
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                           referrerPolicy="no-referrer"
                         />
                         {/* Subtle rich gradient overlay mask to guarantee readability and high contrast */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-emerald-950/45 to-stone-900/10 z-1" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-emerald-950/30 to-stone-900/10 z-1" />
                         
                         {/* Floating header badges */}
-                        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
+                        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
                           {/* Category Pill Tag */}
                           <span className="text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 bg-emerald-950/90 text-emerald-100 border border-emerald-800/40 rounded-full shadow-sm">
                             {th.category}
@@ -516,7 +598,7 @@ export default function App() {
 
                           {/* Safety Indicator Badge */}
                           {th.severityRating && (
-                            <span className={`text-[9px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border shadow-sm ${
+                            <span className={`text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full border shadow-sm ${
                               th.severityRating === 'Safe' 
                                 ? 'bg-emerald-900/90 text-emerald-100 border-emerald-700/50' 
                                 : th.severityRating === 'Caution' 
@@ -529,30 +611,36 @@ export default function App() {
                         </div>
 
                         {/* Subtle label explaining verified vs illustration placeholder source to user */}
-                        <div className="absolute top-11 left-3 z-10">
+                        <div className="absolute top-12 left-4 z-10">
                           <span className="text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 bg-black/60 backdrop-blur-sm text-stone-200 rounded border border-white/5">
                             {herb.imageUrl ? "📷 Verified Specimen" : "🎨 Botanical Illustration"}
                           </span>
                         </div>
 
                         {/* Overlaid Title Copy */}
-                        <div className="absolute bottom-3 left-3 right-3 z-10 text-left">
-                          <p className="text-[10px] font-mono text-emerald-250 font-bold uppercase tracking-wider drop-shadow-sm">{th.commonName || 'Indigenous Flora'}</p>
-                          <h3 className="text-xl font-black tracking-tight font-sans text-white uppercase drop-shadow">{th.kikuyuName}</h3>
+                        <div className="absolute bottom-4 left-4 right-4 z-10 text-left">
+                          <p className="text-[10px] font-mono text-emerald-250 font-bold uppercase tracking-wider drop-shadow-sm">
+                            {language === 'ki' ? (th.commonName || 'Indigenous Flora') : th.kikuyuName}
+                          </p>
+                          <h3 className="text-xl font-black tracking-tight font-sans text-white uppercase drop-shadow">
+                            {language === 'ki' ? th.kikuyuName : (th.commonName || 'Indigenous Flora')}
+                          </h3>
                         </div>
                       </div>
 
-                      <div className="p-5 space-y-4 flex-grow flex flex-col justify-between">
-                        <div className="space-y-2">
+                      <div className="p-6 space-y-4 flex-grow flex flex-col justify-between">
+                        <div className="space-y-3.5 text-left">
                           <p className="text-xs text-stone-500 line-clamp-3 leading-relaxed font-normal">{th.description}</p>
-                          <div className="text-[11px] font-semibold text-stone-700">
-                            <strong>Common use:</strong> {th.medicinalUses && th.medicinalUses[0]}
+                          <div className="h-px bg-stone-150 w-full" />
+                          <div className="text-[11px] font-semibold text-stone-700 flex items-center gap-1.5 leading-none bg-stone-50 p-2.5 rounded-lg border border-stone-200/20">
+                            <span className="text-emerald-955 uppercase text-[9px] font-extrabold tracking-wider bg-emerald-55/70 px-1.5 py-0.5 rounded border border-emerald-100/50">Common use</span>
+                            <span className="truncate max-w-[150px]">{th.medicinalUses && th.medicinalUses[0]}</span>
                           </div>
                         </div>
 
                         <button
-                          onClick={() => setSelectedPlantForModal(th)}
-                          className="w-full py-2 bg-stone-50 text-emerald-950 font-bold border border-stone-200 rounded-xl text-xs hover:bg-stone-100/80 transition"
+                          onClick={() => setSelectedPlantForModal(herb)}
+                          className="w-full mt-2 py-2.5 bg-stone-100 hover:bg-[#D4A017] hover:text-emerald-950 hover:border-[#D4A017] text-emerald-950 font-extrabold border border-stone-250/90 rounded-xl text-xs transition cursor-pointer"
                         >
                           Learn More
                         </button>
@@ -564,45 +652,58 @@ export default function App() {
             </section>
 
             {/* ABOUT SECTION SUMMARY */}
-            <section id="about" className="mx-4 bg-stone-100 border border-stone-200 rounded-[36px] p-8 md:p-12">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                <div className="space-y-4">
-                  <span className="text-[10px] bg-emerald-50 text-emerald-800 font-extrabold uppercase px-2 py-1 rounded">Our Mission</span>
-                  <h2 className="text-3xl font-extrabold text-emerald-950 tracking-tight leading-tight">Preserving African Herbal Knowledge</h2>
+            <section id="about" className="mx-4 bg-stone-100/95 border border-stone-200/80 rounded-[40px] p-8 md:p-14 text-left relative overflow-hidden shadow-sm">
+              <div className="absolute right-0 bottom-0 opacity-5 pointer-events-none transform translate-x-1/4 translate-y-1/4 select-none">
+                <Leaf className="w-96 h-96 text-emerald-900" />
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center relative z-10">
+                <div className="space-y-6">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] bg-emerald-50 text-emerald-850 border border-emerald-100/50 font-extrabold uppercase px-3 py-1.5 rounded-full">
+                    <Sparkles className="w-3.5 h-3.5 text-[#D4A017]" />
+                    {t("home.pillars") || "Our Mission"}
+                  </span>
+                  <h2 className="text-3xl md:text-4xl font-extrabold text-emerald-950 tracking-tight leading-none">
+                    {t("home.aboutSectionTitle") || "Preserving African Herbal Knowledge"}
+                  </h2>
+                  <div className="h-[2px] w-12 bg-[#D4A017]" />
+                  
                   <p className="text-stone-700 text-xs md:text-sm leading-relaxed font-semibold">
-                    The slopes of central Kenya grow a biological library of plants that traditional sages <span className="italic">Muthamaki wa Mithĩga</span> spent millenniums testing and classifying. But oral recipes pass away if not written down.
+                    {t("home.missionIntro") || "The slopes of central Kenya grow a biological library of plants that traditional sages Muthamaki wa Mithĩga spent millenniums testing and classifying. But oral recipes pass away if not written down."}
                   </p>
                   <p className="text-stone-600 text-xs leading-relaxed font-normal">
-                    <span className="font-extrabold text-stone-850">DawaKienyeji</span> represents an educational initiative to catalog regional medicinal plants with their correct Kikuyu characters (Ũ, Ĩ), scientific botanical taxonomy, sustainable vertical cutting guidelines, and defensive parameters to ensure safety. We integrate conversational AI to foster modern digital preservation.
+                    {t("home.mission") || "DawaKienyeji represents an educational initiative to catalog regional medicinal plants with their correct Kikuyu characters (Ũ, Ĩ), scientific botanical taxonomy, sustainable vertical cutting guidelines, and defensive parameters to ensure safety. We integrate conversational AI to foster modern digital preservation."}
                   </p>
                   <button
                     onClick={() => navigateTo('about')}
-                    className="py-2.5 px-5 bg-emerald-950 text-white hover:bg-emerald-800 font-bold rounded-xl text-xs flex items-center justify-center gap-1 shadow"
+                    className="py-3 px-6 bg-emerald-950 hover:bg-emerald-900 text-white font-extrabold rounded-2xl text-xs inline-flex items-center justify-center gap-2 shadow-md transition duration-150 cursor-pointer"
                   >
-                    Our Philosophy
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    {t("home.ourPhilosophy") || "Our Philosophy"}
+                    <ArrowRight className="w-3.5 h-3.5 text-amber-300" />
                   </button>
                 </div>
 
-                <div className="bg-white/80 border border-amber-200/50 p-6 md:p-8 rounded-3xl space-y-4 relative overflow-hidden shadow-inner">
-                  <span className="text-[10px] font-bold uppercase text-stone-400">Educational Statement</span>
-                  <blockquote className="text-sm italic font-sans text-stone-800 leading-relaxed font-semibold">
+                <div className="bg-white border border-[#D4A017]/15 p-8 rounded-[2rem] space-y-4 relative overflow-hidden shadow-lg shadow-emerald-950/2 md:p-10">
+                  <span className="text-[10px] font-mono font-bold uppercase text-stone-400 tracking-wider">Educational Statement</span>
+                  <blockquote className="text-sm italic text-stone-800 leading-relaxed font-semibold relative">
+                    <span className="absolute -top-3.5 -left-1 text-4xl text-[#D4A017]/20 select-none font-serif">“</span>
                     "When a forest grove is burned down in the hills, a scientific library is lost forever. When grandparent healers pass without writing their recipes, a textbook dissolves. Conservation is first aid."
                   </blockquote>
-                  <p className="text-[10px] text-stone-500 font-bold">— Traditional Elders Preservation Circle</p>
+                  <div className="h-px bg-stone-150 w-full my-1" />
+                  <p className="text-[10px] text-stone-500 font-bold tracking-wide">— Traditional Elders Preservation Circle</p>
                 </div>
               </div>
             </section>
 
             {/* BLOG PREVIEW SECTION */}
-            <section id="blog-preview" className="mx-4 space-y-6">
+            <section id="blog-preview" className="mx-4 space-y-6 text-left">
               <div className="flex items-center justify-between border-b pb-4 border-stone-200">
-                <h2 className="text-2xl font-extrabold tracking-tight">Recent Chronicles & Essays</h2>
+                <h2 className="text-2xl font-extrabold tracking-tight">{t("home.recentChronicles") || "Recent Chronicles & Essays"}</h2>
                 <button
                   onClick={() => navigateTo('blog')}
-                  className="text-xs font-bold text-emerald-800 inline-flex items-center gap-0.5 hover:translate-x-1 duration-200 text-right shrink-0"
+                  className="text-xs font-bold text-emerald-800 inline-flex items-center gap-0.5 hover:translate-x-1 duration-200 text-right shrink-0 font-sans"
                 >
-                  Read All Essays
+                  {t("home.readAllEssays") || "Read All Essays"}
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -700,41 +801,51 @@ export default function App() {
               
               <div className="space-y-4 text-center">
                 <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-100 bg-emerald-950/80 backdrop-blur-md border border-emerald-800/30 px-3 py-1.5 rounded-full shadow-sm inline-block">
-                  Background History
+                  {t("home.pillars") || "Background History"}
                 </span>
-                <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white drop-shadow-md uppercase">About DawaKienyeji</h1>
+                <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white drop-shadow-md uppercase">
+                  {t("nav.about") ? `${t("nav.about")} DawaKienyeji` : "About DawaKienyeji"}
+                </h1>
                 <p className="text-stone-100 text-sm md:text-base max-w-xl mx-auto drop-shadow font-medium leading-relaxed">
-                  Blending ancient Gĩkũyũ botanical medicine, indigenous highland preservation, and modern AI models.
+                  {t("home.aboutSub") || "Blending ancient Gĩkũyũ botanical medicine, indigenous highland preservation, and modern AI models."}
                 </p>
               </div>
 
-              <div id="preserving-ethnobotanical-chronicles-card" className="bg-white border border-stone-250 p-6 md:p-8 rounded-3xl shadow-sm space-y-6">
-                <h2 className="text-xl font-extrabold text-emerald-950 tracking-tight leading-tight">Preserving Ethnobotanical Chronicles</h2>
+              <div id="preserving-ethnobotanical-chronicles-card" className="bg-white border border-stone-250 p-6 md:p-8 rounded-3xl shadow-sm space-y-6 text-left">
+                <h2 className="text-xl font-extrabold text-emerald-950 tracking-tight leading-tight">
+                  {t("home.aboutHeading") || "Preserving Ethnobotanical Chronicles"}
+                </h2>
                 <p className="text-xs md:text-sm text-stone-600 leading-relaxed font-normal">
-                  Kikuyu herbal medicine <span className="italic">Dawa za Kienyeji</span> has existed under forest canopies for centuries. In our hills, trees like the peppery <strong className="font-bold">Mũthĩga</strong> (<span className="italic">Warburgia ugandensis</span>) served as our emergency clinics for colds and fevers. Urination issues in older men were solved with tea brewed from the reddish bark of <strong className="font-bold">Mũcorai</strong> (<span className="italic">Prunus africana</span> / Pygeum). Toothaches were temporarily anesthetized with Sodom Apple (<strong className="font-bold">Mũtongu</strong>) roots. Saps from sacred Strangler Figs (<strong className="font-bold">Mũgũmo</strong>) served as instant surgical coagulants on cuts.
+                  {t("home.preservingText") || "Kikuyu herbal medicine Dawa za Kienyeji has existed under forest canopies for centuries. In our hills, trees like the peppery Mũthĩga (Warburgia ugandensis) served as our emergency clinics for colds and fevers. Urination issues in older men were solved with tea brewed from the reddish bark of Mũcorai (Prunus africana / Pygeum). Toothaches were temporarily anesthetized with Sodom Apple (Mũtongu) roots. Saps from sacred Strangler Figs (Mũgũmo) served as instant surgical coagulants on cuts."}
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-stone-100 border border-stone-200 rounded-2xl">
                   <div className="space-y-1.5">
                     <h3 className="font-extrabold text-stone-900 text-xs flex items-center gap-1.5 uppercase">
                       <Landmark className="w-4 h-4 text-emerald-800" />
-                      Our Integrity Philosophy
+                      {t("home.integrityHeading") || "Our Integrity Philosophy"}
                     </h3>
-                    <p className="text-[11px] text-stone-600 leading-relaxed font-normal">We prioritize clinical safety and exact species mapping. Traditional heritage is respected inside our parameters to ensure children or pregnant mothers avoid toxic saps.</p>
+                    <p className="text-[11px] text-stone-600 leading-relaxed font-normal">
+                      {t("home.integrityText") || "We prioritize clinical safety and exact species mapping. Traditional heritage is respected inside our parameters to ensure child safety and avoid toxic saps."}
+                    </p>
                   </div>
                   <div className="space-y-1.5">
                     <h3 className="font-extrabold text-stone-900 text-xs flex items-center gap-1.5 uppercase">
                       <TreePine className="w-4 h-4 text-emerald-800" />
-                      Ecology & Sustainability
+                      {t("home.ecologyHeading") || "Ecology & Sustainability"}
                     </h3>
-                    <p className="text-[11px] text-stone-600 leading-relaxed font-normal">We mandate vertical Opposite Striping harvesting so that bark trees remain alive and forests continue to thrive. We are ecological preservationists first.</p>
+                    <p className="text-[11px] text-stone-600 leading-relaxed font-normal">
+                      {t("home.ecologyText") || "We mandate vertical Opposite Striping harvesting so that bark trees remain alive and forests continue to thrive. We are ecological preservationists first."}
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-sm font-bold uppercase text-emerald-850">The Role of RAG Technology</h3>
+                  <h3 className="text-sm font-bold uppercase text-emerald-850">
+                    {t("home.ragHeading") || "The Role of RAG Technology"}
+                  </h3>
                   <p className="text-xs text-stone-500 leading-relaxed font-semibold">
-                    With the passing of elder practitioners <span className="italic">Muthamaki wa Mithĩga</span>, oral records suffer memory erosion. This website serves as a clinical digital library. Our conversational AI companion—<strong className="font-bold">DawaBot</strong>—utilizes Retrieval-Augmented Generation (RAG) mapped directly containing verified Kikuyu botanical records to ensure exact scientific and traditional answers. In doing so, we don't duplicate books; we teach young Kenyans their botanical lineage.
+                    {t("home.ragText") || "Our conversational AI companion—DawaBot—utilizes Retrieval-Augmented Generation mapped directly containing verified Kikuyu botanical records... In doing so, we don't duplicate books; we teach young Kenyans their botanical lineage."}
                   </p>
                 </div>
               </div>
@@ -743,14 +854,12 @@ export default function App() {
           </div>
         )}
 
+
         {/* Tab 3: Plants catalog (Main browsable cards) */}
         {currentRoute === 'plants' && <PlantsCatalog />}
 
         {/* Tab 4: Traditional Remedies listing */}
         {currentRoute === 'remedies' && <TraditionalRemedies />}
-
-        {/* Tab 5: Research Knowledge Base articles */}
-        {currentRoute === 'knowledge' && <ResearchKnowledge />}
 
         {/* Tab 6: Blog Feed list */}
         {currentRoute === 'blog' && <BlogFeed />}
@@ -809,8 +918,8 @@ export default function App() {
           </div>
 
           {/* Column 2: Navigation Links (Home, About, Herbal Plants, Traditional Remedies) */}
-          <div className="lg:col-span-3 space-y-4">
-            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">Navigation</h4>
+          <div className="lg:col-span-3 space-y-4 text-left">
+            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">{t("nav.footerNav") || "Navigation"}</h4>
             <ul className="flex flex-col gap-3 text-xs md:text-sm font-semibold">
               <li>
                 <button 
@@ -818,7 +927,7 @@ export default function App() {
                   className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span>Home</span>
+                  <span>{t("nav.home") || "Home"}</span>
                 </button>
               </li>
               <li>
@@ -827,7 +936,7 @@ export default function App() {
                   className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span>About</span>
+                  <span>{t("nav.about") || "About"}</span>
                 </button>
               </li>
               <li>
@@ -836,7 +945,7 @@ export default function App() {
                   className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span>Herbal Plants</span>
+                  <span>{t("nav.plants") || "Herbal Plants"}</span>
                 </button>
               </li>
               <li>
@@ -845,32 +954,23 @@ export default function App() {
                   className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span>Traditional Remedies</span>
+                  <span>{t("nav.remedies") || "Traditional Remedies"}</span>
                 </button>
               </li>
             </ul>
           </div>
 
-          {/* Column 3: Knowledge & Research Links (Knowledge Base, Blog, Ask DawaBot, Contact) */}
-          <div className="lg:col-span-3 space-y-4">
-            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">Knowledge & Research</h4>
+          {/* Column 3: Community & Support (Blog, Ask DawaBot, Contact) */}
+          <div className="lg:col-span-3 space-y-4 text-left">
+            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">{t("nav.footerResearch") || "Community & Help"}</h4>
             <ul className="flex flex-col gap-3 text-xs md:text-sm font-semibold">
-              <li>
-                <button 
-                  onClick={() => navigateTo('knowledge')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span>Knowledge Base</span>
-                </button>
-              </li>
               <li>
                 <button 
                   onClick={() => navigateTo('blog')} 
                   className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span>Blog</span>
+                  <span>{t("nav.blog") || "Blog"}</span>
                 </button>
               </li>
               <li>
@@ -879,7 +979,7 @@ export default function App() {
                   className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span className="font-bold text-[#D4A017] hover:underline hover:decoration-wavy">Get Help</span>
+                  <span className="font-bold text-[#D4A017] hover:underline hover:decoration-wavy">{t("nav.askBot") || "Get Help"}</span>
                 </button>
               </li>
               <li>
@@ -888,7 +988,7 @@ export default function App() {
                   className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span>Contact</span>
+                  <span>{t("nav.contact") || "Contact"}</span>
                 </button>
               </li>
             </ul>
@@ -932,8 +1032,18 @@ export default function App() {
             <div className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-xl w-full p-6 space-y-5 border text-stone-900 border-stone-200">
               <div className="flex items-center justify-between border-b pb-3">
                 <div>
-                  <span className="text-[9px] uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded font-bold">{pm.category}</span>
-                  <h3 className="text-xl font-extrabold text-stone-950 mt-1 uppercase leading-none">{pm.kikuyuName}</h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[9px] uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded font-bold">{pm.category}</span>
+                    {language !== 'ki' && (
+                      <span className="text-[9px] uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-bold">{pm.kikuyuName}</span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-extrabold text-stone-950 mt-1.5 uppercase leading-none">
+                    {language === 'ki' ? pm.kikuyuName : pm.commonName}
+                  </h3>
+                  {language === 'ki' && (
+                    <p className="text-xs text-stone-500 font-medium mt-1">{pm.commonName}</p>
+                  )}
                 </div>
                 <button 
                   onClick={() => setSelectedPlantForModal(null)}

@@ -1,16 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { User, Calendar, Clock, ArrowRight, MessageSquare, Heart, Bookmark, Eye, CornerDownRight, X, Sparkles } from "lucide-react";
-import { BlogPost } from "../types";
-import { fetchBlogs } from "../utils/api";
+import { BlogPost, BlogComment } from "../types";
+import { fetchBlogs, fetchBlogComments, addBlogComment } from "../utils/api";
 import Markdown from "react-markdown";
 import { useLanguage } from "../utils/LanguageContext";
-
-interface Comment {
-  id: string;
-  author: string;
-  text: string;
-  timestamp: string;
-}
 
 export default function BlogFeed() {
   const { t, translateBlog, language } = useLanguage();
@@ -23,16 +16,11 @@ export default function BlogFeed() {
   const [hasLiked, setHasLiked] = useState<{ [id: string]: boolean }>({});
   const [bookmarks, setBookmarks] = useState<{ [id: string]: boolean }>({});
 
-  // Comments State (associated with blog IDs)
-  const [commentsMap, setCommentsMap] = useState<{ [blogId: string]: Comment[] }>({
-    'b1': [
-      { id: '1', author: 'Dr. Joseph Ndingi', text: 'Preserving this knowledge was long overdue. Combining AI RAG with verified oral lore is spectacular.', timestamp: '3 days ago' },
-      { id: '2', author: 'Kamau wa Kuria', text: 'Grandmother used Muthiga for our colds. This is highly accurate!', timestamp: '2 days ago' }
-    ],
-    'b2': [
-      { id: '1', author: 'Grace Wanjiku', text: 'Mugumo holds incredible cultural reverence. The ecological side benefit of sacred trees is a beautiful lesson.', timestamp: '1 day ago' }
-    ]
-  });
+  // Live Comments State
+  const [comments, setComments] = useState<BlogComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [pendingComments, setPendingComments] = useState<BlogComment[]>([]);
+  const [commentsCounts, setCommentsCounts] = useState<{ [id: string]: number }>({});
   
   const [commentAuthor, setCommentAuthor] = useState("");
   const [commentText, setCommentText] = useState("");
@@ -48,6 +36,19 @@ export default function BlogFeed() {
           defaultLikes[b.id] = b.id === 'b1' ? 24 : b.id === 'b2' ? 18 : 12;
         });
         setLikes(defaultLikes);
+
+        // Fetch direct approved comment counts from the backend API for accurate numbers
+        const countsMap: { [id: string]: number } = {};
+        for (const blog of data) {
+          try {
+            const list = await fetchBlogComments(blog.id);
+            // Count approved comments
+            countsMap[blog.id] = list.filter(c => c.approved).length;
+          } catch (err) {
+            countsMap[blog.id] = blog.id === 'b1' ? 2 : blog.id === 'b2' ? 1 : 0;
+          }
+        }
+        setCommentsCounts(countsMap);
       } catch (e) {
         console.error(e);
       } finally {
@@ -56,6 +57,27 @@ export default function BlogFeed() {
     }
     load();
   }, []);
+
+  // Fetch comments whenever the active blog is loaded
+  useEffect(() => {
+    if (!activeBlog) {
+      setComments([]);
+      setPendingComments([]);
+      return;
+    }
+    async function loadComments() {
+      setCommentsLoading(true);
+      try {
+        const comps = await fetchBlogComments(activeBlog!.id);
+        setComments(comps);
+      } catch (err) {
+        console.error("Error loading blog comments:", err);
+      } finally {
+        setCommentsLoading(false);
+      }
+    }
+    loadComments();
+  }, [activeBlog]);
 
   const handleLike = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -73,27 +95,19 @@ export default function BlogFeed() {
     setBookmarks(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const submitComment = (e: React.FormEvent) => {
+  const submitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentAuthor.trim() || !commentText.trim() || !activeBlog) return;
 
-    const newComment: Comment = {
-      id: String(Date.now()),
-      author: commentAuthor.trim(),
-      text: commentText.trim(),
-      timestamp: "Just now"
-    };
-
-    setCommentsMap(prev => {
-      const existing = prev[activeBlog.id] || [];
-      return {
-        ...prev,
-        [activeBlog.id]: [...existing, newComment]
-      };
-    });
-
-    setCommentAuthor("");
-    setCommentText("");
+    try {
+      const newComment = await addBlogComment(activeBlog.id, commentAuthor.trim(), commentText.trim());
+      // Show comments directly inside the local pending listing
+      setPendingComments(prev => [newComment, ...prev]);
+      setCommentAuthor("");
+      setCommentText("");
+    } catch (err) {
+      console.error("Failed to post comment:", err);
+    }
   };
 
   return (
@@ -177,7 +191,7 @@ export default function BlogFeed() {
                   </button>
                   <button className="flex items-center gap-1 hover:text-emerald-700">
                     <MessageSquare className="w-3.5 h-3.5" />
-                    <span>{(commentsMap[blog.id] || []).length}</span>
+                    <span>{commentsCounts[blog.id] || 0}</span>
                   </button>
                 </div>
 
@@ -264,14 +278,34 @@ export default function BlogFeed() {
                 <div className="p-4 border-b border-stone-200">
                   <h4 className="text-xs font-extrabold uppercase text-emerald-850 tracking-wider flex items-center gap-1.5">
                     <MessageSquare className="w-4 h-4 text-emerald-700 animate-pulse" />
-                    Discussions ({(commentsMap[ab.id] || []).length})
+                    Discussions ({comments.length + pendingComments.length})
                   </h4>
                 </div>
 
                 {/* Comment logs scroll */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
-                  {(commentsMap[ab.id] || []).map((com) => (
-                    <div key={com.id} className="bg-white border border-stone-200 p-3 rounded-2xl space-y-1 z-10 block">
+                  {commentsLoading && <p className="text-center text-[10px] text-stone-400">Loading comments...</p>}
+                  
+                  {pendingComments.map((com) => (
+                    <div key={com.id} className="bg-emerald-50/50 border border-emerald-200/50 p-3 rounded-2xl space-y-1 block relative">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-stone-900 text-xs flex items-center gap-1">
+                          <User className="w-3.5 h-3.5 text-emerald-800" />
+                          {com.author}
+                        </span>
+                        <span className="text-[8px] bg-amber-100 text-amber-800 font-extrabold rounded px-1.5 py-0.5 uppercase tracking-wide">
+                          Pending Approval
+                        </span>
+                      </div>
+                      <p className="text-stone-700 text-xs font-semibold leading-relaxed">
+                        {com.text}
+                      </p>
+                      <p className="text-[8px] text-stone-400 font-mono text-right">{com.timestamp}</p>
+                    </div>
+                  ))}
+
+                  {comments.map((com) => (
+                    <div key={com.id} className="bg-white border border-stone-200 p-3 rounded-2xl space-y-1 block relative">
                       <div className="flex items-center justify-between">
                         <span className="font-extrabold text-stone-900 text-xs flex items-center gap-1">
                           <User className="w-3.5 h-3.5 text-stone-500" />
@@ -282,8 +316,25 @@ export default function BlogFeed() {
                       <p className="text-stone-700 text-xs font-semibold leading-relaxed">
                         {com.text}
                       </p>
+                      
+                      {/* Nested Admin Reply */}
+                      {com.replyText && (
+                        <div className="mt-2 p-2 px-2.5 bg-stone-100 border border-stone-150 rounded-xl flex items-start gap-1.5">
+                          <CornerDownRight className="w-3.5 h-3.5 text-emerald-800 shrink-0 mt-0.5" />
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-extrabold text-emerald-950 uppercase tracking-wider block">Admin Advice</span>
+                            <p className="text-stone-600 text-[11px] leading-relaxed font-semibold">{com.replyText}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
+
+                  {comments.length === 0 && pendingComments.length === 0 && !commentsLoading && (
+                    <p className="text-center py-10 text-[10px] text-stone-400 italic">
+                      No discussions yet. Ask a question or share your ancestral reflections!
+                    </p>
+                  )}
                 </div>
 
                 {/* Post commentator Form */}
@@ -303,7 +354,7 @@ export default function BlogFeed() {
                       placeholder="Ask a question or add a recipe reflection..."
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
-                      className="w-full p-2.5 pr-10 border border-stone-300 rounded-lg text-xs bg-white text-stone-900 font-normal leading-relaxed focus:outline-none"
+                      className="w-full p-2.5 pr-12 border border-stone-300 rounded-lg text-xs bg-white text-stone-900 font-normal leading-relaxed focus:outline-none"
                     />
                     <button
                       type="submit"

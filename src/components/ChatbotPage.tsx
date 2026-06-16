@@ -7,14 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import Markdown from "react-markdown";
 import { ChatMessage, ChatSession } from "../types";
 import { postChat, sendChatFeedback } from "../utils/api";
-
-const SUGGESTED_QUESTIONS = [
-  "What is MŨTHĨGA used for?",
-  "Which herbs treat stomach ache?",
-  "What is the scientific name of MŨTONGU?",
-  "Which plants are used for fever?",
-  "Explain traditional uses of Warburgia ugandensis."
-];
+import { useLanguage } from "../utils/LanguageContext";
 
 interface ChatbotPageProps {
   onBackToHome: () => void;
@@ -27,7 +20,21 @@ const VOICE_LANGUAGES = [
   { id: "fr", code: "fr-FR", name: "Français", flag: "🇫🇷", label: "Français" }
 ];
 
+const getWelcomeText = (lang: string) => {
+  switch (lang) {
+    case "sw":
+      return "Karibu kwenye msaada wa DawaBot. Uliza chochote kuhusu mazingira ya mimea ya tiba, tiba za asili, au maarifa ya mitishamba ya Gĩkũyũ. Unaweza kuuliza kuhusu mimea maalum kama vile MŨTHĨGA, MŨTONGU, au MŨCORAI, au kuulizia dalili mbalimbali kama maumivu ya tumbo au homa.";
+    case "ki":
+      return "Ũhoro mwega, ndari-inĩ ya NdawaBot. Ũria kĩndũ o gĩothe kĩĩgĩĩ mĩgũgũ ya tawa na kĩĩgĩĩ mĩthĩga ya tene na ũgĩ wa gĩkũyũ. Gĩmia wandĩke kĩĩgĩĩ mĩthĩga ta MŨTHĨGA, MŨTONGU, kana MŨCORAI, kana mĩrimu ya nda na homa.";
+    case "fr":
+      return "Bienvenue dans l'assistant DawaBot. Posez toutes vos questions sur les plantes médicinales, les remèdes traditionnels ou les connaissances botaniques de Gĩkũyũ. Interrogez notre base de données sur des plantes comme MŨTHĨGA, MŨTONGU ou MŨCORAI, ou posez des questions sur des maux comme les douleurs abdominales ou la fièvre.";
+    default:
+      return "Welcome to the DawaBot botanical assistant. Ask anything about medicinal plants, herbal remedies, traditional medicine, or Gĩkũyũ botanical knowledge. Query directly about specific plants like MŨTHĨGA, MŨTONGU, or MŨCORAI, or ask about ailments like stomach pain or fever.";
+  }
+};
+
 export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
+  const { language, t } = useLanguage();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [inputText, setInputText] = useState("");
@@ -37,10 +44,49 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [ratings, setRatings] = useState<{ [msgId: string]: 'good' | 'bad' }>({});
   const [voiceLang, setVoiceLang] = useState(VOICE_LANGUAGES[0]);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const listEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Keep references updated for async speech callbacks to prevent closures tearing down
+  const sessionsRef = useRef<ChatSession[]>([]);
+  const currentSessionIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  useEffect(() => {
+    currentSessionIdRef.current = currentSessionId;
+  }, [currentSessionId]);
+
+  // Synchronize Voice Language list with currently active website language context
+  useEffect(() => {
+    const matched = VOICE_LANGUAGES.find((lang) => lang.id === language);
+    if (matched) {
+      setVoiceLang(matched);
+    }
+  }, [language]);
+
+  // Auto-translate welcome/intro messages in existing default or empty sessions when website language changes in realtime
+  useEffect(() => {
+    setSessions(prev => prev.map(s => {
+      return {
+        ...s,
+        messages: s.messages.map(m => {
+          if (m.id === 'welcome' || m.id === 'welcome-reset' || m.id.startsWith('welcome-s-')) {
+            return {
+              ...m,
+              text: getWelcomeText(language)
+            };
+          }
+          return m;
+        })
+      };
+    }));
+  }, [language]);
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -51,12 +97,17 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
       rec.interimResults = false;
       rec.lang = voiceLang.code;
       
+      rec.onstart = () => {
+        setIsListening(true);
+        setVoiceError(null);
+      };
+
       rec.onresult = (event: any) => {
         const text = event.results[0][0].transcript;
         if (text && text.trim()) {
           setInputText(text);
           // Automatically trigger send message to DawaBot with transcribed text
-          handleSendMessage(text);
+          handleSendMessageWithRefs(text);
         }
         setIsListening(false);
       };
@@ -64,6 +115,13 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
       rec.onerror = (e: any) => {
         console.error("Speech Recognition Error:", e);
         setIsListening(false);
+        if (e.error === "not-allowed") {
+          setVoiceError("Microphone access permission was denied. Please check your browser address bar permissions or iframe constraints.");
+        } else if (e.error === "no-speech") {
+          setVoiceError("No voice was detected. Please try speaking again closer to the mic.");
+        } else {
+          setVoiceError(`Voice session error: ${e.error || "failed to capture sound"}`);
+        }
       };
 
       rec.onend = () => {
@@ -71,10 +129,20 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
       };
 
       recognitionRef.current = rec;
+    } else {
+      console.warn("Web SpeechRecognition is not natively supported in this browser environment");
     }
-  }, [voiceLang, sessions, currentSessionId]);
 
-  // Initialize state with default session
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (_) {}
+      }
+    };
+  }, [voiceLang.code, language]);
+
+  // Initialize state with default session on first mount
   useEffect(() => {
     const defaultSessionId = 's-default';
     const initialSession: ChatSession = {
@@ -84,9 +152,8 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         {
           id: 'welcome',
           role: 'model',
-          text: "Hello! I am DawaBot. Ask me anything about medicinal plants, herbal remedies, traditional medicine, or Gĩkũyũ botanical knowledge.\n\nYou can query about specific plants like MŨTHĨGA, MŨTONGU, or MŨCORAI, or ask about ailments like stomach pain or fever.",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          suggestions: SUGGESTED_QUESTIONS
+          text: getWelcomeText(language || "en"),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]
     };
@@ -104,20 +171,29 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
 
   const handleStartVoice = () => {
     if (!recognitionRef.current) {
-      alert("Speech-to-text is not supported directly in this browser or environment frame. Please type your query.");
+      setVoiceError("Speech-to-text is not supported directly in this browser frame or sandbox. Please type your query.");
       return;
     }
+    setVoiceError(null);
     if (isListening) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (_) {}
       setIsListening(false);
     } else {
-      setIsListening(true);
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+      } catch (err: any) {
+        console.error("Microphone trigger error:", err);
+        setVoiceError("Could not access physical microphone. Verify device permissions.");
+        setIsListening(false);
+      }
     }
   };
 
-  const handleSendMessage = async (textToSend: string) => {
-    if (!textToSend.trim() || !currentSessionId) return;
+  const handleSendMessageWithRefs = async (textToSend: string) => {
+    const activeId = currentSessionIdRef.current;
+    if (!textToSend.trim() || !activeId) return;
 
     const userMsg: ChatMessage = {
       id: `msg-user-${Date.now()}`,
@@ -128,7 +204,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
 
     // Update active session with user message
     setSessions(prev => prev.map(s => {
-      if (s.id === currentSessionId) {
+      if (s.id === activeId) {
         return { ...s, messages: [...s.messages, userMsg] };
       }
       return s;
@@ -136,13 +212,13 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
 
     setInputText("");
     setIsTyping(true);
+    setVoiceError(null);
 
     try {
-      // Collect current session history
-      const currentSessionSnapshot = sessions.find(s => s.id === currentSessionId);
+      const currentSessionSnapshot = sessionsRef.current.find(s => s.id === activeId);
       const historyMsg = currentSessionSnapshot ? currentSessionSnapshot.messages : [];
 
-      const result = await postChat(historyMsg, textToSend);
+      const result = await postChat(historyMsg, textToSend, language);
 
       const botMsg: ChatMessage = {
         id: result.logId || `msg-bot-${Date.now()}`,
@@ -153,8 +229,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
       };
 
       setSessions(prev => prev.map(s => {
-        if (s.id === currentSessionId) {
-          // If the default session only had welcome message, let's rename the tab to the query
+        if (s.id === activeId) {
           const title = s.messages.length === 1 ? (textToSend.slice(0, 24) + "...") : s.title;
           return {
             ...s,
@@ -173,7 +248,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setSessions(prev => prev.map(s => {
-        if (s.id === currentSessionId) {
+        if (s.id === activeId) {
           return { ...s, messages: [...s.messages, errorMsg] };
         }
         return s;
@@ -181,6 +256,10 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleSendMessage = async (textToSend: string) => {
+    await handleSendMessageWithRefs(textToSend);
   };
 
   const handleCreateNewSession = () => {
@@ -192,9 +271,8 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         {
           id: `welcome-${newId}`,
           role: 'model',
-          text: "Welcome to a fresh botanical session. Ask DawaBot about Kikuyu traditional remedies or sustainable harvesting.",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          suggestions: SUGGESTED_QUESTIONS.slice(0, 3)
+          text: getWelcomeText(language),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]
     };
@@ -212,9 +290,8 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
           {
             id: 'welcome-reset',
             role: 'model',
-            text: "Hello! History cleared. I am ready to assist you again with traditional botanical knowledge.",
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            suggestions: SUGGESTED_QUESTIONS
+            text: getWelcomeText(language),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ]
       };
@@ -390,30 +467,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
                           </div>
                         )}
                         
-                        {/* Suggestion pills specifically inside bot greetings */}
-                        {msg.suggestions && msg.suggestions.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-emerald-600/10 space-y-2">
-                            <p className="text-[11px] font-bold opacity-75 flex items-center gap-1">
-                              <HelpCircle className="w-3.5 h-3.5 text-emerald-600" />
-                              Select a sample question to query immediately:
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {msg.suggestions.map((suggestion, sIdx) => (
-                                <button
-                                  key={sIdx}
-                                  onClick={() => handleSendMessage(suggestion)}
-                                  className={`text-[11px] font-medium text-left px-3 py-1.5 rounded-lg border transition duration-150 ${
-                                    isDark 
-                                      ? 'border-zinc-800 hover:border-emerald-600 bg-zinc-800/40 text-emerald-400 hover:text-white' 
-                                      : 'border-stone-200 hover:border-emerald-600 bg-stone-50 hover:bg-emerald-50 text-emerald-900 transition'
-                                  }`}
-                                >
-                                  {suggestion}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+
 
                       </div>
 
@@ -492,9 +546,9 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         </div>
 
         {/* Input panel deck */}
-        <div className={`p-4 border-t ${
-          isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-stone-100/70 border-stone-200'
-        } backdrop-blur-md sticky bottom-0 z-10`}>
+        <div className={`p-4 py-5 md:py-6 md:pb-8 border-t ${
+          isDark ? 'bg-zinc-900 border-zinc-850' : 'bg-stone-50 border-stone-200'
+        } sticky bottom-0 z-10 shadow-[0_-8px_32px_rgba(0,0,0,0.04)]`}>
           <div className="max-w-3xl mx-auto space-y-3">
             
             {/* Real-time Voice Controller Dashboard */}
@@ -541,6 +595,26 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
               </div>
             </div>
 
+            {/* Voice error alert */}
+            {voiceError && (
+              <div className="p-3 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-center justify-between text-[11px] font-semibold animate-fade-in shadow-sm">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{voiceError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVoiceError(null);
+                    handleStartVoice();
+                  }}
+                  className="px-2.5 py-1 text-red-700 bg-white hover:bg-neutral-55 active:bg-neutral-100 border border-red-200 rounded font-bold uppercase tracking-wider text-[9px] cursor-pointer"
+                >
+                  Retry Voice
+                </button>
+              </div>
+            )}
+
             {/* Glowing active listening overlay / status wave */}
             <AnimatePresence>
               {isListening && (
@@ -580,7 +654,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
                       setIsListening(false);
                       recognitionRef.current?.stop();
                     }}
-                    className="px-2.5 py-1 rounded bg-rose-600 text-white font-black text-[10px] uppercase hover:bg-rose-700 transition"
+                    className="px-2.5 py-1 rounded bg-rose-600 text-white font-black text-[10px] uppercase hover:bg-rose-700 transition cursor-pointer"
                   >
                     Cancel speaking
                   </button>
@@ -613,7 +687,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
                 <button
                   type="button"
                   onClick={handleStartVoice}
-                  className={`p-2 rounded-lg transition-all shadow-md transform active:scale-95 duration-200 relative flex items-center justify-center ${
+                  className={`p-2 rounded-lg transition-all shadow-md transform active:scale-95 duration-200 relative flex items-center justify-center cursor-pointer ${
                     isListening 
                       ? 'bg-rose-600 text-white animate-pulse ring-4 ring-rose-500/30' 
                       : isDark ? 'text-emerald-400 bg-zinc-800 hover:bg-zinc-700 hover:text-white' : 'text-emerald-950 bg-stone-100 hover:bg-emerald-50 hover:text-emerald-950'
@@ -630,7 +704,7 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
                 <button
                   type="submit"
                   disabled={!inputText.trim()}
-                  className={`p-2 rounded-lg transition-all shadow-md ${
+                  className={`p-2 rounded-lg transition-all shadow-md cursor-pointer ${
                     inputText.trim()
                       ? 'bg-emerald-700 hover:bg-emerald-650 text-white active:scale-95 transform'
                       : isDark ? 'bg-zinc-800 text-zinc-650' : 'bg-stone-200 text-stone-400'

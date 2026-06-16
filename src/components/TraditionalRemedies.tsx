@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Coffee, ShieldCheck, HeartPulse, RefreshCw, Layers, ListChecks, HelpCircle, Thermometer } from "lucide-react";
+import { ShieldCheck, ListChecks, HelpCircle, Thermometer, HeartPulse } from "lucide-react";
 import { TraditionalRemedy, Herb } from "../types";
 import { fetchRemedies, fetchPlants } from "../utils/api";
 import { useLanguage } from "../utils/LanguageContext";
@@ -55,17 +55,21 @@ export default function TraditionalRemedies() {
       {/* Title Header Banner Deck */}
       <div className="bg-stone-100/50 p-6 md:p-8 rounded-3xl border border-stone-250 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="max-w-2xl space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2 py-1 rounded">{t("label.category")}</span>
-          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-sans">{t("nav.remedies")}</h1>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded">
+            {t("label.category") || "Category"}
+          </span>
+          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-sans">
+            {t("nav.remedies") || "Traditional Remedies"}
+          </h1>
           <p className="text-sm text-stone-500 leading-relaxed font-normal">
-            Traditional combinations of leaf juices, boiled bark decoctions, and fresh roots. Click tab filters below to browse remedies tailored and mapped to daily body ailments.
+            {t("remedies.title") || "Traditional combinations of leaf juices, boiled bark decoctions, and fresh roots. Click tab filters below to browse remedies tailored and mapped to daily body ailments."}
           </p>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
           <input
             type="text"
-            placeholder={t("plants.searchPlaceholder")}
+            placeholder={t("plants.searchPlaceholder") || "Search..."}
             value={filterKeyword}
             onChange={(e) => setFilterKeyword(e.target.value)}
             className="px-4 py-3 border border-stone-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-700 bg-white placeholder-stone-400 shadow-sm"
@@ -110,9 +114,11 @@ export default function TraditionalRemedies() {
                   {/* Category Pill Tag Block */}
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-[9px] uppercase tracking-wider font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full">
-                      {rem.category}
+                      {getCategoryLabel(rem.category)}
                     </span>
-                    <span className="text-[10px] text-stone-400 font-bold font-mono">Dose: {rem.dose}</span>
+                    <span className="text-[10px] text-stone-400 font-bold font-mono">
+                      {t("remedies.dosage") || "Dose"}: {rem.dose}
+                    </span>
                   </div>
 
                   <h3 className="text-xl font-extrabold text-stone-900 tracking-tight leading-snug">
@@ -131,20 +137,28 @@ export default function TraditionalRemedies() {
 
                   {/* Interlinked Associated Herb Profiles from db */}
                   <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/50 space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase text-stone-400 tracking-wider">Recommended Indigenous Herbs:</span>
+                    <span className="text-[10px] font-bold uppercase text-stone-400 tracking-wider">
+                      {t("remedies.herbs") || "Recommended Indigenous Herbs"}:
+                    </span>
                     <div className="flex flex-wrap gap-2">
                       {rem.recommendedHerbs.map((rh, idx) => {
                         // find associated scientific plant profile
                         const associatedPlant = plants.find((p) => p.kikuyuName === rh);
+                        const th = associatedPlant ? translateHerb(associatedPlant) : null;
+                        const displayTitleName = th ? (language === 'ki' ? th.kikuyuName : th.commonName) : rh;
+                        const displaySubName = th ? (language === 'ki' ? th.commonName : th.kikuyuName) : null;
                         return (
                           <div 
                             key={idx} 
-                            className="bg-white px-3 py-1 rounded-full border border-stone-200 shadow-sm text-xs font-bold text-stone-800 flex items-center gap-1.5"
+                            className="bg-white px-3 py-1 rounded-full border border-[#e2e8f0] shadow-sm text-xs font-bold text-stone-800 flex items-center gap-1.5"
                           >
                             <HeartPulse className="w-3.5 h-3.5 text-emerald-700" />
-                            <span>{rh}</span>
+                            <span>{displayTitleName}</span>
+                            {displaySubName && (
+                              <span className="text-[10px] text-amber-700 font-extrabold font-sans">({displaySubName})</span>
+                            )}
                             {associatedPlant && (
-                              <span className="italic text-[10px] text-stone-500 font-normal font-sans">({associatedPlant.scientificName})</span>
+                              <span className="italic text-[10px] text-stone-400 font-normal font-sans">| {associatedPlant.scientificName}</span>
                             )}
                           </div>
                         );
@@ -156,7 +170,7 @@ export default function TraditionalRemedies() {
                   <div className="space-y-3 pt-2">
                     <h4 className="text-[10px] uppercase font-bold text-stone-400 tracking-wider flex items-center gap-1">
                       <ListChecks className="w-4 h-4 text-emerald-700" />
-                      Traditional Recipe & Brewing Steps:
+                      {t("remedies.prepSteps") || "Traditional Recipe & Brewing Steps"}:
                     </h4>
                     <div className="space-y-3 pl-1">
                       {rem.steps.map((st, sIdx) => (
@@ -177,7 +191,7 @@ export default function TraditionalRemedies() {
                 {/* Foot safety declaration */}
                 <div className="pt-4 border-t border-stone-100 flex items-center gap-2 text-[10px] text-stone-400">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Never ingest raw toxic saps. Limit doses to 1 cup twice daily unless specified otherwise.</span>
+                  <span>{t("chat.warning") || "Never ingest raw toxic saps. Limit doses to 1 cup twice daily unless specified otherwise."}</span>
                 </div>
 
               </div>

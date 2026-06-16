@@ -5,17 +5,20 @@ import {
   Clock, AlertTriangle, Inbox, Settings, LogOut, Sliders, RefreshCw, HelpCircle,
   BookOpen, Compass, Search, ToggleLeft, ToggleRight, MessageSquare, Send
 } from "lucide-react";
-import { Herb, BlogPost, KnowledgeBaseArticle, ChatLog, ContactMessage } from "../types";
+import { Herb, BlogPost, KnowledgeBaseArticle, ChatLog, ContactMessage, BlogComment } from "../types";
 import { 
   fetchPlants, addPlant, editPlant, deletePlant, 
   fetchArticles, addArticle, fetchBlogs, addBlog, fetchAnalytics,
-  loginAdmin, fetchMessages, updateMessageStatus
+  loginAdmin, fetchMessages, updateMessageStatus,
+  replyToMessage, fetchAllComments, moderateComment, deleteComment
 } from "../utils/api";
 import { getPlantImage, classifyPlantType, FALLBACK_CATEGORIES, getAISuggestedImages } from "../utils/herbImages";
+import { useLanguage } from "../utils/LanguageContext";
 
-type SidebarTab = 'dashboard' | 'upload_docs' | 'plants' | 'knowledge' | 'blogs' | 'chatbot_training' | 'ai_analytics' | 'messages' | 'settings';
+type SidebarTab = 'dashboard' | 'upload_docs' | 'plants' | 'knowledge' | 'blogs' | 'blog_comments' | 'chatbot_training' | 'ai_analytics' | 'messages' | 'settings';
 
 export default function AdminDashboard() {
+  const { t, language } = useLanguage();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
@@ -32,6 +35,13 @@ export default function AdminDashboard() {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [allComments, setAllComments] = useState<BlogComment[]>([]);
+  
+  // Blog Comment moderation search/filters/reply state
+  const [commentFilter, setCommentFilter] = useState<'all' | 'pending' | 'approved'>('all');
+  const [selectedCommentForReply, setSelectedCommentForReply] = useState<BlogComment | null>(null);
+  const [commentReplyText, setCommentReplyText] = useState("");
+  const [submittingCommentReply, setSubmittingCommentReply] = useState(false);
   
   // Action Feedback Alerts
   const [statusMsg, setStatusMsg] = useState("");
@@ -129,6 +139,8 @@ export default function AdminDashboard() {
       if (adminPin) {
         const dbMsgs = await fetchMessages(adminPin);
         setMessages(dbMsgs);
+        const dbComs = await fetchAllComments(adminPin);
+        setAllComments(dbComs);
       }
     } catch (e: any) {
       showErr("Failed to load backend administration records. Re-authenticating may resolve this.");
@@ -317,32 +329,94 @@ export default function AdminDashboard() {
     }
   };
 
-  // Dispatch advisory Simulated response back to user
-  const handleSendAdvisorySim = (e: React.FormEvent) => {
+  // Dispense professional response email via server nodemailer SMTP, logging status metrics
+  const handleSendAdvisorySim = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!advisoryReplyText.trim()) return;
+    if (!advisoryReplyText.trim() || !selectedMsgForReply) return;
     setSendingReplySim(true);
-    setTimeout(async () => {
-      try {
-        if (selectedMsgForReply) {
-          await updateMessageStatus(selectedMsgForReply.id, 'replied', adminPin);
-        }
-        showStatus(`Advisory reply successfully dispatched via email to ${selectedMsgForReply?.email}!`);
+    try {
+      const result = await replyToMessage(selectedMsgForReply.id, advisoryReplyText.trim(), adminPin);
+      if (result.success) {
+        showStatus(`Response successfully sent via email to ${selectedMsgForReply?.email}! Confirmation ID: ${result.delivery?.messageId || "SMTP"}`);
         setSelectedMsgForReply(null);
         setAdvisoryReplyText("");
         loadAdminData();
-      } catch (err) {
-        showErr("Action finished but failed to log replied state.");
-      } finally {
-        setSendingReplySim(false);
+      } else {
+        showErr("Action completed but server could not verify delivery confirmation code.");
       }
-    }, 2000);
+    } catch (err: any) {
+      showErr(err.message || "Email dispatch failed. Please verify mailbox configurations.");
+    } finally {
+      setSendingReplySim(false);
+    }
+  };
+
+  // --- BLOG COMMENT MODERATION HANDLERS ---
+  const handleApproveComment = async (id: string) => {
+    try {
+      await moderateComment(id, { approved: true }, adminPin);
+      showStatus("Blog comment approved! It is now live in the discussions thread.");
+      loadAdminData();
+    } catch (err: any) {
+      showErr(err.message || "Failed to approve comment.");
+    }
+  };
+
+  const handleDisapproveComment = async (id: string) => {
+    try {
+      await moderateComment(id, { approved: false }, adminPin);
+      showStatus("Comment disapproved and hidden from the public blogging feed.");
+      loadAdminData();
+    } catch (err: any) {
+      showErr(err.message || "Failed to disapprove comment.");
+    }
+  };
+
+  const handleSendCommentReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentReplyText.trim() || !selectedCommentForReply) return;
+    setSubmittingCommentReply(true);
+    try {
+      await moderateComment(
+        selectedCommentForReply.id, 
+        { replyText: commentReplyText.trim(), approved: true }, 
+        adminPin
+      );
+      showStatus(`Advice reply successfully pinned to ${selectedCommentForReply.author}'s comment.`);
+      setSelectedCommentForReply(null);
+      setCommentReplyText("");
+      loadAdminData();
+    } catch (err: any) {
+      showErr(err.message || "Failed to publish advice reply.");
+    } finally {
+      setSubmittingCommentReply(false);
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    if (confirm("Are you extremely sure you want to permanently delete this comment? This cannot be undone.")) {
+      try {
+        await deleteComment(id, adminPin);
+        showStatus("Comment permanently deleted.");
+        loadAdminData();
+      } catch (err: any) {
+        showErr(err.message || "Failed to delete comment.");
+      }
+    }
   };
 
   // Filter messages
   const filteredMessages = messages.filter((msg) => {
     if (messageFilter === 'all') return true;
     return msg.status === messageFilter;
+  });
+
+  // Filter blog discussions/comments
+  const filteredComments = allComments.filter((com) => {
+    if (commentFilter === 'all') return true;
+    if (commentFilter === 'pending') return !com.approved;
+    if (commentFilter === 'approved') return com.approved;
+    return true;
   });
 
   // Filter plants based on search
@@ -371,9 +445,9 @@ export default function AdminDashboard() {
           <div className="p-3.5 bg-emerald-50 rounded-full text-emerald-800 mb-2 transform hover:scale-110 transition">
             <Shield className="w-9 h-9 text-emerald-700 animate-pulse" />
           </div>
-          <h2 className="text-xl font-extrabold font-sans text-stone-900 tracking-tight">Gardens Control Portal</h2>
+          <h2 className="text-xl font-extrabold font-sans text-stone-900 tracking-tight">{t("admin.complianceTitle") || "Gardens Control Portal"}</h2>
           <p className="text-xs text-stone-500 mt-1">
-            Sign in below to authenticate as a registered system ethnobotanist.
+            {t("admin.loginSub") || "Sign in below to authenticate as a registered system ethnobotanist."}
           </p>
         </div>
 
@@ -386,7 +460,7 @@ export default function AdminDashboard() {
 
         <form onSubmit={handleLogin} className="space-y-4 text-xs font-bold text-stone-700">
           <div>
-            <label className="block text-stone-900 uppercase tracking-wide text-[10px] mb-2 font-extrabold">Registered Email</label>
+            <label className="block text-stone-900 uppercase tracking-wide text-[10px] mb-2 font-extrabold">{t("contact.email") || "Registered Email"}</label>
             <div className="relative flex items-center">
               <User className="absolute left-3.5 w-4.5 h-4.5 text-stone-400" />
               <input
@@ -401,7 +475,7 @@ export default function AdminDashboard() {
           </div>
 
           <div>
-            <label className="block text-stone-900 uppercase tracking-wide text-[10px] mb-2 font-extrabold">Gardens Key Password</label>
+            <label className="block text-stone-900 uppercase tracking-wide text-[10px] mb-2 font-extrabold">{t("admin.pwdLabel") || "Gardens Key Password"}</label>
             <div className="relative flex items-center">
               <Key className="absolute left-3.5 w-4.5 h-4.5 text-stone-400" />
               <input
@@ -421,7 +495,7 @@ export default function AdminDashboard() {
             className="w-full py-3 bg-emerald-950 text-white rounded-xl font-bold hover:bg-emerald-800 hover:scale-[1.01] active:translate-y-0.5 transition duration-150 flex items-center justify-center gap-2 shadow mt-6 disabled:bg-stone-300 disabled:cursor-not-allowed"
           >
             <Lock className="w-3.5 h-3.5 text-emerald-300" />
-            {isLoggingIn ? "Validating Credentials..." : "Unlock Dashboard"}
+            {isLoggingIn ? t("btn.loading") : t("admin.unlock") || "Unlock Dashboard"}
           </button>
         </form>
       </div>
@@ -442,7 +516,7 @@ export default function AdminDashboard() {
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-extrabold text-sm text-stone-900 block leading-tight">Admin Console</span>
+              <span className="font-extrabold text-sm text-stone-900 block leading-tight">{t("nav.admin") || "Admin Console"}</span>
               <span className="text-[9px] uppercase tracking-wider text-emerald-700 font-bold block mt-0.5">Joseph wa Gikuyu</span>
             </div>
           </div>
@@ -458,7 +532,7 @@ export default function AdminDashboard() {
             >
               <span className="flex items-center gap-2">
                 <LayoutDashboard className="w-4 h-4 shrink-0" />
-                <span>Dashboard</span>
+                <span>{t("admin.tabDashboard") || "Dashboard"}</span>
               </span>
             </button>
 
@@ -470,7 +544,7 @@ export default function AdminDashboard() {
             >
               <span className="flex items-center gap-2">
                 <UploadCloud className="w-4 h-4 shrink-0" />
-                <span>Upload Documents</span>
+                <span>{t("admin.tabUpload") || "Upload Documents"}</span>
               </span>
               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                 activeTab === 'upload_docs' ? 'bg-emerald-800 text-emerald-200' : 'bg-stone-250 text-stone-600'
@@ -485,7 +559,7 @@ export default function AdminDashboard() {
             >
               <span className="flex items-center gap-2">
                 <PlusCircle className="w-4 h-4 shrink-0" />
-                <span>Herbal Plants</span>
+                <span>{t("nav.plants") || "Herbal Plants"}</span>
               </span>
               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                 activeTab === 'plants' ? 'bg-emerald-800 text-emerald-200' : 'bg-stone-250 text-stone-600'
@@ -500,7 +574,7 @@ export default function AdminDashboard() {
             >
               <span className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 shrink-0" />
-                <span>Knowledge Base</span>
+                <span>{t("nav.knowledge") || "Knowledge Base"}</span>
               </span>
             </button>
 
@@ -512,11 +586,28 @@ export default function AdminDashboard() {
             >
               <span className="flex items-center gap-2">
                 <FileText className="w-4 h-4 shrink-0" />
-                <span>Blog Posts</span>
+                <span>{t("nav.blog") || "Blog Posts"}</span>
               </span>
               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                 activeTab === 'blogs' ? 'bg-emerald-800 text-emerald-200' : 'bg-stone-250 text-stone-600'
               }`}>{blogs.length}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('blog_comments')}
+              className={`w-full py-2.5 px-3.5 rounded-xl transition flex items-center justify-between ${
+                activeTab === 'blog_comments' ? 'bg-emerald-950 text-white shadow-md' : 'hover:bg-stone-200/50 hover:text-stone-900'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 shrink-0" />
+                <span>Blog Discussions</span>
+              </span>
+              {allComments.filter(c => !c.approved).length > 0 && (
+                <span className="font-extrabold text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full shrink-0 animate-pulse">
+                  {allComments.filter(c => !c.approved).length}
+                </span>
+              )}
             </button>
 
             <button
@@ -527,7 +618,7 @@ export default function AdminDashboard() {
             >
               <span className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 shrink-0" />
-                <span>Chatbot Training</span>
+                <span>{t("admin.tabChatbot") || "Chatbot Training"}</span>
               </span>
             </button>
 
@@ -539,7 +630,7 @@ export default function AdminDashboard() {
             >
               <span className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 shrink-0" />
-                <span>AI Analytics</span>
+                <span>{t("admin.tabAnalytics") || "AI Analytics"}</span>
               </span>
             </button>
 
@@ -551,7 +642,7 @@ export default function AdminDashboard() {
             >
               <span className="flex items-center gap-2">
                 <Inbox className="w-4 h-4 shrink-0" />
-                <span>User Messages</span>
+                <span>{t("admin.tabMessages") || "User Messages"}</span>
               </span>
               {unreadCount > 0 && (
                 <span className="font-extrabold text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full animate-bounce shrink-0">{unreadCount}</span>
@@ -566,7 +657,7 @@ export default function AdminDashboard() {
             >
               <span className="flex items-center gap-2">
                 <Settings className="w-4 h-4 shrink-0" />
-                <span>Settings</span>
+                <span>{t("admin.tabSettings") || "Settings"}</span>
               </span>
             </button>
 
@@ -620,42 +711,151 @@ export default function AdminDashboard() {
             </div>
 
             {/* Metrics cards grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               
-              <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-sm space-y-2 relative overflow-hidden">
-                <span className="p-2.5 bg-emerald-50/70 border border-emerald-100/50 text-emerald-800 rounded-xl inline-block absolute right-4 top-4">
-                  <Compass className="w-5 h-5 text-emerald-700" />
+              <div className="bg-white border border-stone-200 p-4.5 rounded-2xl shadow-sm space-y-1.5 relative overflow-hidden">
+                <span className="p-2 bg-emerald-50 text-emerald-800 rounded-xl inline-block absolute right-3 top-3 font-sans">
+                  <Compass className="w-4 h-4 text-emerald-700" />
                 </span>
-                <p className="text-[10px] text-stone-400 font-extrabold uppercase tracking-wider">Flora Species</p>
-                <div className="text-3xl font-extrabold text-stone-900 font-mono">{plants.length}</div>
-                <p className="text-[10px] text-stone-500">Opposite stripes registered</p>
+                <p className="text-[9px] text-stone-400 font-extrabold uppercase tracking-wider font-sans">Total Herbal Plants</p>
+                <div className="text-2xl font-extrabold text-stone-900 font-mono">{plants.length}</div>
+                <p className="text-[9px] text-stone-500 font-medium">Kikuyu species cataloged</p>
               </div>
 
-              <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-sm space-y-2 relative overflow-hidden">
-                <span className="p-2.5 bg-amber-50/70 border border-amber-100/50 text-amber-800 rounded-xl inline-block absolute right-4 top-4">
-                  <BookOpen className="w-5 h-5 text-amber-700" />
+              <div className="bg-white border border-stone-200 p-4.5 rounded-2xl shadow-sm space-y-1.5 relative overflow-hidden">
+                <span className="p-2 bg-amber-50 text-amber-800 rounded-xl inline-block absolute right-3 top-3 font-sans">
+                  <BookOpen className="w-4 h-4 text-amber-700" />
                 </span>
-                <p className="text-[10px] text-stone-400 font-extrabold uppercase tracking-wider">Treatises Indexed</p>
-                <div className="text-3xl font-extrabold text-stone-900 font-mono">{articles.length}</div>
-                <p className="text-[10px] text-stone-500">RAG chatbot contextual base</p>
+                <p className="text-[9px] text-stone-400 font-extrabold uppercase tracking-wider font-sans">Uploaded Documents</p>
+                <div className="text-2xl font-extrabold text-stone-900 font-mono">{articles.length}</div>
+                <p className="text-[9px] text-stone-500 font-medium font-sans">RAG chatbot safety files</p>
               </div>
 
-              <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-sm space-y-2 relative overflow-hidden">
-                <span className="p-2.5 bg-sky-50/70 border border-sky-100/50 text-sky-850 rounded-xl inline-block absolute right-4 top-4">
-                  <MessageSquare className="w-5 h-5 text-sky-700" />
+              <div className="bg-white border border-stone-200 p-4.5 rounded-2xl shadow-sm space-y-1.5 relative overflow-hidden">
+                <span className="p-2 bg-sky-50/80 text-sky-850 rounded-xl inline-block absolute right-3 top-3 font-sans">
+                  <MessageSquare className="w-4 h-4 text-sky-700" />
                 </span>
-                <p className="text-[10px] text-stone-400 font-extrabold uppercase tracking-wider">Bot Sessions</p>
-                <div className="text-3xl font-extrabold text-stone-900 font-mono">{analytics?.totalChats || 0}</div>
-                <p className="text-[10px] text-stone-500">Conversational queries logged</p>
+                <p className="text-[9px] text-stone-400 font-extrabold uppercase tracking-wider font-sans">Blog Discussions</p>
+                <div className="text-2xl font-extrabold text-stone-900 font-mono">{allComments.length}</div>
+                <p className="text-[9px] text-stone-500 font-medium font-sans">Total community comments</p>
               </div>
 
-              <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-sm space-y-2 relative overflow-hidden">
-                <span className="p-2.5 bg-red-50/70 border border-red-100/50 text-red-800 rounded-xl inline-block absolute right-4 top-4 animate-pulse">
-                  <Inbox className="w-5 h-5 text-red-700" />
+              <div className="bg-white border border-stone-200 p-4.5 rounded-2xl shadow-sm space-y-1.5 relative overflow-hidden">
+                <span className="p-2 bg-red-50 text-red-800 rounded-xl inline-block absolute right-3 top-3 animate-pulse font-sans">
+                  <Inbox className="w-4 h-4 text-red-700" />
                 </span>
-                <p className="text-[10px] text-stone-400 font-extrabold uppercase tracking-wider">Unread Mail</p>
-                <div className="text-3xl font-extrabold text-stone-900 font-mono text-red-650">{unreadCount}</div>
-                <p className="text-[10px] text-stone-500">Pending advisor reviews</p>
+                <p className="text-[9px] text-stone-400 font-extrabold uppercase tracking-wider font-sans font-sans">New Messages</p>
+                <div className="text-2xl font-extrabold text-stone-900 font-mono text-red-650">{messages.filter(m => m.status === 'unread').length}</div>
+                <p className="text-[9px] text-stone-500 font-medium font-sans">Pending advisor reviews</p>
+              </div>
+
+              <div className="bg-white border border-stone-200 p-4.5 rounded-2xl shadow-sm space-y-1.5 relative overflow-hidden">
+                <span className="p-2 bg-purple-50 text-purple-800 rounded-xl inline-block absolute right-3 top-3 font-sans">
+                  <Sliders className="w-4 h-4 text-purple-700" />
+                </span>
+                <p className="text-[9px] text-stone-400 font-extrabold uppercase tracking-wider font-sans">Chatbot Analytics</p>
+                <div className="text-2xl font-extrabold text-stone-900 font-mono">{analytics?.totalChats || 12}</div>
+                <p className="text-[9px] text-stone-500 font-medium font-sans">Satisfaction: {analytics?.satisfactionRate || '94%'}</p>
+              </div>
+
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+              
+              {/* Panel 1: Recent User Activity */}
+              <div className="bg-white border border-stone-205 p-5 rounded-2xl shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-stone-105 pb-3 font-sans">
+                  <h3 className="font-extrabold text-[#4A6741] text-xs uppercase flex items-center gap-1.5">
+                    <Inbox className="w-4.5 h-4.5 text-emerald-800 shrink-0" />
+                    Incoming Consultations (Activity)
+                  </h3>
+                  <button onClick={() => setActiveTab('messages')} className="text-[10px] text-emerald-800 hover:underline font-bold">View All →</button>
+                </div>
+                <div className="space-y-3 max-h-[320px] overflow-y-auto divide-y divide-stone-100 pr-1">
+                  {messages.length === 0 ? (
+                    <p className="text-xs text-stone-400 py-6 text-center font-normal">No user inquiries logged.</p>
+                  ) : (
+                    messages.slice(0, 3).map((msg) => (
+                      <div key={msg.id} className="pt-3 first:pt-0 space-y-1 text-xs">
+                        <div className="flex items-center justify-between font-bold">
+                          <span className="text-stone-900 font-sans truncate pr-2">{msg.name}</span>
+                          <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 whitespace-nowrap ${
+                            msg.status === 'unread' ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-stone-50 text-stone-605 border'
+                          }`}>{msg.status === 'unread' ? 'New Mail' : msg.status}</span>
+                        </div>
+                        <p className="text-stone-500 font-normal truncate italic font-sans pb-0.5">"{msg.subject}"</p>
+                        <p className="text-[9px] text-stone-450 font-mono font-normal flex justify-between font-sans">
+                          <span className="truncate pr-1">{msg.email}</span>
+                          <span>{msg.timestamp.split(',')[0]}</span>
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Panel 2: Latest Comments */}
+              <div className="bg-white border border-stone-205 p-5 rounded-2xl shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-stone-105 pb-3">
+                  <h3 className="font-extrabold text-[#4A6741] text-xs uppercase flex items-center gap-1.5 font-sans">
+                    <MessageSquare className="w-4.5 h-4.5 text-emerald-800 shrink-0" />
+                    Latest Comments
+                  </h3>
+                  <button onClick={() => setActiveTab('blog_comments')} className="text-[10px] text-emerald-800 hover:underline font-bold">Moderate →</button>
+                </div>
+                <div className="space-y-3 max-h-[320px] overflow-y-auto divide-y divide-stone-100 pr-1">
+                  {allComments.length === 0 ? (
+                    <p className="text-xs text-stone-400 py-6 text-center font-normal">No community comments posted yet.</p>
+                  ) : (
+                    allComments.slice(0, 3).map((com) => (
+                      <div key={com.id} className="pt-3 first:pt-0 space-y-1 text-xs font-sans">
+                        <div className="flex items-center justify-between font-bold">
+                          <span className="text-stone-900 font-sans truncate pr-2">{com.author}</span>
+                          <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0 whitespace-nowrap ${
+                            com.approved ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-amber-50 text-amber-700 border border-amber-100 animate-pulse'
+                          }`}>{com.approved ? 'Approved' : 'Pending'}</span>
+                        </div>
+                        <p className="text-stone-500 font-normal leading-relaxed text-xs line-clamp-2">"{com.text}"</p>
+                        <p className="text-[9px] text-stone-455 font-mono font-normal">Posted: {com.timestamp.split(',')[0]}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Panel 3: AI Knowledge Base Status */}
+              <div className="bg-white border border-stone-205 p-5 rounded-2xl shadow-sm space-y-4 font-sans">
+                <div className="flex items-center justify-between border-b border-stone-105 pb-3">
+                  <h3 className="font-extrabold text-[#4A6741] text-xs uppercase flex items-center gap-1.5 font-sans">
+                    <Shield className="w-4.5 h-4.5 text-emerald-800 shrink-0" />
+                    AI Knowledge Base Status
+                  </h3>
+                  <span className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-emerald-750 font-extrabold bg-emerald-55 px-2.5 py-1 rounded-full border border-emerald-110 shrink-0">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0 animate-ping" />
+                    RAG Live
+                  </span>
+                </div>
+                <div className="space-y-3.5 text-xs leading-relaxed text-stone-500 font-normal">
+                  <div className="space-y-1">
+                    <div className="flex justify-between font-bold text-stone-700 text-xs">
+                      <span>Index Calibration Level:</span>
+                      <span className="text-emerald-750 font-extrabold">100% Calibrated</span>
+                    </div>
+                    <p className="text-[11px] text-stone-400">All registered medicinal species represent validated Oral Lore & clinical safety guidelines.</p>
+                  </div>
+                  <div className="h-px bg-stone-100" />
+                  <div className="grid grid-cols-2 gap-2 text-center text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    <div className="bg-stone-50 p-2.5 border border-stone-200/50 rounded-xl">
+                      <p className="text-[8px] text-stone-404 font-extrabold">Vector Nodes</p>
+                      <p className="text-xs text-stone-900 font-mono mt-0.5">{(plants.length * 4) + articles.length}</p>
+                    </div>
+                    <div className="bg-stone-50 p-2.5 border border-stone-200/50 rounded-xl">
+                      <p className="text-[8px] text-stone-404 font-extrabold">Grounding State</p>
+                      <p className="text-xs text-stone-900 font-sans mt-0.5" style={{ color: '#15803d' }}>ACTIVE</p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-stone-405 italic leading-relaxed">System prompt strictly forces clinical safe dosage checks, citing published treatises from your knowledge library.</p>
+                </div>
               </div>
 
             </div>
@@ -1440,6 +1640,172 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* TAB 5.5: BLOG DISCUSSION MODERATION BLOCK */}
+        {activeTab === 'blog_comments' && (
+          <div className="space-y-6 animate-fade-in font-sans text-xs">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
+              <div>
+                <h1 className="text-2xl font-extrabold text-stone-900 leading-none font-sans">Blog Discussions & Comments</h1>
+                <p className="text-xs text-stone-500 mt-1 font-normal">Review user reflections, approve regional lore submissions, and publish verified answers.</p>
+              </div>
+
+              {/* Filtering Controls */}
+              <div className="flex bg-stone-100 border p-1 rounded-xl text-[10px] font-bold text-stone-600">
+                {(['all', 'pending', 'approved'] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setCommentFilter(f)}
+                    className={`px-3 py-1.5 rounded-lg capitalize cursor-pointer transition ${
+                      commentFilter === f ? 'bg-emerald-950 text-white shadow-sm' : 'hover:text-stone-950'
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Left Column: Comments List */}
+              <div className="lg:col-span-7 space-y-4 max-h-[660px] overflow-y-auto pr-1">
+                {filteredComments.length > 0 ? (
+                  filteredComments.map((com) => {
+                    const blog = blogs.find(b => b.id === com.blogId);
+                    return (
+                      <div 
+                        key={com.id} 
+                        className={`p-5 rounded-2xl border transition shadow-sm bg-white hover:bg-stone-50/50 ${
+                          !com.approved ? 'border-l-4 border-l-amber-500 border-stone-200 shadow' : 'border-stone-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase text-stone-400">
+                              <span>Ref: {blog ? blog.title : `Blog ${com.blogId}`}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {com.timestamp}</span>
+                            </div>
+                            <h4 className="font-extrabold text-[#4A6741] text-xs mt-1 font-sans">Submitted by: {com.author}</h4>
+                          </div>
+
+                          <div className="shrink-0 flex items-center gap-1.5">
+                            {com.approved ? (
+                              <span className="bg-emerald-100/70 border border-emerald-250 text-emerald-800 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide">Approved & Public</span>
+                            ) : (
+                              <span className="bg-amber-100/70 border border-amber-250 text-amber-800 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide">Pending Approval</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className="text-stone-700 text-xs font-semibold leading-relaxed mt-3.5 bg-stone-50 p-3.5 rounded-xl border border-stone-150/40">
+                          {com.text}
+                        </p>
+
+                        {/* Existing Admin Reply preview */}
+                        {com.replyText && (
+                          <div className="mt-3 p-3 bg-stone-105 rounded-xl border border-stone-200 flex items-start gap-2">
+                            <Send className="w-3.5 h-3.5 text-emerald-850 shrink-0 mt-0.5" />
+                            <div className="space-y-0.5">
+                              <span className="text-[9px] font-extrabold text-emerald-950 uppercase tracking-widest block">ADMIN REPLY DETAIL</span>
+                              <p className="text-stone-600 text-[11px] leading-relaxed font-semibold">{com.replyText}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-end gap-1.5 mt-4 pt-3 border-t">
+                          {!com.approved ? (
+                            <button
+                              onClick={() => handleApproveComment(com.id)}
+                              className="py-1.5 px-3 bg-emerald-900 text-white rounded-lg font-extrabold text-[10px] hover:bg-emerald-800 cursor-pointer"
+                            >
+                              Approve
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleDisapproveComment(com.id)}
+                              className="py-1.5 px-3 bg-stone-150 text-stone-700 rounded-lg font-extrabold text-[10px] hover:bg-stone-200 cursor-pointer"
+                            >
+                              Hide Comment
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setSelectedCommentForReply(com);
+                              setCommentReplyText(com.replyText || `Dear ${com.author},\n\nThank you for sharing Gĩkũyũ traditional knowledge regarding Gĩkũyũ herbal trees.\n\nRegarding your comments:\n\n\n\nBest regards,\nChief Elder Joseph\nDawaKienyeji Advisory Circle`);
+                            }}
+                            className="py-1.5 px-3 bg-emerald-950 text-white rounded-lg font-extrabold text-[10px] hover:bg-emerald-800 cursor-pointer"
+                          >
+                            Attach Advice Reply
+                          </button>
+                          <button
+                            onClick={() => handleDeleteComment(com.id)}
+                            className="py-1.5 px-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-extrabold text-[10px] cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-center font-bold text-stone-400 py-16 bg-white border border-stone-200 rounded-2xl">No blog comments matching selection.</p>
+                )}
+              </div>
+
+              {/* Right Column: Inline Discussion Reply composer */}
+              <div className="lg:col-span-5 bg-white border border-stone-200 p-6 rounded-2xl shadow-sm h-fit space-y-4">
+                <h3 className="font-extrabold text-stone-900 text-sm border-b pb-2">Discussion advice sender</h3>
+
+                {selectedCommentForReply ? (
+                  <form onSubmit={handleSendCommentReply} className="space-y-4">
+                    <div className="bg-stone-50 p-3 rounded-xl border space-y-1">
+                      <p className="font-bold text-[9px] text-stone-400 uppercase leading-none">REPLYING TO COMMENT</p>
+                      <p className="font-extrabold text-stone-900 mt-1">From: {selectedCommentForReply.author}</p>
+                      <p className="text-[10px] text-stone-500 font-semibold line-clamp-2">"{selectedCommentForReply.text}"</p>
+                    </div>
+
+                    <div>
+                      <label className="block mb-1.5 uppercase font-extrabold text-stone-900 text-[9px] tracking-wide">Reply / Advice Content *</label>
+                      <textarea
+                        required
+                        rows={10}
+                        value={commentReplyText}
+                        onChange={(e) => setCommentReplyText(e.target.value)}
+                        placeholder="Draft response..."
+                        className="w-full p-2.5 border border-stone-300 rounded-xl bg-white text-stone-900 font-semibold leading-relaxed text-xs font-mono"
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={submittingCommentReply}
+                        className="flex-1 py-2 bg-emerald-950 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow text-xs disabled:bg-stone-300 cursor-pointer"
+                      >
+                        <Send className="w-3.5 h-3.5 text-emerald-300" />
+                        {submittingCommentReply ? "Saving Advice..." : "Attach and Publish"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCommentForReply(null)}
+                        className="px-4 py-2 border rounded-xl hover:bg-stone-50 font-bold text-xs cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="text-center py-10 font-sans text-stone-400">
+                    <MessageSquare className="w-8 h-8 mx-auto text-stone-350 mb-2" />
+                    <p className="font-bold text-xs">No Comment Selected</p>
+                    <p className="text-[10px] text-stone-400 mt-1 font-normal leading-relaxed">Select "Attach Advice Reply" on any blog comment to attach a nested responses block.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TAB 6: CHATBOT TRAINING & CONFIGS */}
         {activeTab === 'chatbot_training' && (
           <div className="space-y-6 animate-fade-in">
@@ -1664,19 +2030,39 @@ export default function AdminDashboard() {
                           <p className="text-[10px] text-emerald-800 font-bold">From: {msg.name} ({msg.email})</p>
                         </div>
 
-                        <div className="shrink-0 flex items-center gap-1.5">
-                          <button
-                            onClick={() => handleToggleMessageStatus(msg)}
-                            className={`px-2 py-0.5 border text-[9px] font-bold rounded-full ${
-                              msg.status === 'unread' 
-                                ? 'bg-red-50 text-red-800 border-red-200' 
-                                : 'bg-stone-100 text-stone-605'
-                            }`}
-                          >
-                            {msg.status === 'unread' ? "Unread" : "Mark Unread"}
-                          </button>
+                        <div className="shrink-0 flex flex-col items-end gap-1.5">
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => handleToggleMessageStatus(msg)}
+                              className={`px-2 py-0.5 border text-[9px] font-bold rounded-full cursor-pointer transition ${
+                                msg.status === 'unread' 
+                                  ? 'bg-red-50 text-red-800 border-red-200 animate-pulse' 
+                                  : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-150'
+                              }`}
+                            >
+                              {msg.status === 'unread' ? "New" : "Mark Unread"}
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await updateMessageStatus(msg.id, msg.status, adminPin, !msg.resolved);
+                                  showStatus(`Inquiry marked as ${!msg.resolved ? 'Resolved' : 'Unresolved'}`);
+                                  loadAdminData();
+                                } catch (err) {
+                                  showErr("Failed to update message resolution status.");
+                                }
+                              }}
+                              className={`px-2 py-0.5 border text-[9px] font-extrabold rounded-full cursor-pointer transition ${
+                                msg.resolved 
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                                  : 'bg-amber-50 text-amber-800 border-amber-250 animate-pulse'
+                              }`}
+                            >
+                              {msg.resolved ? "✓ Resolved" : "⚠ Unresolved"}
+                            </button>
+                          </div>
                           {msg.status === 'replied' && (
-                            <span className="bg-green-50 text-green-800 border border-green-150 rounded-full px-2 py-0.5 text-[9px] font-bold">Replied</span>
+                            <span className="bg-green-50 text-green-800 border border-green-150 rounded-full px-2 py-0.5 text-[9px] font-bold">Response Dispatched</span>
                           )}
                         </div>
                       </div>

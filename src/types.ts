@@ -70,6 +70,17 @@ export interface ChatLog {
   satisfactionRating?: 'good' | 'bad';
 }
 
+export interface BlogComment {
+  id: string;
+  blogId: string;
+  author: string;
+  text: string;
+  timestamp: string;
+  approved: boolean;
+  replyText?: string;
+  replyTimestamp?: string;
+}
+
 export interface ContactMessage {
   id: string;
   name: string;
@@ -78,4 +89,7 @@ export interface ContactMessage {
   message: string;
   timestamp: string;
   status: 'unread' | 'read' | 'replied';
+  replyText?: string;
+  replyTimestamp?: string;
+  resolved?: boolean;
 }

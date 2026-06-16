@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import { Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2, Bookmark, ShieldCheck, TreePine, AlertCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2, ShieldCheck, TreePine, AlertCircle } from "lucide-react";
 import { postMessage } from "../utils/api";
+import { useLanguage } from "../utils/LanguageContext";
 
 export default function ContactPage() {
+  const { t, language } = useLanguage();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
@@ -49,16 +51,88 @@ export default function ContactPage() {
     }, 3500);
   };
 
+  const contactTextMap: Record<string, Record<string, string>> = {
+    channels: {
+      en: "Direct Advisory Channels",
+      sw: "Vituo vya Ushauri vya Moja kwa Moja",
+      ki: "Njĩra cia Kwarĩria o Rĩmwe",
+      fr: "Canaux d'Information Directs"
+    },
+    channelsDesc: {
+      en: "Reach out directly for clinical inquiries, seed propagation consults, and safety compliance reports.",
+      sw: "Wasiliana nasi moja kwa moja kwa maswali ya matibabu, ushauri wa mbegu, na ripoti za usalama.",
+      ki: "Mwanya wa kwarĩria nĩguo tũcũranĩrie mĩhaka thũthũria ya mĩthĩga na rũrĩrĩ.",
+      fr: "Contactez-nous directement pour les études cliniques, la propagation de semences et la sécurité."
+    },
+    hotline: {
+      en: "Telephone Hotline",
+      sw: "Nambari ya Simu",
+      ki: "Namba ya Simu",
+      fr: "Ligne Téléphonique"
+    },
+    correspondence: {
+      en: "Correspondence Email",
+      sw: "Barua Pepe ya Mawasiliano",
+      ki: "Mbarũthi ya Gũcokanĩria",
+      fr: "Courriel Électronique"
+    },
+    successDesc: {
+      en: "Our herbal preservationists will analyze and email you back soon.",
+      sw: "Wataalamu wetu wa mitishamba watachambua na kukujibu hivi karibuni kupitia barua pepe.",
+      ki: "Andũ a rũũgĩ rwa mĩthĩga nĩmagũkũonera riũ thĩnĩ wa barua pepe yaku.",
+      fr: "Nos spécialistes analyseront votre demande et vous répondront très bientôt."
+    },
+    sendInquiry: {
+      en: "Send secure consultative Inquiry",
+      sw: "Tuma Swali la Ushauri Salama",
+      ki: "Tũma mũri rũũgĩ rwa muthĩga wega",
+      fr: "Envoyer une Demande de Consultation Sécurisée"
+    },
+    placeholderName: {
+      en: "e.g. Kiprop Waithera",
+      sw: "Mfano: Kiprop Waithera",
+      ki: "ta: Kiprop Waithera",
+      fr: "ex. Kiprop Waithera"
+    },
+    placeholderEmail: {
+      en: "e.g. user@domain.com",
+      sw: "Mfano: user@domain.com",
+      ki: "ta: user@domain.com",
+      fr: "ex. mickael@domain.com"
+    },
+    placeholderSubject: {
+      en: "e.g., Sustainability report for Pygeum or DawaBot queries",
+      sw: "Mfano: Ripoti ya Pygeum au maswali ya DawaBot",
+      ki: "ta: Ripoti ya mĩthĩga kana DawaBot",
+      fr: "ex. Rapport de Pygeum ou questions DawaBot"
+    },
+    placeholderMessage: {
+      en: "Tell us about the tree species, ailments or seed propagation queries you require...",
+      sw: "Tuambie kuhusu spishi za mti, magonjwa au maswali ya uenezi wa mbegu...",
+      ki: "Andĩka kĩĩgĩĩ mĩthemba ya mĩthĩga na mbeũ mĩtĩ-inĩ...",
+      fr: "Parlez-nous des espèces, des maladies ou de la propagation de semences dont vous avez besoin..."
+    }
+  };
+
+  const getL = (key: string) => {
+    const matchedLang = language || "en";
+    return contactTextMap[key]?.[matchedLang as string] || contactTextMap[key]?.['en'] || key;
+  };
+
   return (
     <div id="contact-viewport" className="space-y-8 font-sans max-w-7xl mx-auto px-4">
       
       {/* Title Header Banner Deck */}
       <div className="bg-stone-50 p-6 md:p-8 rounded-3xl border border-stone-250/80 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="max-w-2xl space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">Get In Touch</span>
-          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-sans">Contact Us</h1>
-          <p className="text-sm text-stone-500 leading-relaxed font-normal">
-            Have questions about plant safety, sustainability regulations, or native seeds? Write or visit us at our highlands model gardens.
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+            {t("nav.contact")}
+          </span>
+          <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight font-sans">
+            {t("contact.title") || "Contact Us"}
+          </h1>
+          <p className="text-sm text-stone-500 leading-relaxed font-normal text-left">
+            {t("contact.subtitle") || "Have questions about plant safety, sustainability regulations, or native seeds? Write or visit us at our highlands model gardens."}
           </p>
         </div>
       </div>
@@ -66,112 +140,119 @@ export default function ContactPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Left column: Contact Info card */}
-        <div className="lg:col-span-5 bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900 text-white p-6 md:p-8 rounded-3xl shadow-xl flex flex-col justify-between space-y-8">
+        <div className="lg:col-span-4 bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900 text-white p-6 md:p-8 rounded-3xl shadow-xl flex flex-col justify-center space-y-8 min-h-[380px] text-left">
           
           <div className="space-y-6">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 px-2.5 py-1 bg-emerald-900 rounded border border-emerald-800">Highland Station</span>
-            <h2 className="text-xl font-extrabold tracking-tight">Main Model Nursery Gardens</h2>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#D4A017] px-2.5 py-1 bg-emerald-900 rounded border border-emerald-800">
+              {t("nav.contact") || "GET IN TOUCH"}
+            </span>
+            <h2 className="text-2xl font-extrabold tracking-tight">
+              {getL("channels")}
+            </h2>
             <p className="text-xs text-emerald-100 leading-relaxed font-semibold">
-              Visit our traditional medicinal plant botanical sanctuary along the slopes of the Aberdares, where we propagate endangered trees like Prunus africana (*Mũcorai*).
+              {getL("channelsDesc")}
             </p>
 
-            <div className="space-y-4 pt-4 text-xs font-semibold">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-emerald-400 shrink-0" />
+            <div className="space-y-6 pt-4 text-xs font-semibold">
+              <div className="flex items-start gap-4">
+                <div className="p-2.5 bg-emerald-900/40 rounded-xl border border-emerald-800">
+                  <Phone className="w-5 h-5 text-[#D4A017] shrink-0 animate-pulse" />
+                </div>
                 <div>
-                  <p className="font-bold text-white">Nyeri model Nursery Garden</p>
-                  <p className="font-normal opacity-80">Kabiru-ini highland slope path, Nyeri County, Kenya</p>
+                  <p className="font-extrabold text-stone-200 uppercase text-[9px] tracking-widest mb-0.5">
+                    {getL("hotline")}
+                  </p>
+                  <p className="font-black text-white text-sm tracking-wide">+254 141 063 174</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <Phone className="w-5 h-5 text-emerald-400 shrink-0" />
-                <div>
-                  <p className="font-bold text-white">Advisory line</p>
-                  <p className="font-normal opacity-80">+254 711 00DAWA (003292)</p>
+              <div className="flex items-start gap-4 border-t border-emerald-900/55 pt-5">
+                <div className="p-2.5 bg-emerald-900/40 rounded-xl border border-emerald-800">
+                  <Mail className="w-5 h-5 text-[#D4A017] shrink-0" />
                 </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Mail className="w-5 h-5 text-emerald-400 shrink-0" />
                 <div>
-                  <p className="font-bold text-white">General Email</p>
-                  <p className="font-normal opacity-80">info@mojatu.com</p>
+                  <p className="font-extrabold text-stone-200 uppercase text-[9px] tracking-widest mb-0.5">
+                    {getL("correspondence")}
+                  </p>
+                  <p className="font-black text-white text-sm tracking-wide">info@dawakienyenji.com</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="p-4 bg-emerald-900 border border-emerald-800 rounded-2xl flex items-start gap-3 text-xs leading-relaxed">
-            <ShieldCheck className="w-5 h-5 text-emerald-300 shrink-0 mt-0.5" />
-            <p className="font-semibold text-emerald-100">
-              Approved by the traditional forestry conservation committee of central Kenya.
-            </p>
-          </div>
-
         </div>
 
         {/* Right column: Interactive message form */}
-        <div className="lg:col-span-7 bg-white border border-stone-250 p-6 md:p-8 rounded-3xl shadow-sm space-y-6">
+        <div className="lg:col-span-8 bg-white border border-stone-250 p-6 md:p-8 rounded-3xl shadow-sm space-y-6 text-left">
           <h2 className="text-lg font-bold text-emerald-950 uppercase border-b border-stone-100 pb-3 flex items-center gap-1.5 font-sans">
             <MessageSquare className="w-5 h-5 text-emerald-700" />
-            Send secure consultative Inquiry
+            {getL("sendInquiry")}
           </h2>
 
           {submitted ? (
-            <div className="py-12 text-center text-xs font-semibold text-emerald-800 space-y-3.5 bg-emerald-50 rounded-2xl border border-emerald-100 animate-pulse">
+            <div className="py-12 text-center text-xs font-semibold text-emerald-800 space-y-3.5 bg-emerald-50 rounded-2xl border border-emerald-100">
               <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
               <div>
-                <p className="text-sm font-bold">Inquiry Sent Successfully!</p>
-                <p className="text-[10px] text-stone-500 mt-1">Our herbal preservationists will analyze and email you back soon.</p>
+                <p className="text-sm font-bold">{t("contact.success") || "Inquiry Sent Successfully!"}</p>
+                <p className="text-[10px] text-stone-500 mt-1">
+                  {getL("successDesc")}
+                </p>
               </div>
             </div>
           ) : (
             <form onSubmit={handleContactSubmit} className="space-y-4 text-xs font-semibold text-stone-700">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block mb-1 font-bold text-stone-900 uppercase">Your Name *</label>
+                  <label className="block mb-1 font-bold text-stone-900 uppercase text-left">
+                    {t("contact.name") || "Your Name *"}
+                  </label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Kiprop Waithera"
+                    placeholder={getL("placeholderName")}
                     className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900"
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 font-bold text-stone-900 uppercase">Your Email *</label>
+                  <label className="block mb-1 font-bold text-stone-900 uppercase text-left">
+                    {t("contact.email") || "Your Email *"}
+                  </label>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. user@domain.com"
+                    placeholder={getL("placeholderEmail")}
                     className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block mb-1 font-bold text-stone-900 uppercase">Subject Topic</label>
+                <label className="block mb-1 font-bold text-stone-900 uppercase text-left">
+                  {t("contact.subject") || "Subject *"}
+                </label>
                 <input
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g., Sustainability report for Pygeum or DawaBot queries"
+                  placeholder={getL("placeholderSubject")}
                   className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900"
                 />
               </div>
 
               <div>
-                <label className="block mb-1 font-bold text-stone-900 uppercase">Explain details of your concern *</label>
+                <label className="block mb-1 font-bold text-stone-900 uppercase text-left">
+                  {t("contact.messageHint") || "Explain details *"}
+                </label>
                 <textarea
                   required
                   rows={4}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Tell us about the tree species, ailments or seed propagation queries you require..."
+                  placeholder={getL("placeholderMessage")}
                   className="w-full p-2.5 border border-stone-300 rounded-lg text-stone-900 font-normal leading-relaxed text-xs"
                 />
               </div>
@@ -186,12 +267,12 @@ export default function ContactPage() {
               <button
                 type="submit"
                 disabled={isSending}
-                className={`w-full py-3 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow transition ${
+                className={`w-full py-3 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow transition cursor-pointer ${
                   isSending ? 'bg-stone-400 cursor-not-allowed' : 'bg-emerald-950 hover:bg-emerald-800'
                 }`}
               >
                 <Send className="w-3.5 h-3.5 text-emerald-300" />
-                {isSending ? "Index-transmitting..." : "Submit Advisory Form"}
+                {isSending ? t("btn.loading") : t("btn.submit")}
               </button>
             </form>
           )}
@@ -200,16 +281,16 @@ export default function ContactPage() {
           <div className="mt-8 pt-8 border-t border-stone-100 bg-stone-50 p-6 rounded-2xl space-y-4">
             <h3 className="text-xs uppercase font-extrabold text-emerald-950 tracking-wider flex items-center gap-1.5 font-sans">
               <TreePine className="w-4 h-4 text-emerald-700" />
-              Subscribe to regional safety and species digests
+              {t("newsletter.title") || "Subscribe to bulletins"}
             </h3>
-            <p className="text-[11px] text-stone-500 leading-relaxed font-normal">
-              Enter your email address to receive bi-monthly reports regarding traditional plant conservation laws, replanting drives, and safe traditional preparations.
+            <p className="text-[11px] text-stone-505 leading-relaxed font-normal">
+              {t("newsletter.subtitle") || "Get sustainable harvesting updates."}
             </p>
 
             {newsletterSubscribed ? (
               <p className="text-xs font-bold text-green-700 flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4" />
-                Signed up! Thank you for supporting Gĩkũyũ botanical preservation.
+                {t("newsletter.success") || "Subscribed successfully!"}
               </p>
             ) : (
               <form onSubmit={handleNewsletter} className="flex gap-2">
@@ -218,14 +299,14 @@ export default function ContactPage() {
                   required
                   value={newsletterEmail}
                   onChange={(e) => setNewsletterEmail(e.target.value)}
-                  placeholder="Enter your email address..."
+                  placeholder={t("newsletter.placeholder") || "Enter your email address..."}
                   className="flex-1 p-2.5 border border-stone-300 rounded-lg text-xs bg-white text-stone-900 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-700"
                 />
                 <button
                   type="submit"
-                  className="px-4 bg-emerald-950 text-white rounded-lg font-bold text-xs hover:bg-emerald-800"
+                  className="px-4 bg-emerald-950 text-white rounded-lg font-bold text-xs hover:bg-emerald-800 cursor-pointer"
                 >
-                  Join List
+                  {t("newsletter.button") || "Join List"}
                 </button>
               </form>
             )}
