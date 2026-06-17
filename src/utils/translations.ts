@@ -426,6 +426,12 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
     ki: "Thoma makala mothe",
     fr: "Lire tous les Essais"
   },
+  "home.exploreBlogs": {
+    en: "Explore Blogs",
+    sw: "Gundua Blogu",
+    ki: "Thuthuria Mablogu",
+    fr: "Explorer les Blogs"
+  },
   "home.readEssay": {
     en: "Read Essay",
     sw: "Soma Zaidi",

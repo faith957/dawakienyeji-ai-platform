@@ -635,13 +635,6 @@ export default function App() {
                     {t("home.featuredFlora") || "Featured Medicinal Flora"}
                   </h2>
                 </div>
-                <button
-                  onClick={() => navigateTo('plants')}
-                  className="py-3 px-5 rounded-2xl border border-stone-250 hover:border-emerald-800/20 hover:bg-emerald-50/20 text-xs font-extrabold tracking-wider uppercase text-emerald-950 inline-flex items-center gap-2 shrink-0 bg-white shadow-sm transition active:scale-98 duration-150 cursor-pointer"
-                >
-                  {t("home.browseFullDb") || "Browse Full Database"}
-                  <ArrowRight className="w-4 h-4 text-emerald-800" />
-                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -780,7 +773,7 @@ export default function App() {
                   onClick={() => navigateTo('blog')}
                   className="text-xs font-bold text-emerald-800 inline-flex items-center gap-0.5 hover:translate-x-1 duration-200 text-right shrink-0 font-sans"
                 >
-                  {t("home.readAllEssays") || "Read All Essays"}
+                  {t("home.exploreBlogs") || "Explore Blogs"}
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -1018,13 +1011,13 @@ export default function App() {
           </div>
 
           {/* Column 2: Quick Links (combines all navigation links precisely as requested) */}
-          <div className="lg:col-span-4 space-y-4 text-center flex flex-col items-center">
-            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans w-full text-center">{t("nav.quickLinks") || "Quick Links"}</h4>
-            <ul className="flex flex-col items-center gap-2.5 text-xs md:text-sm font-semibold">
+          <div className="lg:col-span-4 space-y-4 text-left">
+            <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">{t("nav.quickLinks") || "Quick Links"}</h4>
+            <ul className="flex flex-col gap-2.5 text-xs md:text-sm font-semibold">
               <li>
                 <button 
                   onClick={() => navigateTo('home')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.home") || "Home"}</span>
@@ -1033,7 +1026,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('about')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.about") || "About"}</span>
@@ -1042,7 +1035,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('plants')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.plants") || "Herbal Plants"}</span>
@@ -1051,7 +1044,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('remedies')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.remedies") || "Traditional Remedies"}</span>
@@ -1060,7 +1053,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('blog')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.blog") || "Blogs"}</span>
@@ -1069,7 +1062,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('chatbot')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span className="font-bold text-[#D4A017] hover:underline hover:decoration-wavy">{t("nav.askBot") || "Get Help"}</span>
@@ -1078,7 +1071,7 @@ export default function App() {
               <li>
                 <button 
                   onClick={() => navigateTo('contact')} 
-                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-center cursor-pointer font-medium"
+                  className="group flex items-center gap-1.5 text-white hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
                   <span>{t("nav.contact") || "Contact"}</span>
@@ -1101,7 +1094,7 @@ export default function App() {
               </p>
               <p className="flex items-start gap-2 group text-white">
                 <Mail className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-200" />
-                <span>info@dawakienyenji.com</span>
+                <span>info@dawakienyeji.com</span>
               </p>
             </div>
           </div>
