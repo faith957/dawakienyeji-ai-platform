@@ -142,8 +142,28 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
     };
   }, [voiceLang.code, language]);
 
-  // Initialize state with default session on first mount
+  // Initialize state with default session on first mount or load from persistent storage
   useEffect(() => {
+    const savedSessions = localStorage.getItem("dawa_chat_sessions");
+    const savedActiveId = localStorage.getItem("dawa_current_session_id");
+    
+    if (savedSessions) {
+      try {
+        const parsed = JSON.parse(savedSessions);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSessions(parsed);
+          if (savedActiveId && parsed.some(s => s.id === savedActiveId)) {
+            setCurrentSessionId(savedActiveId);
+          } else {
+            setCurrentSessionId(parsed[0].id);
+          }
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to parse saved chat sessions:", err);
+      }
+    }
+
     const defaultSessionId = 's-default';
     const initialSession: ChatSession = {
       id: defaultSessionId,
@@ -153,6 +173,20 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
     setSessions([initialSession]);
     setCurrentSessionId(defaultSessionId);
   }, []);
+
+  // Persist sessions to localStorage database when updated
+  useEffect(() => {
+    if (sessions.length > 0) {
+      localStorage.setItem("dawa_chat_sessions", JSON.stringify(sessions));
+    }
+  }, [sessions]);
+
+  // Persist active session id
+  useEffect(() => {
+    if (currentSessionId) {
+      localStorage.setItem("dawa_current_session_id", currentSessionId);
+    }
+  }, [currentSessionId]);
 
   // Auto-scroll to bottom of conversation
   useEffect(() => {
@@ -276,6 +310,8 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
       };
       setSessions([initialSession]);
       setCurrentSessionId(defaultSessionId);
+      localStorage.removeItem("dawa_chat_sessions");
+      localStorage.removeItem("dawa_current_session_id");
     }
   };
 
@@ -326,8 +362,13 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         </div>
 
         <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 bg-emerald-600 rounded-lg text-white">
-            <Bot className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg overflow-hidden bg-emerald-950 flex items-center justify-center p-0.5 border border-amber-500/20 shrink-0">
+            <img 
+              src="https://i.postimg.cc/VkwT0rck/Chat-GPT-Image-Jun-7-2026-09-17-26-PM.png" 
+              alt="DawaBot Logo" 
+              className="w-full h-full object-cover rounded-lg"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <div>
             <h1 className="font-bold text-sm tracking-tight">{t("chat.dawaBotAssistant") || "DawaBot Assistant"}</h1>
@@ -398,9 +439,14 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
                 ? 'bg-zinc-900/40 border-zinc-850 text-zinc-100' 
                 : 'bg-emerald-50/40 border-emerald-100/60 text-emerald-950'
             }`}>
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-emerald-700 rounded-lg text-white">
-                  <Bot className="w-4 h-4" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg overflow-hidden bg-emerald-950 flex items-center justify-center p-0.5 border border-amber-500/20 shrink-0">
+                  <img 
+                    src="https://i.postimg.cc/VkwT0rck/Chat-GPT-Image-Jun-7-2026-09-17-26-PM.png" 
+                    alt="DawaBot Logo" 
+                    className="w-full h-full object-cover rounded-lg"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
                 <h2 className="text-sm font-bold tracking-tight leading-none uppercase">
                   {language === 'sw' ? 'Karibu kwenye DawaBot' :
@@ -433,12 +479,19 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
                     className={`flex items-start gap-3.5 ${isUser ? 'flex-row-reverse' : ''}`}
                   >
                     {/* Character Avatar */}
-                    <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ${
+                    <div className={`w-8 h-8 rounded-full shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${
                       isUser 
                         ? 'bg-emerald-600 text-white' 
-                        : isDark ? 'bg-zinc-800 text-emerald-400' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : isDark ? 'bg-zinc-850 text-emerald-400 border border-zinc-700' : 'bg-emerald-950 text-emerald-800 p-0.5 border border-amber-500/20'
                     }`}>
-                      {isUser ? "ME" : <Bot className="w-4 h-4" />}
+                      {isUser ? "ME" : (
+                        <img 
+                          src="https://i.postimg.cc/VkwT0rck/Chat-GPT-Image-Jun-7-2026-09-17-26-PM.png" 
+                          alt="DawaBot Logo" 
+                          className="w-full h-full object-cover rounded-full"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
                     </div>
 
                     {/* Chat Bubble card */}
@@ -531,10 +584,15 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
             {/* Typist loading dots */}
             {isTyping && (
               <div className="flex items-start gap-3.5">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  isDark ? 'bg-zinc-800 text-emerald-400' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                <div className={`w-8 h-8 rounded-full shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${
+                  isDark ? 'bg-zinc-850 text-emerald-400 border border-zinc-700' : 'bg-emerald-950 text-emerald-800 p-0.5 border border-amber-500/20'
                 }`}>
-                  <Bot className="w-4 h-4" />
+                  <img 
+                    src="https://i.postimg.cc/VkwT0rck/Chat-GPT-Image-Jun-7-2026-09-17-26-PM.png" 
+                    alt="DawaBot Logo" 
+                    className="w-full h-full object-cover rounded-full"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
                 <div className={`p-4 rounded-2xl rounded-tl-none text-sm border ${
                   isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-300' : 'bg-white border-stone-200 text-emerald-800'

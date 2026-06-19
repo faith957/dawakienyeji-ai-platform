@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { 
   Leaf, Bot, BookOpen, MapPin, Phone, Mail, ArrowRight, ShieldCheck, 
   Sparkles, Menu, X, Landmark, Compass, BrainCircuit, Users, Database, Globe, TreePine,
-  ChevronLeft, ChevronRight, Facebook, Twitter, Instagram, Youtube
+  ChevronLeft, ChevronRight, Facebook, Twitter, Instagram, Youtube, History
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { INITIAL_HERBS, INITIAL_BLOGS } from "./data/herbalDatabase";
@@ -246,7 +246,7 @@ export default function App() {
             >
               <div className="relative flex items-center justify-center">
                 <span className="absolute animate-ping inline-flex h-1.5 w-1.5 rounded-full bg-amber-400 opacity-75" />
-                <Bot className="w-4 h-4 text-emerald-300 relative" />
+                <History className="w-4 h-4 text-emerald-300 relative" />
               </div>
               <span>{t("nav.askBot")}</span>
             </button>
