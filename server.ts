@@ -1,11 +1,76 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import nodemailer from "nodemailer";
 import { INITIAL_HERBS, INITIAL_REMEDIES, INITIAL_BLOGS, INITIAL_KNOWLEDGE_BASE } from "./src/data/herbalDatabase.js";
+import { findDictionaryMatches } from "./src/data/kikuyu_botanical_dictionary.js";
 import { Herb, BlogPost, TraditionalRemedy, KnowledgeBaseArticle, ChatMessage, ChatLog, BlogComment } from "./src/types.js";
 import { translateHerb, translateRemedy } from "./src/utils/translations.js";
+
+const USERS_FILE = path.join(process.cwd(), "src", "data", "users.json");
+const CHAT_SESSIONS_FILE = path.join(process.cwd(), "src", "data", "user_sessions.json");
+
+interface UserAccount {
+  email: string;
+  password?: string;
+  name?: string;
+}
+
+interface UserSessionsData {
+  [email: string]: any[];
+}
+
+// Load users helper
+const loadUsers = (): UserAccount[] => {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      return JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
+    }
+  } catch (err) {
+    console.error("Error reading users file:", err);
+  }
+  return [
+    { email: "joseph@yflab.org", password: "Joseph@60", name: "Dr. Joseph Ndingi" },
+    { email: "faith@mojatu.com", password: "Faith@60", name: "Faith Mojatu" }
+  ];
+};
+
+// Save users helper
+const saveUsers = (users: UserAccount[]) => {
+  try {
+    fs.mkdirSync(path.dirname(USERS_FILE), { recursive: true });
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Error saving users file:", err);
+  }
+};
+
+// Load user sessions helper
+const loadUserSessions = (): UserSessionsData => {
+  try {
+    if (fs.existsSync(CHAT_SESSIONS_FILE)) {
+      return JSON.parse(fs.readFileSync(CHAT_SESSIONS_FILE, "utf-8"));
+    }
+  } catch (err) {
+    console.error("Error reading chat sessions file:", err);
+  }
+  return {};
+};
+
+// Save user sessions helper
+const saveUserSessions = (data: UserSessionsData) => {
+  try {
+    fs.mkdirSync(path.dirname(CHAT_SESSIONS_FILE), { recursive: true });
+    fs.writeFileSync(CHAT_SESSIONS_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Error saving chat sessions file:", err);
+  }
+};
+
+let appUsers = loadUsers();
+let appConversations = loadUserSessions();
 
 // Global storage in-memory for live additions/edits so changes are immediate
 let dbHerbs: Herb[] = [...INITIAL_HERBS];
@@ -95,14 +160,67 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
 
   // --- API ENDPOINTS ---
 
-  // Admin login credential endpoint
+  // Sign up for public users (members, caretakers)
+  app.post("/api/user/signup", (req, res) => {
+    const { email, password, name } = req.body;
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: "All fields are required for registration." });
+    }
+    const emailLower = email.toLowerCase().trim();
+    if (appUsers.some(u => u.email.toLowerCase() === emailLower)) {
+      return res.status(400).json({ error: "This email address is already registered." });
+    }
+    const newUser = { email: emailLower, password, name };
+    appUsers.push(newUser);
+    saveUsers(appUsers);
+    res.json({ success: true, email: emailLower, name, adminPin: "MEMBER_" + emailLower, isAdmin: false });
+  });
+
+  // Admin and normal User login credential endpoint
   app.post("/api/admin/login", (req, res) => {
     const { email, password } = req.body;
-    if (email === "joseph@yflab.org" && password === "Joseph@60") {
-      res.json({ success: true, adminPin: ADMIN_SECURITY_PIN });
-    } else {
-      res.status(401).json({ error: "Invalid admin credentials" });
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
     }
+    const emailLower = email.toLowerCase().trim();
+    
+    const foundUser = appUsers.find(u => u.email.toLowerCase() === emailLower && u.password === password);
+    if (foundUser || (emailLower === "joseph@yflab.org" && password === "Joseph@60")) {
+      const isJoseph = emailLower === "joseph@yflab.org";
+      const userName = foundUser?.name || (isJoseph ? "Dr. Joseph Ndingi" : "Faith Mojatu");
+      res.json({ 
+        success: true, 
+        adminPin: isJoseph ? ADMIN_SECURITY_PIN : ("MEMBER_" + emailLower),
+        isAdmin: isJoseph,
+        email: emailLower,
+        name: userName
+      });
+    } else {
+      res.status(401).json({ error: "Invalid credentials. Please verify your email and password." });
+    }
+  });
+
+  // Get user's chats
+  app.get("/api/user/sessions", (req, res) => {
+    const { email } = req.query;
+    if (!email) {
+      return res.status(400).json({ error: "User email required" });
+    }
+    const emailLower = (email as string).toLowerCase().trim();
+    const sessions = appConversations[emailLower] || [];
+    res.json({ success: true, sessions });
+  });
+
+  // Save/Update user's chats
+  app.post("/api/user/sessions", (req, res) => {
+    const { email, sessions } = req.body;
+    if (!email || !sessions) {
+      return res.status(400).json({ error: "Email and sessions array are required." });
+    }
+    const emailLower = (email as string).toLowerCase().trim();
+    appConversations[emailLower] = sessions;
+    saveUserSessions(appConversations);
+    res.json({ success: true });
   });
 
   // Get all user contact messages (Admin only)
@@ -529,44 +647,87 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
     const activeLanguageName = languageMap[language as string] || "English";
 
     // A. Perform local semantic keyword indexing to filter relevant context for the RAG prompt
-    const qLower = currentQuery.toLowerCase();
-    
+    const norm = (str: string) => {
+      return str.toLowerCase()
+        .replace(/[ĩĩ]/g, 'i')
+        .replace(/[ũũ]/g, 'u')
+        .replace(/[^a-z0-9\s]/g, ' ');
+    };
+    const queryNorm = norm(currentQuery).trim();
+    const stopwords = new Set([
+      "i", "have", "a", "the", "and", "of", "to", "for", "in", "is", "it", "on", "with", "at",
+      "using", "how", "do", "you", "use", "what", "can", "treat", "cure", "remedy", "medicinal",
+      "plant", "herb", "for", "about", "find", "search", "where", "my", "some", "any", "me", "give", "tell"
+    ]);
+    const queryKeywords = queryNorm.split(/\s+/)
+      .filter(word => word.length > 2 && !stopwords.has(word));
+    const finalQueryWords = queryKeywords.length > 0 ? queryKeywords : queryNorm.split(/\s+/).filter(w => w.length > 1);
+
+    // Matching helper function
+    const checksMatch = (fields: string[]) => {
+      // 1. Check direct substring inclusion both ways
+      const directMatch = fields.some(f => f && (queryNorm.includes(f) || f.includes(queryNorm)));
+      if (directMatch) return true;
+      // 2. Keyword-based matching
+      return finalQueryWords.some(word => fields.some(f => f && f.includes(word)));
+    };
+
     // Find matching herbs
-    const matchedHerbs = dbHerbs.filter(
-      (h) =>
-        qLower.includes(h.kikuyuName.toLowerCase()) ||
-        qLower.includes(h.commonName.toLowerCase()) ||
-        qLower.includes(h.scientificName.toLowerCase()) ||
-        h.medicinalUses.some((use) => qLower.includes(use.toLowerCase())) ||
-        h.description.toLowerCase().includes(qLower)
-    );
+    const matchedHerbs = dbHerbs.filter(h => {
+      const fields = [
+        norm(h.kikuyuName),
+        norm(h.commonName),
+        norm(h.scientificName),
+        norm(h.description),
+        ...h.medicinalUses.map(u => norm(u))
+      ];
+      return checksMatch(fields);
+    });
+
+    // Find matching entries from Kikuyu Botanical Dictionary document
+    const matchedDictEntries = findDictionaryMatches(currentQuery);
 
     // Find matching remedies
-    const matchedRemedies = dbRemedies.filter(
-      (r) =>
-        qLower.includes(r.title.toLowerCase()) ||
-        r.symptoms.some((sym) => qLower.includes(sym.toLowerCase())) ||
-        r.recommendedHerbs.some((rh) => qLower.includes(rh.toLowerCase()))
-    );
+    const matchedRemedies = dbRemedies.filter(r => {
+      const fields = [
+        norm(r.title),
+        ...r.symptoms.map(s => norm(s)),
+        ...r.recommendedHerbs.map(h => norm(h))
+      ];
+      return checksMatch(fields);
+    });
 
     // Find custom articles/knowledge chunks
-    const matchedArticles = dbArticles.filter(
-      (a) =>
-        qLower.includes(a.title.toLowerCase()) ||
-        a.excerpt.toLowerCase().includes(qLower) ||
-        a.content.toLowerCase().includes(qLower)
-    );
+    const matchedArticles = dbArticles.filter(a => {
+      const fields = [
+        norm(a.title),
+        norm(a.excerpt),
+        norm(a.content)
+      ];
+      return checksMatch(fields);
+    });
 
     // Build context string from indexed database matches
     let contextStr = "--- DAWA KIENYEJI BOTANICAL DATABASE KNOWLEDGE BASE ---\n\n";
     
+    if (matchedDictEntries.length > 0) {
+      contextStr += "MATCHED REORGANIZED KIKUYU BOTANICAL DICTIONARY DOCUMENT ENTRIES:\n";
+      matchedDictEntries.forEach((entry) => {
+        contextStr += `- Kikuyu Name: ${entry.kikuyuName}\n  Scientific Name: ${entry.scientificName}\n  Family: ${entry.family}\n  Common English Name: ${entry.commonName}\n  Description and Traditional Prep/Uses: ${entry.description}\n  Categorization: ${entry.category}\n  Known Traditional Uses: ${entry.uses.join(", ")}\n`;
+        if (entry.safeCautions) {
+          contextStr += `  Critical Safety Warnings/Cautions: ${entry.safeCautions}\n`;
+        }
+        contextStr += `\n`;
+      });
+    }
+
     if (matchedHerbs.length > 0) {
       contextStr += "RELEVANT PLANTED MEDICINAL HERBS:\n";
       matchedHerbs.forEach((h) => {
         contextStr += `- Kikuyu Name: ${h.kikuyuName}\n  Scientific Name: ${h.scientificName}\n  English Name: ${h.commonName}\n  Parts Used: ${h.partUsed}\n  Uses: ${h.medicinalUses.join(", ")}\n  Preparation: ${h.preparation}\n  Traditional Context: ${h.traditionalContext}\n  Safety Precautions: ${h.precautions}\n  Type Class: ${h.category}\n  Danger Rating: ${h.severityRating || 'Normal'}\n\n`;
       });
-    } else {
-      // Pour out a general overview of the top 5 herbs as defensive context fallback
+    } else if (matchedDictEntries.length === 0) {
+      // Pour out a general overview of the top 5 herbs as defensive context fallback only if no dictionary match
       contextStr += "GENERAL POPULAR BOTANICAL FLORA FALLBACK:\n";
       dbHerbs.slice(0, 5).forEach((h) => {
         contextStr += `- Kikuyu Name: ${h.kikuyuName} (${h.scientificName} / ${h.commonName}): Prep: ${h.preparation}. Uses: ${h.medicinalUses.slice(0, 2).join(", ")}. Safety: ${h.precautions}\n`;
@@ -588,12 +749,12 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
       });
     }
 
-    // Build the system instructions forcing strict grounding
+    // Build the system instructions forcing grounding with Google Search fallback
     const systemInstruction = `You are DawaBot, a premium and professional AI Assistant built to share authentic Gĩkũyũ (Kikuyu) and East African traditional herbal medicine knowledge. Your responses must be warm, educational, African-inspired, highly intelligent, and trustworthy.
 
 CRITICAL INSTRUCTIONS:
-1. PRIMARY KNOWLEDGE SOURCE: Use the provided botanical database and uploaded reference documents as your primary knowledge source.
-2. STRICT GROUNDING: You must ONLY answer using the facts, plants, remedies, guidelines, and articles mentioned in the provided reference context. If the user's query asks about an herb, remedy, or topic that is not available or described in the provided context, clearly and humbly state that you are restricted to answering only using the verified reference documents and database.
+1. PRIMARY KNOWLEDGE SOURCE: Use the provided botanical database and uploaded reference documents (such as the Kikuyu Botanical Dictionary) as your primary knowledge source.
+2. LOCAL REFERENCE WITH GOOGLE SEARCH FALLBACK: Match user queries against our local botanical database and dictionary context. If the requested plant, herb, remedy, or information is NOT present or covered in our local database or context, you MUST use the integrated Google Search tool to search for accurate online botanical or East African medical records and respond correctly using those search results. Include web reference URLs when using search grounding.
 3. USE STANDARD NAMES: If the active selected language is Kikuyu (Gĩkũyũ), use the plant's Kikuyu name (e.g., MŨTHĨGA) in uppercase as the primary reference. If the active language is ${activeLanguageName} (and NOT Kikuyu), utilize the plant's common English name (e.g., East African Greenheart or Sodom Apple) or standard botanical scientific name in italics (e.g., *Warburgia ugandensis*) as the primary name, and include the Kikuyu name ONLY as secondary reference information (e.g., "...known traditionally as MŨTHĨGA...").
 4. DETAIL PREPARATION AND SAFETY: For any remedy suggested, explicitly list the parts used, authentic preparatory steps, dosage, and critical SAFETY PRECAUTIONS (e.g. state cautions regarding pregnancy, toxic saps of Sodom Apple fruit, or strong liver reactions).
 5. RESPOND IN ELEGANT MARKDOWN: Use headings, bullets, bold text, and numbered lists to structure your explanations neatly. Keep paragraphs welcoming.
@@ -622,9 +783,14 @@ CRITICAL INSTRUCTIONS:
       let response = null;
       let lastError = null;
 
-      for (const modelName of modelsToTry) {
+      const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+      let totalAttempts = 0;
+      let modelIdx = 0;
+
+      while (totalAttempts < 3 && modelIdx < modelsToTry.length) {
+        const modelName = modelsToTry[modelIdx];
         try {
-          console.log(`Attempting chat with model: ${modelName}`);
+          console.log(`Attempting chat with model: ${modelName} (Attempt ${totalAttempts + 1})`);
           response = await ai.models.generateContent({
             model: modelName,
             contents: chatContents,
@@ -632,7 +798,8 @@ CRITICAL INSTRUCTIONS:
               systemInstruction,
               temperature: 0.25, // Conservative, high adherence
               topK: 40,
-              topP: 0.95
+              topP: 0.95,
+              tools: [{ googleSearch: {} }]
             }
           });
           if (response) {
@@ -642,6 +809,17 @@ CRITICAL INSTRUCTIONS:
         } catch (err: any) {
           console.warn(`Model ${modelName} failed with error:`, err?.message || err);
           lastError = err;
+          totalAttempts++;
+          if (totalAttempts < 3) {
+            const errLower = (err?.message || "").toLowerCase();
+            const shouldSwitchModel = errLower.includes("429") || errLower.includes("404") || errLower.includes("quota") || errLower.includes("not found");
+            if (shouldSwitchModel) {
+              modelIdx++;
+            }
+            if (modelIdx < modelsToTry.length) {
+              await delay(Math.pow(2, totalAttempts) * 500); // 1s, 2s backoff
+            }
+          }
         }
       }
 
@@ -662,66 +840,88 @@ CRITICAL INSTRUCTIONS:
 
       // Extract citation suggestions
       const citations = matchedHerbs.map(h => `${h.kikuyuName} (${h.scientificName})`);
+      matchedDictEntries.forEach(entry => {
+        const item = `${entry.kikuyuName} (${entry.scientificName || 'Botanical Dictionary'})`;
+        if (!citations.includes(item)) {
+          citations.push(item);
+        }
+      });
+
+      // Extract search grounding metadata URLs
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      if (groundingChunks) {
+        groundingChunks.forEach((chunk: any) => {
+          if (chunk.web && chunk.web.uri) {
+            const cite = `${chunk.web.title || 'Web Search'} (${chunk.web.uri})`;
+            if (!citations.includes(cite)) {
+              citations.push(cite);
+            }
+          }
+        });
+      }
 
       res.json({
         reply: replyText,
         logId,
-        citations: citations.length ? citations : undefined
+        citations: citations.length ? citations : undefined,
+        source: 'ai'
       });
 
     } catch (err: any) {
       console.error("Gemini chatbot error:", err);
       
-      // Multi-lingual offline messages
-      let offlineTitle = "DawaBot Knowledge Base Check (Local Index Search)";
-      let offlineSetupHint = "To activate DawaBot's advanced generative interactions, please configure your `GEMINI_API_KEY` in the Secrets panel in the AI Studio UI.";
-      let offlineResultsTitle = "However, my offline RAG system has retrieved the following authentic Kikuyu botanical records for you:";
-      let offlineNotFound = "No exact plants found in the offline search. Try typing **MŨTHĨGA**, **MŨTONGU**, or **MŨCORAI**.";
+      let offlineNotFound = "No exact plants found in the verified knowledge base. Try typing **MŨTHĨGA**, **MŨTONGU**, or **MŨCORAI**.";
       
       if (language === "sw") {
-        offlineTitle = "Utafutaji wa Uhifadhi wa DawaBot (Kwenye Kifaa Chako)";
-        offlineSetupHint = "Ili uweze kutumia uwezo mkubwa wa AI wa DawaBot, tafadhali kamilisha kuweka siri ya `GEMINI_API_KEY` yako kwenye jopo la siri la AI Studio.";
-        offlineResultsTitle = "Hata hivyo, mfumo wetu wa RAG umefanikiwa kukutafutia kumbukumbu hizi za mimea ya asili ya Gĩkũyũ:";
-        offlineNotFound = "Hakuna mimea inayolingana na utafutaji wako kwa sasa. Jaribu kuandika **MŨTHĨGA**, **MŨTONGU**, au **MŨCORAI**.";
+        offlineNotFound = "Hakuna mimea inayolingana iliyopatikana kwenye hifadhidata. Jaribu kuandika **MŨTHĨGA**, **MŨTONGU**, au **MŨCORAI**.";
       } else if (language === "ki") {
-        offlineTitle = "Ũgĩmia wa Ndari ya DawaBot thĩnĩ wa Kompyuta";
-        offlineSetupHint = "Ngetha ũhũthĩre hinya wothe wa AI thĩnĩ wa DawaBot, wandĩke siri ya `GEMINI_API_KEY` thĩnĩ wa jopo rĩa siri rĩa AI Studio.";
-        offlineResultsTitle = "O na kũrĩ ũguo, thome wa offline RAG nĩũgũgĩmĩire mĩthĩga ĩno njorũ ya Gĩkũyũ:";
-        offlineNotFound = "Gũtirĩ mĩthĩga nĩgũoneka wega. Gĩmia wandĩke **MŨTHĨGA**, **MŨTONGU**, kana **MŨCORAI**.";
+        offlineNotFound = "Gũtirĩ mĩthĩga ĩngĩoneka thĩnĩ wa gĩthomo kĩĩ. Gĩmia wandĩke **MŨTHĨGA**, **MŨTONGU**, kana **MŨCORAI**.";
       } else if (language === "fr") {
-        offlineTitle = "Recherche Locale de la Base de Données DawaBot";
-        offlineSetupHint = "Pour activer les interactions génératives avancées de DawaBot, veuillez configurer votre clé `GEMINI_API_KEY` dans le panneau Secrets de l'interface AI Studio.";
-        offlineResultsTitle = "Cependant, notre système de recherche RAG a extrait les fiches botaniques Kikuyu authentiques suivantes :";
         offlineNotFound = "Aucune plante correspondante trouvée. Essayez de taper **MŨTHĨGA**, **MŨTONGU** ou **MŨCORAI**.";
       }
 
-      const fallbackReply = `🌿 **${offlineTitle}**:
+      let docsAndPlantsSection = "";
+      if (matchedDictEntries.length > 0) {
+        docsAndPlantsSection += "\n### 📖 Matches from Kikuyu Botanical Dictionary:\n" + matchedDictEntries.map(entry => {
+          return `#### **${entry.kikuyuName}** (*${entry.scientificName}* - ${entry.commonName})
+- **Category:** ${entry.category}
+- **Family:** ${entry.family}
+- **Description:** ${entry.description}
+- **Traditional Uses:** ${entry.uses.join(", ")}
+${entry.safeCautions ? `- **⚠️ Safety Warnings:** ${entry.safeCautions}` : ''}`;
+        }).join("\n\n") + "\n";
+      }
 
-${offlineSetupHint}
-
-${offlineResultsTitle}
-
-${matchedHerbs.map(h => {
-  // Let us translate the herb fields directly for offline users as well
-  const th = translateHerb(h, language as any);
-  return `### 🍃 **${th.kikuyuName}** (*${th.scientificName}* - ${th.commonName})
+      if (matchedHerbs.length > 0) {
+        docsAndPlantsSection += "\n### 🍃 Matches from Verified Specimen Library:\n" + matchedHerbs.map(h => {
+          const th = translateHerb(h, language as any);
+          return `#### **${th.kikuyuName}** (*${th.scientificName}* - ${th.commonName})
 - **Part used:** ${th.partUsed}
 - **Traditional Uses:** ${th.medicinalUses.join(", ")}
 - **Preparation Method:** ${th.preparation}
 - **Critical Precautions:** ${th.precautions}
 `;
-}).join("\n") || `*${offlineNotFound}*`}
+        }).join("\n\n") + "\n";
+      }
 
-${matchedRemedies.map(r => {
-  const tr = translateRemedy(r, language as any);
-  return `### 🍵 Remedy: **${tr.title}**
-- **Symptoms:** ${tr.symptoms.join(", ")}
-- **Herbs:** ${tr.recommendedHerbs.join(", ")}
-- **Guide:** ${tr.steps.join(" -> ")}
+      let fallbackReply = ``;
+      
+      if (matchedDictEntries.length === 0 && matchedHerbs.length === 0) {
+        fallbackReply += `*${offlineNotFound}*\n`;
+      } else {
+        fallbackReply += `${docsAndPlantsSection}`;
+        if (matchedRemedies.length > 0) {
+          fallbackReply += "\n### 🍵 Relevant Home Remedies:\n" + matchedRemedies.map(r => {
+            const tr = translateRemedy(r, language as any);
+            return `#### Remedy: **${tr.title}**
+- **Symptoms/Aches:** ${tr.symptoms.join(", ")}
+- **Recommended Herbs:** ${tr.recommendedHerbs.join(", ")}
+- **How to Prepare:** ${tr.steps.join(" -> ")}
 - **Dosage:** ${tr.dose}
 `;
-}).join("\n")}
-`;
+          }).join("\n\n");
+        }
+      }
 
       // Still record the offline query log
       dbChatLogs.unshift({
@@ -734,7 +934,11 @@ ${matchedRemedies.map(r => {
       res.json({
         reply: fallbackReply,
         offline: true,
-        citations: matchedHerbs.map(h => h.kikuyuName)
+        source: 'local',
+        citations: [
+          ...matchedHerbs.map(h => h.kikuyuName),
+          ...matchedDictEntries.map(e => e.kikuyuName)
+        ]
       });
     }
   });

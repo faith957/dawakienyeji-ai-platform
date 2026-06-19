@@ -54,6 +54,7 @@ export interface ChatMessage {
   timestamp: string;
   suggestions?: string[];
   citations?: string[];
+  source?: 'ai' | 'local';
 }
 
 export interface ChatSession {

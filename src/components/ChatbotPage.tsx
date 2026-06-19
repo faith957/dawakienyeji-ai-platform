@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { 
   Send, Bot, CornerDownLeft, Volume2, Mic, MicOff, Sun, Moon, 
-  Trash2, Copy, Check, ThumbsUp, ThumbsDown, ArrowLeft, Leaf, AlertCircle, HelpCircle
+  Trash2, Copy, Check, ThumbsUp, ThumbsDown, ArrowLeft, Leaf, AlertCircle, HelpCircle, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Markdown from "react-markdown";
 import { ChatMessage, ChatSession } from "../types";
-import { postChat, sendChatFeedback } from "../utils/api";
+import { postChat, sendChatFeedback, signupUser } from "../utils/api";
 import { useLanguage } from "../utils/LanguageContext";
+import { INITIAL_HERBS } from "../data/herbalDatabase";
 
 interface ChatbotPageProps {
   onBackToHome: () => void;
+  onNavigateTo?: (route: any) => void;
 }
 
 const VOICE_LANGUAGES = [
@@ -33,7 +35,64 @@ const getWelcomeText = (lang: string) => {
   }
 };
 
-export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
+function detectMentionedHerbs(msgText: string, userQueryText?: string, citations?: string[]): typeof INITIAL_HERBS {
+  if (citations !== undefined) {
+    if (citations.length === 0) return [];
+    return INITIAL_HERBS.filter(herb => 
+      citations.some(c => c.toLowerCase().includes(herb.kikuyuName.toLowerCase()))
+    );
+  }
+
+  if (!msgText) return [];
+  const lowerMsg = msgText.toLowerCase();
+  const lowerQuery = userQueryText ? userQueryText.toLowerCase() : "";
+
+  // Helper to check with clear word boundaries so we don't match substrings incorrectly
+  const hasWord = (text: string, term: string) => {
+    if (!text || !term) return false;
+    const cleanTerm = term.trim().toLowerCase();
+    if (!cleanTerm) return false;
+    
+    // Look for exact term within text
+    const idx = text.indexOf(cleanTerm);
+    if (idx === -1) return false;
+
+    // Direct check of characters surrounding the match to verify word boundary
+    const charBefore = idx > 0 ? text[idx - 1] : " ";
+    const charAfter = idx + cleanTerm.length < text.length ? text[idx + cleanTerm.length] : " ";
+
+    // Define characters that do NOT form boundaries (letters, numbers, valid Gĩkũyũ letters/vowels with tildes, etc.)
+    const isWordChar = (char: string) => {
+      return /[a-zA-Z0-9\u0168\u0169\u0128\u0129\u0169\u0168]/i.test(char);
+    };
+
+    return !isWordChar(charBefore) && !isWordChar(charAfter);
+  };
+
+  return INITIAL_HERBS.filter(herb => {
+    const kName = herb.kikuyuName.toLowerCase();
+    const cName = herb.commonName.toLowerCase();
+    const sName = herb.scientificName.toLowerCase();
+
+    const matchedInMsg = hasWord(lowerMsg, kName) || hasWord(lowerMsg, cName) || hasWord(lowerMsg, sName);
+    const matchedInQuery = lowerQuery ? (hasWord(lowerQuery, kName) || hasWord(lowerQuery, cName) || hasWord(lowerQuery, sName)) : false;
+
+    return matchedInMsg || matchedInQuery;
+  });
+}
+
+function isBotanicalQuery(userQueryText?: string): boolean {
+  const combined = (userQueryText || "").toLowerCase();
+  const BOTANICAL_KEYWORDS = [
+    "plant", "tree", "herb", "shrub", "flora", "leaf", "leaves", "root", "roots", 
+    "bark", "stem", "seed", "seeds", "extract", "remedy", "traditional medicine", 
+    "decoction", "infusion", "poultice", "botany", "ethnobotany", "mũgũgũ", "mĩthĩga",
+    "dawa", "kienyeji", "mitishamba", "asthma", "cough", "malaria", "indigestion", "pharyngitis"
+  ];
+  return BOTANICAL_KEYWORDS.some(keyword => combined.includes(keyword));
+}
+
+export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageProps) {
   const { language, t } = useLanguage();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -45,6 +104,75 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
   const [ratings, setRatings] = useState<{ [msgId: string]: 'good' | 'bad' }>({});
   const [voiceLang, setVoiceLang] = useState(VOICE_LANGUAGES[0]);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingMessageText, setEditingMessageText] = useState("");
+  const [currentUser, setCurrentUser] = useState<{ email: string; name: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem("dawa_logged_in_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch (_) {
+      return null;
+    }
+  });
+
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupError, setSignupError] = useState("");
+  const [isSigningUp, setIsSigningUp] = useState(false);
+
+  const handleModalSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupError("");
+    setIsSigningUp(true);
+
+    try {
+      if (!signupName.trim() || !signupEmail.trim() || !signupPassword.trim()) {
+        throw new Error("All fields are required. Please fill in Name, Email, and Password.");
+      }
+      
+      const data = await signupUser(signupEmail, signupPassword, signupName);
+      
+      // Update local state
+      const newUser = { email: data.email, name: data.name };
+      setCurrentUser(newUser);
+
+      // Save user to localStorage
+      localStorage.setItem("dawa_logged_in_user", JSON.stringify({
+        email: data.email,
+        name: data.name,
+        isAdmin: data.isAdmin || false
+      }));
+
+      // Persist credentials
+      localStorage.setItem("dawa_isAuthenticated", "true");
+      localStorage.setItem("dawa_admin_pin", data.adminPin || "");
+      localStorage.setItem("dawa_isAdmin", String(data.isAdmin || false));
+
+      // Sync active local guest sessions
+      if (sessions.length > 0) {
+        await fetch("/api/user/sessions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: data.email, sessions }),
+        }).catch(e => console.error("Cloud sessions sync error after modal sign up:", e));
+      }
+
+      // Hide modal and clear fields
+      setShowSignupModal(false);
+      setSignupName("");
+      setSignupEmail("");
+      setSignupPassword("");
+      
+    } catch (err: any) {
+      setSignupError(err.message || "Sign up failed. Please check your details or try a different email.");
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
   
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const listEndRef = useRef<HTMLDivElement | null>(null);
@@ -144,40 +272,85 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
 
   // Initialize state with default session on first mount or load from persistent storage
   useEffect(() => {
-    const savedSessions = localStorage.getItem("dawa_chat_sessions");
-    const savedActiveId = localStorage.getItem("dawa_current_session_id");
-    
-    if (savedSessions) {
-      try {
-        const parsed = JSON.parse(savedSessions);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setSessions(parsed);
-          if (savedActiveId && parsed.some(s => s.id === savedActiveId)) {
-            setCurrentSessionId(savedActiveId);
-          } else {
-            setCurrentSessionId(parsed[0].id);
+    const checkAndSync = async () => {
+      const savedUserStr = localStorage.getItem("dawa_logged_in_user");
+      if (savedUserStr) {
+        try {
+          const user = JSON.parse(savedUserStr);
+          if (user && user.email) {
+            const res = await fetch(`/api/user/sessions?email=${encodeURIComponent(user.email)}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.success && Array.isArray(data.sessions) && data.sessions.length > 0) {
+                setSessions(data.sessions);
+                const savedActiveId = localStorage.getItem("dawa_current_session_id");
+                if (savedActiveId && data.sessions.some((s: any) => s.id === savedActiveId)) {
+                  setCurrentSessionId(savedActiveId);
+                } else {
+                  setCurrentSessionId(data.sessions[0].id);
+                }
+                return;
+              }
+            }
           }
-          return;
+        } catch (e) {
+          console.error("Failed to load user cloud sessions:", e);
         }
-      } catch (err) {
-        console.error("Failed to parse saved chat sessions:", err);
       }
-    }
 
-    const defaultSessionId = 's-default';
-    const initialSession: ChatSession = {
-      id: defaultSessionId,
-      title: "Botanical Wisdom Chat",
-      messages: []
+      const savedSessions = localStorage.getItem("dawa_chat_sessions");
+      const savedActiveId = localStorage.getItem("dawa_current_session_id");
+      
+      if (savedSessions) {
+        try {
+          const parsed = JSON.parse(savedSessions);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSessions(parsed);
+            if (savedActiveId && parsed.some(s => s.id === savedActiveId)) {
+              setCurrentSessionId(savedActiveId);
+            } else {
+              setCurrentSessionId(parsed[0].id);
+            }
+            return;
+          }
+        } catch (err) {
+          console.error("Failed to parse saved chat sessions:", err);
+        }
+      }
+
+      const defaultSessionId = 's-default';
+      const initialSession: ChatSession = {
+        id: defaultSessionId,
+        title: "Botanical Wisdom Chat",
+        messages: []
+      };
+      setSessions([initialSession]);
+      setCurrentSessionId(defaultSessionId);
     };
-    setSessions([initialSession]);
-    setCurrentSessionId(defaultSessionId);
+
+    checkAndSync();
   }, []);
 
-  // Persist sessions to localStorage database when updated
+  // Persist sessions to localStorage and Cloud database when updated
   useEffect(() => {
     if (sessions.length > 0) {
       localStorage.setItem("dawa_chat_sessions", JSON.stringify(sessions));
+      
+      const savedUserStr = localStorage.getItem("dawa_logged_in_user");
+      if (savedUserStr) {
+        try {
+          const user = JSON.parse(savedUserStr);
+          if (user && user.email) {
+            fetch("/api/user/sessions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email: user.email, sessions }),
+            }).catch(e => console.error("Cloud vault save failure:", e));
+          }
+        } catch (_) {}
+      }
     }
   }, [sessions]);
 
@@ -252,7 +425,8 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         role: 'model',
         text: result.reply,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        citations: result.citations
+        citations: result.citations,
+        source: result.source
       };
 
       setSessions(prev => prev.map(s => {
@@ -312,6 +486,81 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
       setCurrentSessionId(defaultSessionId);
       localStorage.removeItem("dawa_chat_sessions");
       localStorage.removeItem("dawa_current_session_id");
+    }
+  };
+
+  const handleEditMessage = async (msgId: string, newText: string) => {
+    const activeId = currentSessionIdRef.current;
+    if (!newText.trim() || !activeId) return;
+
+    const currentSessionSnapshot = sessionsRef.current.find(s => s.id === activeId);
+    if (!currentSessionSnapshot) return;
+
+    const msgIdx = currentSessionSnapshot.messages.findIndex(m => m.id === msgId);
+    if (msgIdx === -1) return;
+
+    // Slice prefix history
+    const baseHistory = currentSessionSnapshot.messages.slice(0, msgIdx);
+    
+    const updatedUserMsg: ChatMessage = {
+      ...currentSessionSnapshot.messages[msgIdx],
+      text: newText
+    };
+
+    const historyWithEdit = [...baseHistory, updatedUserMsg];
+
+    setEditingMessageId(null);
+    setEditingMessageText("");
+    setIsTyping(true);
+
+    // Save history with the edit
+    setSessions(prev => prev.map(s => {
+      if (s.id === activeId) {
+        return {
+          ...s,
+          messages: historyWithEdit
+        };
+      }
+      return s;
+    }));
+
+    try {
+      const result = await postChat(historyWithEdit, newText, language);
+
+      const botMsg: ChatMessage = {
+        id: result.logId || `msg-bot-${Date.now()}`,
+        role: 'model',
+        text: result.reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        citations: result.citations,
+        source: result.source
+      };
+
+      setSessions(prev => prev.map(s => {
+        if (s.id === activeId) {
+          return {
+            ...s,
+            messages: [...historyWithEdit, botMsg]
+          };
+        }
+        return s;
+      }));
+
+    } catch (err: any) {
+      const errorMsg: ChatMessage = {
+        id: `msg-err-${Date.now()}`,
+        role: 'model',
+        text: "I encountered an error querying the database for your updated query. Please verify your connection or refresh.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setSessions(prev => prev.map(s => {
+        if (s.id === activeId) {
+          return { ...s, messages: [...historyWithEdit, errorMsg] };
+        }
+        return s;
+      }));
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -406,6 +655,35 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
           })}
         </div>
 
+        {/* Member Profile, Sign Up & Cloud Vault Sync */}
+        {currentUser ? (
+          <div className="mt-3 p-3.5 rounded-xl bg-emerald-50 text-emerald-950 border border-emerald-100/80 flex flex-col gap-1.5 font-sans">
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-800">
+              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Botanical Vault Active</span>
+            </div>
+            <p className="text-[10px] text-stone-500 font-medium">
+              Hello, <span className="font-bold text-emerald-900">{currentUser.name}</span>. Your chats sync automatically.
+            </p>
+            <button
+              onClick={() => onNavigateTo?.('admin')}
+              className="mt-1 w-full py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-[10px] rounded-lg transition text-center cursor-pointer"
+            >
+              Access Member Portal
+            </button>
+          </div>
+        ) : (
+          <div className="mt-3 font-sans">
+            <button
+              onClick={() => setShowSignupModal(true)}
+              className="w-full py-2.5 bg-amber-650 hover:bg-amber-700 text-white font-extrabold text-xs rounded-lg transition duration-200 text-center cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+              style={{ backgroundColor: "#D4A017" }}
+            >
+              Sign Up & Save Chats 🔐
+            </button>
+          </div>
+        )}
+
         <div className="mt-4 pt-4 border-t border-stone-300/40 md:border-t flex items-center justify-between">
           <p className="text-[10px] opacity-60">{t("chat.statusSecure") || "Status: Secure Sandbox"}</p>
           <button
@@ -421,14 +699,6 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
 
       {/* Main Chat Interface */}
       <div id="chat-scroller" className="flex-1 flex flex-col min-h-0 relative">
-        {/* Banner warning if offline mode fell back */}
-        <div className={`p-2.5 text-center text-xs border-b ${
-          isDark ? 'bg-zinc-900/80 border-amber-950 text-amber-500' : 'bg-amber-50/70 border-amber-100 text-amber-800'
-        } flex items-center justify-center gap-2`}>
-          <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-          <span>{t("chat.poweredByRAG") || "Powered by RAG directly aligned to traditional Kikuyu Ethnobotany database."}</span>
-        </div>
-
         {/* Conversation flow arena */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
           <div className="max-w-3xl mx-auto space-y-6">
@@ -504,48 +774,157 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
                             : 'bg-white border border-stone-200 text-emerald-950 rounded-tl-none'
                       }`}>
                         
-                        {/* Markdown Renderer with container classes */}
-                        <div className="prose prose-emerald max-w-none break-words text-inherit leading-relaxed space-y-2.5">
-                          <Markdown>{msg.text}</Markdown>
-                        </div>
-
-                        {/* Plant citations returned by RAG node */}
-                        {msg.citations && msg.citations.length > 0 && (
-                          <div className="mt-3.5 pt-2.5 border-t border-emerald-600/10 flex flex-wrap items-center gap-1.5">
-                            <span className="text-[10px] uppercase font-semibold letter-spacing-1.2 opacity-60">Database citations:</span>
-                            {msg.citations.map((cite, cIdx) => (
-                              <span 
-                                key={cIdx} 
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                  isUser 
-                                    ? 'bg-emerald-800 text-emerald-100' 
-                                    : isDark ? 'bg-zinc-800 text-emerald-400' : 'bg-emerald-50 text-emerald-800 border border-emerald-100'
-                                }`}
+                        {isUser && editingMessageId === msg.id ? (
+                          <div className="space-y-3 font-sans w-full min-w-[240px] md:min-w-[320px]">
+                            <textarea
+                              value={editingMessageText}
+                              onChange={(e) => setEditingMessageText(e.target.value)}
+                              rows={3}
+                              className="w-full p-2.5 text-xs text-stone-900 bg-white border border-emerald-900/20 rounded-xl focus:ring-1 focus:ring-emerald-500 font-medium"
+                            />
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingMessageId(null);
+                                  setEditingMessageText("");
+                                }}
+                                className="px-2.5 py-1 bg-emerald-800/80 hover:bg-emerald-900 text-white font-extrabold text-[10px] rounded-lg transition cursor-pointer"
                               >
-                                {cite}
-                              </span>
-                            ))}
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleEditMessage(msg.id, editingMessageText)}
+                                className="px-3 py-1 bg-white hover:bg-emerald-50 text-emerald-950 font-black text-[10px] rounded-lg transition flex items-center gap-1 cursor-pointer"
+                              >
+                                Update
+                              </button>
+                            </div>
                           </div>
-                        )}
-                        
+                        ) : (
+                          <>
+                            {/* Markdown Renderer with container classes */}
+                            <div className="prose prose-emerald max-w-none break-words text-inherit leading-relaxed space-y-2.5">
+                              <Markdown>{msg.text}</Markdown>
+                            </div>
+                            
+                            {/* Source Badge */}
+                            {!isUser && msg.source && (
+                              <div className={`mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] uppercase font-extrabold tracking-wider ${
+                                isDark ? 'bg-zinc-800 text-emerald-400' : 'bg-emerald-50 text-emerald-700'
+                              }`}>
+                                {msg.source === 'ai' ? '✨ AI Response' : '📚 Knowledge Base Response'}
+                              </div>
+                            )}
 
+                            {/* Verified Plant Specimen Images sourced dynamically from Database */}
+                            {!isUser && (
+                              (() => {
+                                // Find user query immediately preceding this bot response
+                                const prevUserMsg = i > 0 ? activeMessages.slice(0, i).reverse().find(m => m.role === 'user') : null;
+                                const userQueryText = prevUserMsg ? prevUserMsg.text : "";
+                                
+                                const matched = detectMentionedHerbs(msg.text, userQueryText, msg.citations);
+                                const isBotanic = isBotanicalQuery(userQueryText);
+                                
+                                if (matched.length === 0) {
+                                  return null;
+                                }
+                                
+                                const matchedWithImages = matched.filter(herb => herb.imageUrl && herb.imageUrl.trim().length > 0);
+                                if (matchedWithImages.length === 0) {
+                                  return null;
+                                }
+                                
+                                return (
+                                  <div className="mt-3.5 pt-3 border-t border-emerald-600/10 space-y-2.5">
+                                    <span className="text-[9px] uppercase font-extrabold tracking-wider opacity-60 block">Verified Specimen Library Reference:</span>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                      {matchedWithImages.map(herb => {
+                                        return (
+                                          <div 
+                                            key={herb.id} 
+                                            className={`flex flex-col gap-2 p-2.5 rounded-xl transition ${
+                                              isDark ? 'bg-zinc-800 border border-zinc-700' : 'bg-stone-50 border border-stone-200/75'
+                                            }`}
+                                          >
+                                            <div className="flex items-center gap-3">
+                                              <img 
+                                                src={herb.imageUrl} 
+                                                alt={herb.kikuyuName} 
+                                                className="w-12 h-12 object-cover rounded-lg shrink-0 border border-stone-200/20"
+                                                referrerPolicy="no-referrer"
+                                              />
+                                              <div className="min-w-0 flex-1">
+                                                <h4 className="text-[11px] font-bold uppercase truncate text-emerald-800">{herb.kikuyuName}</h4>
+                                                <p className="text-[10px] text-stone-500 font-medium truncate italic">{herb.scientificName}</p>
+                                                <p className="text-[9px] text-[#D4A017] font-bold truncate">{herb.commonName}</p>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })()
+                            )}
+                          </>
+                        )}
 
                       </div>
 
                       {/* Bubble Actions bar */}
                       <div className={`flex items-center gap-3 text-[10px] opacity-60 px-1 ${isUser ? 'justify-end' : ''}`}>
                         <span>{msg.timestamp}</span>
+                        {isUser && (
+                          <div className="flex items-center gap-2">
+                            <span className="opacity-40">|</span>
+                            {/* Copy button */}
+                            <button 
+                              onClick={() => handleCopyText(msg.text, msg.id)}
+                              className="hover:text-emerald-900 hover:bg-emerald-100/50 p-1 px-2 rounded-lg transition flex items-center gap-1 cursor-pointer text-emerald-800 font-extrabold border border-emerald-600/20 bg-emerald-50/50"
+                              title="Copy your message"
+                            >
+                              {copiedId === msg.id ? (
+                                <>
+                                  <Check className="w-2.5 h-2.5 text-green-700" />
+                                  <span className="text-green-850 font-black">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-2.5 h-2.5" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* Edit button */}
+                            <span className="opacity-40">|</span>
+                            <button 
+                              onClick={() => {
+                                setEditingMessageId(msg.id);
+                                setEditingMessageText(msg.text);
+                              }}
+                              className="hover:text-amber-900 hover:bg-amber-100/50 p-1 px-2 rounded-lg transition flex items-center gap-1 cursor-pointer text-amber-800 font-extrabold border border-amber-600/20 bg-amber-50/50"
+                              title="Edit query and reprocess"
+                            >
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        )}
                         {!isUser && (
                           <div className="flex items-center gap-2">
                             <button 
                               onClick={() => handleCopyText(msg.text, msg.id)}
-                              className="hover:text-emerald-500 p-0.5 rounded transition flex items-center gap-0.5"
+                              className="hover:text-emerald-900 hover:bg-emerald-100/50 p-1 px-2 rounded-lg transition flex items-center gap-1 cursor-pointer text-emerald-800 font-extrabold border border-emerald-600/20 bg-emerald-50/50"
                               title="Copy to clipboard"
                             >
                               {copiedId === msg.id ? (
                                 <>
-                                  <Check className="w-2.5 h-2.5 text-green-500" />
-                                  <span className="text-green-500">{t("chat.copied") || "Copied"}</span>
+                                  <Check className="w-2.5 h-2.5 text-green-700" />
+                                  <span className="text-green-850 font-black">{t("chat.copied") || "Copied"}</span>
                                 </>
                               ) : (
                                 <>
@@ -745,6 +1124,127 @@ export default function ChatbotPage({ onBackToHome }: ChatbotPageProps) {
         </div>
 
       </div>
+
+      {/* Botanical Vault Registration Popup Modal */}
+      <AnimatePresence>
+        {showSignupModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSignupModal(false)}
+              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
+            />
+            
+            {/* Modal Body */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              className={`relative w-full max-w-md p-6 rounded-2xl shadow-2xl border font-sans select-none overflow-hidden ${
+                isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-stone-200 text-stone-900'
+              }`}
+            >
+              <div className="absolute top-4 right-4">
+                <button
+                  type="button"
+                  onClick={() => setShowSignupModal(false)}
+                  className="p-1.5 rounded-full transition hover:bg-stone-500/10 cursor-pointer"
+                >
+                  <X className="w-5 h-5 opacity-60" />
+                </button>
+              </div>
+
+              {/* Header Title */}
+              <div className="flex items-center gap-2.5 mb-5 mt-2">
+                <div className="p-2 rounded-lg bg-emerald-100 text-emerald-800 shrink-0 border border-emerald-200/50">
+                  <Leaf className="w-5 h-5 animate-pulse text-emerald-700" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-800">Create Member Vault</h3>
+                  <p className="text-[10px] text-stone-500 font-medium">Verify credentials to backup & synchronize botanical wisdom</p>
+                </div>
+              </div>
+
+              {signupError && (
+                <div className="p-3 mb-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs font-semibold flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{signupError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleModalSignup} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-stone-500 mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    placeholder="e.g. Wanjiku Kamau"
+                    className={`w-full p-2.5 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
+                      isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-stone-500 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="wanjiku@domain.ke"
+                    className={`w-full p-2.5 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
+                      isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-stone-500 mb-1">Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className={`w-full p-2.5 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
+                      isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
+                    }`}
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSigningUp}
+                    className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow transition active:scale-95 duration-150 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isSigningUp ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Establishing Vault...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Establish Personal Member Vault 🔐</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-center">
+                <p className="text-[9px] text-stone-400 font-medium">Your connection is fully secure. 256-bit encryption active.</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

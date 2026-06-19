@@ -102,7 +102,7 @@ export async function addArticle(article: Omit<KnowledgeBaseArticle, 'id' | 'las
   return true;
 }
 
-export async function postChat(messages: ChatMessage[], currentQuery: string, language?: string): Promise<{ reply: string; logId: string; offline?: boolean; citations?: string[] }> {
+export async function postChat(messages: ChatMessage[], currentQuery: string, language?: string): Promise<{ reply: string; logId: string; offline?: boolean; citations?: string[]; source?: 'ai' | 'local' }> {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: {
@@ -130,7 +130,7 @@ export async function fetchAnalytics(): Promise<any> {
   return res.json();
 }
 
-export async function loginAdmin(email: string, password: string): Promise<string> {
+export async function loginAdmin(email: string, password: string): Promise<{ success: boolean; adminPin: string; isAdmin: boolean; email?: string; name?: string }> {
   const res = await fetch("/api/admin/login", {
     method: "POST",
     headers: {
@@ -140,10 +140,24 @@ export async function loginAdmin(email: string, password: string): Promise<strin
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Invalid administrative credentials.");
+    throw new Error(err.error || "Invalid credentials.");
   }
-  const data = await res.json();
-  return data.adminPin;
+  return res.json();
+}
+
+export async function signupUser(email: string, password: string, name: string): Promise<{ success: boolean; adminPin: string; isAdmin: boolean; email: string; name: string }> {
+  const res = await fetch("/api/user/signup", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password, name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to sign up.");
+  }
+  return res.json();
 }
 
 export async function fetchMessages(adminPin: string): Promise<ContactMessage[]> {

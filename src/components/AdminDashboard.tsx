@@ -3,13 +3,13 @@ import {
   Lock, Key, Shield, LayoutDashboard, PlusCircle, FileText, BarChart3, 
   Trash2, Edit, Save, Plus, X, UploadCloud, CheckCircle, Flame, User, Mail,
   Clock, AlertTriangle, Inbox, Settings, LogOut, Sliders, RefreshCw, HelpCircle,
-  BookOpen, Compass, Search, ToggleLeft, ToggleRight, MessageSquare, Send
+  BookOpen, Compass, Search, ToggleLeft, ToggleRight, MessageSquare, Send, Check, AlertCircle
 } from "lucide-react";
 import { Herb, BlogPost, KnowledgeBaseArticle, ChatLog, ContactMessage, BlogComment } from "../types";
 import { 
   fetchPlants, addPlant, editPlant, deletePlant, 
   fetchArticles, addArticle, fetchBlogs, addBlog, fetchAnalytics,
-  loginAdmin, fetchMessages, updateMessageStatus,
+  loginAdmin, signupUser, fetchMessages, updateMessageStatus,
   replyToMessage, fetchAllComments, moderateComment, deleteComment
 } from "../utils/api";
 import { getPlantImage, classifyPlantType, FALLBACK_CATEGORIES, getAISuggestedImages } from "../utils/herbImages";
@@ -19,15 +19,46 @@ type SidebarTab = 'dashboard' | 'upload_docs' | 'plants' | 'knowledge' | 'blogs'
 
 export default function AdminDashboard() {
   const { t, language } = useLanguage();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem("dawa_isAuthenticated") === "true";
+  });
   const [emailInput, setEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
-  const [adminPin, setAdminPin] = useState("");
+  const [adminPin, setAdminPin] = useState(() => {
+    return localStorage.getItem("dawa_admin_pin") || "";
+  });
+  const [isAdmin, setIsAdmin] = useState(() => {
+    return localStorage.getItem("dawa_isAdmin") === "true";
+  });
+  const [currentUser, setCurrentUser] = useState<{ email: string; name: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem("dawa_logged_in_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch (_) {
+      return null;
+    }
+  });
+
+  const [signupMode, setSignupMode] = useState(() => {
+    return localStorage.getItem("dawa_prefer_signup") === "true";
+  });
+  const [signupName, setSignupName] = useState("");
+  const [isSigningUp, setIsSigningUp] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Navigation
   const [activeTab, setActiveTab] = useState<SidebarTab>('dashboard');
+
+  useEffect(() => {
+    localStorage.removeItem("dawa_prefer_signup");
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("dawa_isAuthenticated", String(isAuthenticated));
+    localStorage.setItem("dawa_admin_pin", adminPin);
+    localStorage.setItem("dawa_isAdmin", String(isAdmin));
+  }, [isAuthenticated, adminPin, isAdmin]);
   
   // Data States
   const [plants, setPlants] = useState<Herb[]>([]);
@@ -114,6 +145,50 @@ export default function AdminDashboard() {
     author: "Preservation Committee"
   });
 
+  const [docDragActive, setDocDragActive] = useState(false);
+  const [docFileLoading, setDocFileLoading] = useState(false);
+  const [docFileName, setDocFileName] = useState("");
+
+  const handleDocFile = (file: File) => {
+    if (!file) return;
+    setDocFileName(file.name);
+    setDocFileLoading(true);
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = (e.target?.result as string) || "";
+      
+      // Compute beautiful title & excerpt automatically but allow user adjustments
+      let title = file.name
+        .replace(/\.[^/.]+$/, "")
+        .split(/[_-]+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+      
+      let excerpt = text.slice(0, 150).replace(/[\r\n]+/g, " ");
+      if (text.length > 150) {
+        excerpt += "...";
+      }
+
+      setDocForm(prev => ({
+        ...prev,
+        title: prev.title || title,
+        excerpt: prev.excerpt || excerpt,
+        content: text
+      }));
+      
+      setDocFileLoading(false);
+      showStatus(`Successfully parsed "${file.name}"! Document content loaded.`);
+    };
+
+    reader.onerror = () => {
+      setDocFileLoading(false);
+      showErr(`Failed to read the file "${file.name}".`);
+    };
+
+    reader.readAsText(file);
+  };
+
   // Settings Toggles
   const [settingsToggles, setSettingsToggles] = useState({
     clinicalCaveats: true,
@@ -152,29 +227,104 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (isAuthenticated) {
       loadAdminData();
+      if (currentUser?.email) {
+        syncLocalSessionsToServer(currentUser.email);
+      }
     }
-  }, [isAuthenticated, adminPin]);
+  }, [isAuthenticated, adminPin, currentUser?.email]);
+
+  const syncLocalSessionsToServer = async (email: string) => {
+    const localSaved = localStorage.getItem("dawa_chat_sessions");
+    if (localSaved) {
+      try {
+        const sessions = JSON.parse(localSaved);
+        if (Array.isArray(sessions) && sessions.length > 0) {
+          await fetch("/api/user/sessions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, sessions }),
+          });
+        }
+      } catch (e) {
+        console.error("Failed to sync local sessions to cloud vault:", e);
+      }
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
     setLoginError("");
     try {
-      const pin = await loginAdmin(emailInput, passwordInput);
-      setAdminPin(pin);
+      const data = await loginAdmin(emailInput, passwordInput);
+      setAdminPin(data.adminPin);
+      setIsAdmin(data.isAdmin);
       setIsAuthenticated(true);
+      setCurrentUser({
+        email: data.email || emailInput,
+        name: data.name || "System User"
+      });
+      localStorage.setItem("dawa_logged_in_user", JSON.stringify({
+        email: data.email || emailInput,
+        name: data.name || "System User",
+        isAdmin: data.isAdmin
+      }));
       setEmailInput("");
       setPasswordInput("");
+      await syncLocalSessionsToServer(data.email || emailInput);
+      showStatus(`Welcome back, ${data.name || 'User'}!`);
     } catch (err: any) {
-      setLoginError("Invalid admin credentials");
+      setLoginError(err.message || "Invalid credentials. Please verify your email and password.");
     } finally {
       setIsLoggingIn(false);
     }
   };
 
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signupName.trim() || !emailInput.trim() || !passwordInput.trim()) {
+      setLoginError("Please completely fill all fields.");
+      return;
+    }
+    setIsSigningUp(true);
+    setLoginError("");
+    try {
+      const data = await signupUser(emailInput, passwordInput, signupName);
+      setAdminPin(data.adminPin);
+      setIsAdmin(false);
+      setIsAuthenticated(true);
+      setCurrentUser({
+        email: data.email,
+        name: data.name
+      });
+      localStorage.setItem("dawa_logged_in_user", JSON.stringify({
+        email: data.email,
+        name: data.name,
+        isAdmin: false
+      }));
+      setSignupName("");
+      setEmailInput("");
+      setPasswordInput("");
+      await syncLocalSessionsToServer(data.email);
+      showStatus(`Successfully registered account, ${data.name}! Welcome to the Ethnobotany Portal.`);
+    } catch (err: any) {
+      setLoginError(err.message || "Signup failed. This email address might already be registered.");
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
   const handleLogout = () => {
     setAdminPin("");
+    setIsAdmin(false);
     setIsAuthenticated(false);
+    setCurrentUser(null);
+    localStorage.removeItem("dawa_isAuthenticated");
+    localStorage.removeItem("dawa_admin_pin");
+    localStorage.removeItem("dawa_isAdmin");
+    localStorage.removeItem("dawa_logged_in_user");
     setActiveTab('dashboard');
     showStatus("Logged out successfully");
   };
@@ -311,6 +461,8 @@ export default function AdminDashboard() {
         category: "Ethnobotany",
         author: "Preservation Committee"
       });
+      setDocFileName("");
+      setDocDragActive(false);
       loadAdminData();
     } catch (e: any) {
       showErr(e.message || "Failed to index document.");
@@ -447,8 +599,28 @@ export default function AdminDashboard() {
           </div>
           <h2 className="text-xl font-extrabold font-sans text-stone-900 tracking-tight">{t("admin.complianceTitle") || "Gardens Control Portal"}</h2>
           <p className="text-xs text-stone-500 mt-1">
-            {t("admin.loginSub") || "Sign in below to authenticate as a registered system ethnobotanist."}
+            {signupMode ? "Register as a care specialist to save traditional botany inquiries." : (t("admin.loginSub") || "Sign in below to authenticate as a registered system ethnobotanist.")}
           </p>
+        </div>
+
+        {/* Tab Selection */}
+        <div id="auth-tabs" className="flex border-b border-stone-200">
+          <button 
+            type="button"
+            id="auth-tab-signin"
+            onClick={() => { setSignupMode(false); setLoginError(""); }}
+            className={`flex-1 py-2 text-center font-bold text-xs border-b-2 transition cursor-pointer ${!signupMode ? 'border-emerald-800 text-emerald-800 font-extrabold bg-stone-50/50' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
+          >
+            Sign In
+          </button>
+          <button 
+            type="button"
+            id="auth-tab-signup"
+            onClick={() => { setSignupMode(true); setLoginError(""); }}
+            className={`flex-1 py-2 text-center font-bold text-xs border-b-2 transition cursor-pointer ${signupMode ? 'border-emerald-800 text-emerald-800 font-extrabold bg-stone-50/50' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
+          >
+            Create Account / Sign Up
+          </button>
         </div>
 
         {loginError && (
@@ -458,11 +630,28 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4 text-xs font-bold text-stone-700">
+        <form onSubmit={signupMode ? handleSignup : handleLogin} className="space-y-4 text-xs font-bold text-stone-700">
+          {signupMode && (
+            <div>
+              <label className="block text-stone-900 uppercase tracking-wide text-[10px] mb-2 font-extrabold">Your Full Name</label>
+              <div className="relative flex items-center">
+                <User className="absolute left-3.5 w-4.5 h-4.5 text-stone-400" />
+                <input
+                  type="text"
+                  required
+                  value={signupName}
+                  onChange={(e) => setSignupName(e.target.value)}
+                  placeholder="e.g. Faith Mojatu"
+                  className="w-full py-2.5 pl-11 pr-4 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 placeholder-stone-400 font-semibold"
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-stone-900 uppercase tracking-wide text-[10px] mb-2 font-extrabold">{t("contact.email") || "Registered Email"}</label>
             <div className="relative flex items-center">
-              <User className="absolute left-3.5 w-4.5 h-4.5 text-stone-400" />
+              <Mail className="absolute left-3.5 w-4.5 h-4.5 text-stone-400" />
               <input
                 type="email"
                 required
@@ -491,13 +680,203 @@ export default function AdminDashboard() {
 
           <button
             type="submit"
-            disabled={isLoggingIn}
-            className="w-full py-3 bg-emerald-950 text-white rounded-xl font-bold hover:bg-emerald-800 hover:scale-[1.01] active:translate-y-0.5 transition duration-150 flex items-center justify-center gap-2 shadow mt-6 disabled:bg-stone-300 disabled:cursor-not-allowed"
+            id="auth-submit-btn"
+            disabled={signupMode ? isSigningUp : isLoggingIn}
+            className="w-full py-3 bg-emerald-950 text-white rounded-xl font-bold hover:bg-emerald-800 hover:scale-[1.01] active:translate-y-0.5 transition duration-150 flex items-center justify-center gap-2 shadow mt-6 disabled:bg-stone-300 disabled:cursor-not-allowed cursor-pointer"
           >
             <Lock className="w-3.5 h-3.5 text-emerald-300" />
-            {isLoggingIn ? t("btn.loading") : t("admin.unlock") || "Unlock Dashboard"}
+            {signupMode 
+              ? (isSigningUp ? "Registering account..." : "Register & Sign Up")
+              : (isLoggingIn ? t("btn.loading") : (t("admin.unlock") || "Unlock Dashboard"))}
           </button>
         </form>
+      </div>
+    );
+  }
+
+// User Session History helper component for the personalized dashboard
+function UserSessionHistory({ email }: { email: string }) {
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserHistory = async () => {
+      try {
+        const res = await fetch(`/api/user/sessions?email=${encodeURIComponent(email)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSessions(data.sessions || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user session logs:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserHistory();
+  }, [email]);
+
+  if (loading) {
+    return <div className="text-center text-xs text-stone-400 py-6">Connecting to secure botanical vault...</div>;
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <div className="text-center py-8 space-y-1">
+        <p className="font-bold text-stone-600 text-xs text-center">No saved chat sessions in your permanent vault yet.</p>
+        <p className="text-[10px] text-stone-400 text-center">Launch DawaBot from the top header to begin exploring Kikuyu ethnobotany.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {sessions.map((s) => {
+        const isExpanded = expandedSessionId === s.id;
+        const totalMsgs = s.messages?.length || 0;
+        return (
+          <div key={s.id} className="border border-stone-150 rounded-xl overflow-hidden transition-all duration-200">
+            <button 
+              onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
+              className="w-full flex items-center justify-between p-3.5 bg-stone-50 hover:bg-stone-100 transition text-left cursor-pointer"
+            >
+              <div className="min-w-0 flex-1 pr-3">
+                <h4 className="text-xs font-black text-stone-800 truncate">{s.title || "Botanical Wisdom Chat"}</h4>
+                <p className="text-[10px] text-stone-500 mt-1 flex items-center gap-1.5">
+                  <span>{totalMsgs} conversation messages</span>
+                  <span>•</span>
+                  <span>Session: {s.id}</span>
+                </p>
+              </div>
+              <span className="text-[11px] font-bold text-emerald-850 bg-emerald-50 px-2.5 py-1 rounded-lg">
+                {isExpanded ? "Collapse History" : "View Dialog Transcript"}
+              </span>
+            </button>
+
+            {isExpanded && (
+              <div className="p-4 bg-white border-t border-stone-150 space-y-4 max-h-96 overflow-y-auto font-sans">
+                {s.messages && s.messages.length > 0 ? (
+                  s.messages.map((m: any, mIdx: number) => {
+                    const isUser = m.role === 'user';
+                    return (
+                      <div key={m.id || mIdx} className="space-y-1 text-xs">
+                        <div className="flex items-center justify-between text-[10px] uppercase font-black text-stone-450">
+                          <span>{isUser ? "You (User Inquiry)" : "DawaBot Response"}</span>
+                          <span>{m.timestamp}</span>
+                        </div>
+                        <div className={`p-3 rounded-xl leading-relaxed ${
+                          isUser 
+                            ? 'bg-stone-50 text-stone-800 border' 
+                            : 'bg-emerald-50 text-emerald-950 border border-emerald-100'
+                        }`}>
+                          <p className="font-medium whitespace-pre-wrap">{m.text}</p>
+                          {m.citations && m.citations.length > 0 && (
+                            <div className="mt-2 pt-1.5 border-t border-emerald-100 flex flex-wrap items-center gap-1">
+                              <span className="text-[9px] uppercase tracking-wider text-emerald-700/60 font-black">Linked references:</span>
+                              {m.citations.map((cite: string, cIdx: number) => (
+                                <span key={cIdx} className="text-[9px] font-bold bg-emerald-105 text-emerald-900 px-1.5 py-0.5 rounded">
+                                  {cite}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-[10px] text-stone-400 text-center">Empty chat thread history.</p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+  if (isAuthenticated && !isAdmin) {
+    // Render personalized User Dashboard!
+    return (
+      <div id="user-dashboard-root" className="mx-4 min-h-[600px] bg-stone-50 border border-stone-200/90 rounded-3xl overflow-hidden shadow-xl p-8 space-y-6 lg:col-span-12 font-sans">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-stone-205 pb-5">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#D4A017] bg-emerald-50 inline-block border border-emerald-100 px-3 py-1 rounded-full">
+              Verified Care Specialist & Member Portal
+            </span>
+            <h1 className="text-2xl font-black text-stone-900 tracking-tight mt-2">
+              Welcome back, {currentUser?.name || "Ethnobotany Enthusiast"}!
+            </h1>
+            <p className="text-xs text-stone-500 mt-1 font-normal">
+              Access your permanently saved scientific conversations, Kikuyu botanical collections, and study logs.
+            </p>
+          </div>
+          <button 
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-2 py-2 px-4 rounded-xl border border-stone-300 text-stone-700 bg-white hover:bg-stone-50 text-xs font-bold transition duration-150 cursor-pointer shadow-sm"
+          >
+            <LogOut className="w-3.5 h-3.5 text-stone-500" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+
+        {/* Info Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1: Account Info */}
+          <div className="bg-white border border-stone-200 p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-xl w-fit">
+                <User className="w-5 h-5 text-emerald-700" />
+              </div>
+              <h3 className="font-extrabold text-stone-900 text-sm">Account Metadata</h3>
+              <p className="text-stone-500 text-xs leading-relaxed mt-2 font-normal">
+                Registered Profile: <strong className="text-stone-800">{currentUser?.name}</strong> <br />
+                Security Identifier: <span className="font-mono bg-stone-100 px-1 py-0.5 rounded text-stone-600 text-[10px] block mt-1">{currentUser?.email}</span>
+              </p>
+            </div>
+            <div className="pt-4 border-t border-stone-100 flex items-center gap-2 text-[10px] text-stone-400 mt-4 font-normal">
+              <Clock className="w-3.5 h-3.5" />
+              <span>Registered Term Session</span>
+            </div>
+          </div>
+
+          {/* Card 2: Safe Storage Info */}
+          <div className="bg-white border border-stone-200 p-6 rounded-2xl shadow-sm space-y-2">
+            <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-xl w-fit">
+              <Shield className="w-5 h-5 text-emerald-700" />
+            </div>
+            <h3 className="font-extrabold text-stone-900 text-sm">Permanent Database Storage</h3>
+            <p className="text-stone-500 text-xs leading-relaxed mt-2 font-normal">
+              All chatbot search sessions & botanical insights are tied directly to your account. Your dAWabot chats will remain saved here permanently, fully accessible from any modern terminal or phone.
+            </p>
+          </div>
+
+          {/* Card 3: Conservation Pledge */}
+          <div className="bg-white border border-stone-200 p-6 rounded-2xl shadow-sm space-y-2">
+            <div className="p-2.5 bg-amber-50 text-amber-800 rounded-xl w-fit">
+              <BookOpen className="w-5 h-5 text-amber-700" />
+            </div>
+            <h3 className="font-extrabold text-[#D4A017] text-sm">Traditional Oral Lore Safeguard</h3>
+            <p className="text-stone-500 text-xs leading-relaxed mt-2 font-normal">
+              Our shared botanical registry represents centuries of herbal preservation by Kikuyu elders. Practice respectful, vertically-opposite bark harvesting to keep our forests healthy.
+            </p>
+          </div>
+        </div>
+
+        {/* User Saved Conversations logs / history */}
+        <div className="bg-white border border-stone-200 p-6 rounded-2xl shadow-sm space-y-4">
+          <div className="border-b border-stone-150 pb-3 flex items-center justify-between">
+            <h3 className="font-extrabold text-stone-950 text-sm">Your Personal Chat Thread History</h3>
+            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Vault: Active & Secure</span>
+          </div>
+
+          <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
+            <UserSessionHistory email={currentUser?.email || ""} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -958,12 +1337,107 @@ export default function AdminDashboard() {
               {/* Form panel */}
               <div className="lg:col-span-7 bg-white border border-stone-200 p-6 rounded-2xl shadow-sm">
                 <form onSubmit={uploadDocContent} className="space-y-4 text-xs font-semibold text-stone-700">
+                  
+                  {/* Drag and Drop / Manual Selection File Upload Area */}
+                  <div className="space-y-2">
+                    <label className="block uppercase font-bold text-stone-900 text-[10px] tracking-wider">
+                      Botanical Treatise or Kikuyu Heritage Document File Upload
+                    </label>
+                    <div
+                      onDragEnter={(e) => { e.preventDefault(); setDocDragActive(true); }}
+                      onDragLeave={(e) => { e.preventDefault(); setDocDragActive(false); }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDocDragActive(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleDocFile(e.dataTransfer.files[0]);
+                        }
+                      }}
+                      className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 relative ${
+                        docDragActive 
+                          ? 'border-emerald-600 bg-emerald-50/30 shadow-inner' 
+                          : docFileName 
+                            ? 'border-emerald-500 bg-emerald-50/10' 
+                            : 'border-stone-250 hover:border-emerald-700 hover:bg-stone-50 bg-stone-50/50'
+                      }`}
+                      onClick={() => {
+                        const fileInput = document.getElementById("document-file-input");
+                        if (fileInput) fileInput.click();
+                      }}
+                    >
+                      <input
+                        id="document-file-input"
+                        type="file"
+                        accept=".txt,.md,.json,.csv,.rtf"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleDocFile(e.target.files[0]);
+                          }
+                        }}
+                      />
+
+                      {docFileLoading ? (
+                        <div className="space-y-2">
+                          <div className="w-7 h-7 border-3 border-emerald-700/30 border-t-emerald-700 rounded-full animate-spin mx-auto" />
+                          <p className="text-xs text-stone-600 font-bold">Reading document coordinates...</p>
+                        </div>
+                      ) : docFileName ? (
+                        <div className="space-y-2.5">
+                          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mx-auto text-emerald-800 border border-emerald-200">
+                            <Check className="w-5 h-5 stroke-[2.5]" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-emerald-900">Loaded: <span className="underline">{docFileName}</span></p>
+                            <p className="text-[10px] text-stone-500 font-medium mt-1">Ready for indexing. Adjust details below if needed.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDocFileName("");
+                              setDocForm(prev => ({ ...prev, content: "" }));
+                            }}
+                            className="bg-red-50 hover:bg-red-100 text-red-700 text-[10px] uppercase font-extrabold px-3 py-1 rounded-lg border border-red-200/50 transition cursor-pointer"
+                          >
+                            Remove File
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 py-2">
+                          <UploadCloud className="w-9 h-9 text-emerald-800/80 mx-auto animate-bounce duration-1000" />
+                          <div>
+                            <span className="text-xs font-black text-[#D4A017]">Drag & Drop Document Here</span>
+                            <span className="text-xs font-normal text-stone-500 block mt-1">or click to browse local files (.txt, .md, .csv)</span>
+                          </div>
+                          <div className="inline-block mt-2 text-[9px] font-black uppercase text-emerald-800 bg-emerald-50/80 px-2 py-0.5 rounded border border-emerald-100">
+                            Kikuyu (Gĩkũyũ) Document Support Certified 🌍
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Kikuyu Info Banner */}
+                  {docForm.content && (
+                    <div className="p-3 bg-amber-50/50 border border-amber-200/40 rounded-xl space-y-1">
+                      <p className="text-amber-800 font-bold text-[10px] uppercase flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                        Multilingual AI Indexing Ready
+                      </p>
+                      <p className="text-[10px] text-stone-600 font-medium leading-relaxed">
+                        If your uploaded file is in <strong>Kikuyu (Gĩkũyũ)</strong>, you can index it directly! DawaBot's cognitive mapping handles real-time cross-language query searches and will intelligently reply in <strong>English, Swahili, Gĩkũyũ, or French</strong> depending on the visitor's choice.
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block mb-1.5 uppercase font-bold text-stone-900">Treatise Document Title *</label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Clinical assessment on Warburgia ugandensis root bark safety profiles"
+                      placeholder="e.g. Traditional logs on Mũgũgũ root preparation methods"
                       value={docForm.title}
                       onChange={(e) => setDocForm({ ...docForm, title: e.target.value })}
                       className="w-full p-2.5 border border-stone-300 rounded-xl text-stone-900"

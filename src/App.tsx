@@ -133,7 +133,7 @@ export default function App() {
 
   // Render an immersive chatbot view with zero frame clutter
   if (currentRoute === 'chatbot') {
-    return <ChatbotPage onBackToHome={() => navigateTo('home')} />;
+    return <ChatbotPage onBackToHome={() => navigateTo('home')} onNavigateTo={navigateTo} />;
   }
 
   return (
