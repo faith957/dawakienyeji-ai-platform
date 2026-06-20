@@ -9,7 +9,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies needed for build)
-RUN npm ci
+RUN npm install
 
 # Copy the rest of the application files
 COPY . .
@@ -32,7 +32,7 @@ ENV PORT=3000
 COPY package*.json ./
 
 # Install only standard production runtime dependencies
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Copy compiled bundles and static assets from builder stage
 COPY --from=builder /usr/src/app/dist ./dist
