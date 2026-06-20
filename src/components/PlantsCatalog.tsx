@@ -248,11 +248,6 @@ export default function PlantsCatalog() {
         ))}
       </div>
 
-      {/* Grid count state */}
-      <div className="text-[10px] font-mono font-black text-stone-400 uppercase tracking-widest text-left">
-        {getLabelText("showing")} <span className="text-[#D4A017]">{filteredPlants.length}</span> {getLabelText("of")} {plants.length} {getLabelText("mapped")}
-      </div>
-
       {/* Database Catalog grid */}
       {loading ? (
         <div className="py-20 text-center text-sm text-stone-400 font-bold">

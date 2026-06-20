@@ -5,7 +5,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import nodemailer from "nodemailer";
 import { INITIAL_HERBS, INITIAL_REMEDIES, INITIAL_BLOGS, INITIAL_KNOWLEDGE_BASE } from "./src/data/herbalDatabase.js";
-import { findDictionaryMatches } from "./src/data/kikuyu_botanical_dictionary.js";
+import { findDictionaryMatches, KIKUYU_DICTIONARY } from "./src/data/kikuyu_botanical_dictionary.js";
 import { Herb, BlogPost, TraditionalRemedy, KnowledgeBaseArticle, ChatMessage, ChatLog, BlogComment } from "./src/types.js";
 import { translateHerb, translateRemedy } from "./src/utils/translations.js";
 
@@ -234,8 +234,9 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
     if (!name || !email || !message) {
       return res.status(400).json({ error: "Name, email, and message body are required inputs." });
     }
+    const maxId = dbMessages.reduce((max, m) => Math.max(max, parseInt(m.id) || 0), 0);
     const newMessage = {
-      id: String(dbMessages.length + 1),
+      id: String(maxId + 1),
       name,
       email,
       subject: subject || "No Subject Context",
@@ -264,8 +265,9 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
     if (exists) {
       return res.json({ success: true, message: "This email is already subscribed!", alreadyActive: true });
     }
+    const maxSubId = dbSubscriptions.reduce((max, s) => Math.max(max, parseInt(s.id) || 0), 0);
     const newSubscription = {
-      id: String(dbSubscriptions.length + 1),
+      id: String(maxSubId + 1),
       email: email.trim(),
       timestamp: new Date().toISOString()
     };
@@ -493,8 +495,9 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
     if (!newHerb || !newHerb.kikuyuName || !newHerb.scientificName) {
       return res.status(400).json({ error: "Missing required herb fields." });
     }
-    // Generate simple ID if missing
-    newHerb.id = String(dbHerbs.length + 1);
+    // Generate safe auto-incrementing ID if missing
+    const maxHerbId = dbHerbs.reduce((max, h) => Math.max(max, parseInt(h.id) || 0), 0);
+    newHerb.id = String(maxHerbId + 1);
     dbHerbs.unshift(newHerb); // add to top of list
     res.json({ success: true, plant: newHerb });
   });
@@ -538,7 +541,8 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
     if (!newBlog || !newBlog.title || !newBlog.content) {
       return res.status(400).json({ error: "Blog title and content are required." });
     }
-    newBlog.id = String(dbBlogs.length + 1);
+    const maxBlogId = dbBlogs.reduce((max, b) => Math.max(max, parseInt(b.id) || 0), 0);
+    newBlog.id = String(maxBlogId + 1);
     newBlog.date = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -559,7 +563,8 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
     if (!newDoc || !newDoc.title || !newDoc.content) {
       return res.status(400).json({ error: "Document title and content are required." });
     }
-    newDoc.id = String(dbArticles.length + 1);
+    const maxDocId = dbArticles.reduce((max, a) => Math.max(max, parseInt(a.id) || 0), 0);
+    newDoc.id = String(maxDocId + 1);
     newDoc.lastUpdated = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -631,6 +636,152 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
     return geminiClientCache;
   }
 
+  function getOfflineRelatedSuggestions(query: string, language: string): string {
+    const norm = (str: string) => {
+      return str.toLowerCase()
+        .replace(/[ĩĩ]/g, 'i')
+        .replace(/[ũũ]/g, 'u')
+        .replace(/[^a-z0-9\s]/g, ' ');
+    };
+    const qNorm = norm(query || "").trim();
+    if (!qNorm) {
+      return language === "sw" ? "Tafadhali andika jina la mmea." : "Please type a plant or remedy name.";
+    }
+
+    const words = qNorm.split(/\s+/).filter(w => w.length > 2);
+
+    interface Candidate {
+      name: string;
+      scientific: string;
+      common: string;
+      score: number;
+      source: 'herb' | 'dict';
+      uses: string[];
+    }
+
+    const candidates: Candidate[] = [];
+
+    const allPlants: { name: string; scientific: string; common: string; uses: string[]; source: 'herb' | 'dict' }[] = [];
+    
+    dbHerbs.forEach(h => {
+      allPlants.push({
+        name: h.kikuyuName,
+        scientific: h.scientificName,
+        common: h.commonName,
+        uses: h.medicinalUses,
+        source: 'herb'
+      });
+    });
+
+    KIKUYU_DICTIONARY.forEach(d => {
+      allPlants.push({
+        name: d.kikuyuName,
+        scientific: d.scientificName,
+        common: d.commonName,
+        uses: d.uses,
+        source: 'dict'
+      });
+    });
+
+    allPlants.forEach(p => {
+      let score = 0;
+      const pNameNorm = norm(p.name);
+      const pSciNorm = norm(p.scientific);
+      const pComNorm = norm(p.common);
+
+      if (qNorm && (pNameNorm.includes(qNorm) || qNorm.includes(pNameNorm))) {
+        score += 15;
+      }
+      if (pSciNorm && (pSciNorm.includes(qNorm) || qNorm.includes(pSciNorm))) {
+        score += 10;
+      }
+      if (pComNorm && (pComNorm.includes(qNorm) || qNorm.includes(pComNorm))) {
+        score += 8;
+      }
+
+      words.forEach(w => {
+        if (pNameNorm.includes(w)) score += 5;
+        if (pSciNorm.includes(w)) score += 4;
+        if (pComNorm.includes(w)) score += 3;
+        (p.uses || []).forEach(u => {
+          if (norm(u).includes(w)) score += 1;
+        });
+      });
+
+      if (score > 0) {
+        candidates.push({
+          name: p.name,
+          scientific: p.scientific,
+          common: p.common,
+          score,
+          source: p.source,
+          uses: p.uses
+        });
+      }
+    });
+
+    candidates.sort((a, b) => b.score - a.score);
+    const uniqueCandidatesMap = new Map<string, Candidate>();
+    candidates.forEach(c => {
+      const key = c.name.toUpperCase();
+      if (!uniqueCandidatesMap.has(key)) {
+        uniqueCandidatesMap.set(key, c);
+      }
+    });
+
+    const topSuggestions = Array.from(uniqueCandidatesMap.values()).slice(0, 3);
+
+    if (language === "sw") {
+      let msg = "";
+      if (topSuggestions.length > 0) {
+        msg += `Mmea huu si wa kawaida katika rekodi zetu fupi, lakini kulingana na kile ulichouliza, hapa kuna mapendekezo ya miongozo inayohusiana ya mimea inayothaminiwa kijadi katika jamii:\n\n`;
+        topSuggestions.forEach(s => {
+          msg += `- **${s.name}** (*${s.scientific}* - ${s.common})\n  Matumizi ya Kiasili: ${(s.uses || []).slice(0, 3).join(", ")}\n`;
+        });
+      } else {
+        msg += `Unaweza kuchunguza mimea mingine maarufu ya asili kama vile **MŨTHĨGA** au **MŨCORAI** inayothaminiwa kijadi kwa ajili ya afya.\n\n`;
+      }
+      msg += `\nTiba za kiasili zinaweza zisiwafae kila mtu. Watu wajawazito, wanaonyonyesha, wenye matatizo ya kiafya, au wanaotumia dawa wanapaswa kushauriana na daktari aliyehitimu kabla ya kutumia dawa yoyote ya mitishamba.`;
+      return msg;
+    } else if (language === "ki") {
+      let msg = "";
+      if (topSuggestions.length > 0) {
+        msg += `Mũthĩga ũcio ndũandĩkĩtwo wega haha rĩũ, no kũgerera kĩrĩa ũraria, noũthome igũrũ rĩa mĩthĩga ĩno ĩhanaine nayo ĩrĩa ĩhũmagĩrũo tene nĩ matũũra:\n\n`;
+        topSuggestions.forEach(s => {
+          msg += `- **${s.name}** (*${s.scientific}* - ${s.common})\n  Ũhũmĩri wa Kĩndũire: ${(s.uses || []).slice(0, 3).join(", ")}\n`;
+        });
+      } else {
+        msg += `Noũgĩe kũmenya igũrũ rĩa mĩthĩga ĩngĩ ta **MŨTHĨGA** kana **MŨCORAI** ĩrĩa ĩrĩ ngumo na ĩrĩa ĩhũmagĩrũo wega nĩ matũũra.\n\n`;
+      }
+      msg += `\nMĩthĩga ya kĩndũĩre ti njega kũrĩ andũ othe. Andũ arĩa marĩ na nda, arĩa marongithia kĩndũĩre, kana arĩa maroria mĩgũto ĩngĩ mathĩna-inĩ ma mĩri mathome mbre matianarĩa mĩthĩga ĩno na ndagĩtarĩ.`;
+      return msg;
+    } else if (language === "fr") {
+      let msg = "";
+      if (topSuggestions.length > 0) {
+        msg += `Les usages habituels de cette plante ne sont pas listés de manière exhaustive ici, mais d'après votre recherche, voici d'autres plantes connexes traditionnellement valorisées par les communautés :\n\n`;
+        topSuggestions.forEach(s => {
+          msg += `- **${s.name}** (*${s.scientific}* - ${s.common})\n  Usages Traditionnels : ${(s.uses || []).slice(0, 3).join(", ")}\n`;
+        });
+      } else {
+        msg += `N'hésitez pas à explorer d'autres plantes traditionnelles bien connues comme **MŨTHĨGA** ou **MŨCORAI** de notre flore traditionnelle d'Afrique de l'Est.\n\n`;
+      }
+      msg += `\nLes remèdes traditionnels peuvent ne pas convenir à tout le monde. Les personnes enceintes, qui allaitent, qui ont des problèmes médicaux existants ou qui prennent des médicaments doivent consulter un professionnel de la santé qualifié avant d'utiliser tout remède à base de plantes.`;
+      return msg;
+    } else {
+      let msg = "";
+      if (topSuggestions.length > 0) {
+        msg += `While detailed specifications for this specific plant are not immediately highlighted here, you may be interested in these related plants traditionally used in indigenous medicinal practices:\n\n`;
+        topSuggestions.forEach(s => {
+          msg += `- **${s.name}** (*${s.scientific}* - ${s.common})\n  Traditional Uses: ${(s.uses || []).slice(0, 3).join(", ")}\n`;
+        });
+      } else {
+        msg += `You are welcome to read about other well-known botanical species such as **MŨTHĨGA** or **MŨCORAI** historically used by East African communities.\n\n`;
+      }
+      msg += `\nTraditional remedies may not be suitable for everyone. Individuals who are pregnant, breastfeeding, have existing medical conditions, or are taking medication should consult a qualified healthcare professional before using any herbal remedy.`;
+      return msg;
+    }
+  }
+
   app.post("/api/chat", async (req, res) => {
     const { messages, currentQuery, language } = req.body;
     if (!currentQuery) {
@@ -653,7 +804,101 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
         .replace(/[ũũ]/g, 'u')
         .replace(/[^a-z0-9\s]/g, ' ');
     };
-    const queryNorm = norm(currentQuery).trim();
+
+    // Context Extraction Helper to detect known plants mentioned within any message
+    const getPresentPlantsKeys = (text: string) => {
+      const textNorm = norm(text);
+      const foundNames: string[] = [];
+
+      dbHerbs.forEach(h => {
+        const kn = norm(h.kikuyuName);
+        const cn = norm(h.commonName);
+        const sn = norm(h.scientificName);
+        // Ensure word bounds or clean substring checks
+        if (textNorm.includes(kn) || textNorm.includes(cn) || textNorm.includes(sn)) {
+          if (!foundNames.includes(h.kikuyuName)) {
+            foundNames.push(h.kikuyuName);
+          }
+        }
+      });
+
+      KIKUYU_DICTIONARY.forEach(e => {
+        const kn = norm(e.kikuyuName);
+        const cn = norm(e.commonName || "");
+        const sn = norm(e.scientificName || "");
+        if (textNorm.includes(kn) || textNorm.includes(cn) || textNorm.includes(sn)) {
+          if (!foundNames.includes(e.kikuyuName)) {
+            foundNames.push(e.kikuyuName);
+          }
+        }
+      });
+
+      return foundNames;
+    };
+
+    const directPlantsKeys = getPresentPlantsKeys(currentQuery);
+    const queryNormRaw = norm(currentQuery).trim();
+    
+    // Check if query is likely a follow-up asking for details, prep, or dosage about previously discussed plants
+    const isFollowUp = 
+      queryNormRaw.length < 55 && (
+        queryNormRaw.includes("prepare") || queryNormRaw.includes("prep") || queryNormRaw.includes("how to") || 
+        queryNormRaw.includes("dose") || queryNormRaw.includes("dosage") || queryNormRaw.includes("use") || 
+        queryNormRaw.includes("using") || queryNormRaw.includes("precaution") || queryNormRaw.includes("safety") || 
+        queryNormRaw.includes("warning") || queryNormRaw.includes("danger") || queryNormRaw.includes("it") || 
+        queryNormRaw.includes("them") || queryNormRaw.includes("this") || queryNormRaw.includes("that") || 
+        queryNormRaw.includes("more") || queryNormRaw.includes("tell") || queryNormRaw.includes("explain") ||
+        queryNormRaw.includes("remedy") || queryNormRaw.includes("recipe") || queryNormRaw.includes("is there") ||
+        queryNormRaw.includes("do you") || queryNormRaw.includes("any other") || queryNormRaw.includes("where") ||
+        queryNormRaw.includes("swelling") || queryNormRaw.includes("pain") || queryNormRaw.includes("ache")
+      );
+
+    let enrichedQuery = currentQuery;
+    let contextPlantFound = "";
+    let contextSymptomFound = "";
+
+    // If no direct plants are found, or if it has follow-up indicators, let's pull context from message history
+    if (directPlantsKeys.length === 0 || isFollowUp) {
+      if (Array.isArray(messages) && messages.length > 0) {
+        // Walk backwards to find most recently mentioned plant names in history
+        for (let i = messages.length - 1; i >= 0; i--) {
+          const msg = messages[i];
+          const msgText = msg ? (msg.text || "") : "";
+          if (!msgText) continue;
+          const msgPlants = getPresentPlantsKeys(msgText);
+          if (msgPlants.length > 0) {
+            contextPlantFound = msgPlants.join(" ");
+            break;
+          }
+        }
+
+        // Walk backwards to find most recently mentioned symptoms and medical conditions
+        const symptomsList = [
+          "toothache", "tooth", "teeth", "tooch", "thoot", "toot", 
+          "stomach", "fever", "malaria", "cough", "headache", "backache",
+          "arthritis", "joint", "sinus", "diarrhea", "eyes", "skin", "cold"
+        ];
+        for (let i = messages.length - 1; i >= 0; i--) {
+          const msg = messages[i];
+          const msgText = msg ? norm(msg.text || "") : "";
+          if (!msgText) continue;
+          for (const s of symptomsList) {
+            if (msgText.includes(s)) {
+              contextSymptomFound = s;
+              break;
+            }
+          }
+          if (contextSymptomFound) break;
+        }
+      }
+    }
+
+    if (contextPlantFound || contextSymptomFound) {
+      enrichedQuery = `${currentQuery} ${contextPlantFound} ${contextSymptomFound}`.trim();
+      console.log(`[Info-Log] Enriching follow-up query with conversational history: "${currentQuery}" -> "${enrichedQuery}"`);
+    }
+
+    const queryNorm = norm(enrichedQuery).trim();
     const stopwords = new Set([
       "i", "have", "a", "the", "and", "of", "to", "for", "in", "is", "it", "on", "with", "at",
       "using", "how", "do", "you", "use", "what", "can", "treat", "cure", "remedy", "medicinal",
@@ -663,53 +908,129 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
       .filter(word => word.length > 2 && !stopwords.has(word));
     const finalQueryWords = queryKeywords.length > 0 ? queryKeywords : queryNorm.split(/\s+/).filter(w => w.length > 1);
 
-    // Matching helper function
-    const checksMatch = (fields: string[]) => {
-      // 1. Check direct substring inclusion both ways
-      const directMatch = fields.some(f => f && (queryNorm.includes(f) || f.includes(queryNorm)));
-      if (directMatch) return true;
-      // 2. Keyword-based matching
-      return finalQueryWords.some(word => fields.some(f => f && f.includes(word)));
+    // Scoring function to evaluate matching relevance and rule out irrelevant loose results
+    const scoreItem = (fields: string[]): number => {
+      let score = 0;
+      
+      // 1. Direct or substring matching of physical query
+      const queryInField = fields.some(f => f && f.includes(queryNorm));
+      if (queryInField) {
+        score += 150;
+      }
+      const fieldInQuery = fields.some(f => f && queryNorm.includes(f));
+      if (fieldInQuery) {
+        score += 50;
+      }
+
+      // Typos or equivalence mapping (e.g. "tooch" -> "tooth")
+      const checkEquivalentTerms = (w: string) => {
+        const list = [w];
+        if (w === "tooch" || w === "thoot" || w === "toot") {
+          list.push("tooth", "teeth", "toothache", "toothaches");
+        }
+        if (w === "tooth" || w === "teeth" || w === "toothache" || w === "toothaches") {
+          list.push("tooch", "thoot", "toot");
+        }
+        return list;
+      };
+
+      // 2. Keyword-based matching with safety weight for weak vs strong words
+      finalQueryWords.forEach(word => {
+        const equivalents = checkEquivalentTerms(word);
+        const matchesWord = fields.some(f => {
+          if (!f) return false;
+          return equivalents.some(eq => f.includes(eq));
+        });
+
+        if (matchesWord) {
+          const weakWords = [
+            "ache", "aches", "pain", "pains", "treatment", "remedy", "remedies",
+            "medicine", "plant", "herb", "herbs", "mmea", "dawa", "sore", "sores"
+          ];
+          if (weakWords.includes(word)) {
+            score += 10; // low score for generic symptoms
+          } else {
+            score += 80; // high score for specific conditions/organs
+          }
+        }
+      });
+
+      return score;
+    };
+
+    // Scored and dynamic-threshold matching extractor
+    const getBestMatches = <T>(items: T[], fieldsExtractor: (item: T) => string[]): T[] => {
+      const itemsWithScore = items.map(item => {
+        const fields = fieldsExtractor(item).map(f => f ? norm(f) : "");
+        return { item, score: scoreItem(fields) };
+      });
+
+      const matchedWithScore = itemsWithScore.filter(x => x.score > 0);
+      if (matchedWithScore.length === 0) return [];
+
+      const maxScore = Math.max(...matchedWithScore.map(x => x.score));
+
+      // Threshold: if we have highly specific term matches (score >= 80), 
+      // discard items that only match generic terms like 'ache' or 'pain'.
+      let threshold = 1;
+      if (maxScore >= 80) {
+        threshold = 60; // Enforces matching of specific semantic keywords
+      }
+
+      return matchedWithScore
+        .filter(x => x.score >= threshold)
+        .sort((a, b) => b.score - a.score)
+        .map(x => x.item);
     };
 
     // Find matching herbs
-    const matchedHerbs = dbHerbs.filter(h => {
-      const fields = [
-        norm(h.kikuyuName),
-        norm(h.commonName),
-        norm(h.scientificName),
-        norm(h.description),
-        ...h.medicinalUses.map(u => norm(u))
-      ];
-      return checksMatch(fields);
-    });
+    const matchedHerbs = getBestMatches(dbHerbs, (h) => [
+      h.kikuyuName,
+      h.commonName,
+      h.scientificName,
+      h.description,
+      ...h.medicinalUses
+    ]);
 
     // Find matching entries from Kikuyu Botanical Dictionary document
-    const matchedDictEntries = findDictionaryMatches(currentQuery);
+    const rawMatchedDictEntries = findDictionaryMatches(enrichedQuery);
+    let matchedDictEntries = getBestMatches(rawMatchedDictEntries, (entry) => [
+      entry.kikuyuName,
+      entry.commonName,
+      entry.scientificName,
+      entry.description,
+      ...(entry.uses || []),
+      entry.safeCautions || ""
+    ]);
+
+    // Deduplicate: remove dictionary entries already detailed in matchedHerbs
+    matchedDictEntries = matchedDictEntries.filter(entry => {
+      const normEntryName = entry.kikuyuName.toLowerCase().replace(/[ĩũ]/g, '');
+      const isAlreadyInDetailed = matchedHerbs.some(h => {
+        const normHerbName = h.kikuyuName.toLowerCase().replace(/[ĩũ]/g, '');
+        return normEntryName.includes(normHerbName) || normHerbName.includes(normEntryName);
+      });
+      return !isAlreadyInDetailed;
+    });
 
     // Find matching remedies
-    const matchedRemedies = dbRemedies.filter(r => {
-      const fields = [
-        norm(r.title),
-        ...r.symptoms.map(s => norm(s)),
-        ...r.recommendedHerbs.map(h => norm(h))
-      ];
-      return checksMatch(fields);
-    });
+    const matchedRemedies = getBestMatches(dbRemedies, (r) => [
+      r.title,
+      ...r.symptoms,
+      ...r.recommendedHerbs
+    ]);
 
     // Find custom articles/knowledge chunks
-    const matchedArticles = dbArticles.filter(a => {
-      const fields = [
-        norm(a.title),
-        norm(a.excerpt),
-        norm(a.content)
-      ];
-      return checksMatch(fields);
-    });
+    const matchedArticles = getBestMatches(dbArticles, (a) => [
+      a.title,
+      a.excerpt,
+      a.content
+    ]);
 
     // Build context string from indexed database matches
-    let contextStr = "--- DAWA KIENYEJI BOTANICAL DATABASE KNOWLEDGE BASE ---\n\n";
-    
+    let contextStr = "--- AUTHENTIC TRADITIONAL BOTANICAL RECORDS ---\n\n";
+    const hasLocalMatch = (matchedDictEntries.length > 0 || matchedHerbs.length > 0 || matchedRemedies.length > 0);
+
     if (matchedDictEntries.length > 0) {
       contextStr += "MATCHED REORGANIZED KIKUYU BOTANICAL DICTIONARY DOCUMENT ENTRIES:\n";
       matchedDictEntries.forEach((entry) => {
@@ -727,12 +1048,16 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
         contextStr += `- Kikuyu Name: ${h.kikuyuName}\n  Scientific Name: ${h.scientificName}\n  English Name: ${h.commonName}\n  Parts Used: ${h.partUsed}\n  Uses: ${h.medicinalUses.join(", ")}\n  Preparation: ${h.preparation}\n  Traditional Context: ${h.traditionalContext}\n  Safety Precautions: ${h.precautions}\n  Type Class: ${h.category}\n  Danger Rating: ${h.severityRating || 'Normal'}\n\n`;
       });
     } else if (matchedDictEntries.length === 0) {
-      // Pour out a general overview of the top 5 herbs as defensive context fallback only if no dictionary match
-      contextStr += "GENERAL POPULAR BOTANICAL FLORA FALLBACK:\n";
-      dbHerbs.slice(0, 5).forEach((h) => {
-        contextStr += `- Kikuyu Name: ${h.kikuyuName} (${h.scientificName} / ${h.commonName}): Prep: ${h.preparation}. Uses: ${h.medicinalUses.slice(0, 2).join(", ")}. Safety: ${h.precautions}\n`;
-      });
-      contextStr += "\n";
+      if (hasLocalMatch) {
+        // Pour out a general overview of the top 5 herbs as supportive details
+        contextStr += "GENERAL POPULAR BOTANICAL FLORA REFFERENCE:\n";
+        dbHerbs.slice(0, 5).forEach((h) => {
+          contextStr += `- Kikuyu Name: ${h.kikuyuName} (${h.scientificName} / ${h.commonName}): Prep: ${h.preparation}. Uses: ${h.medicinalUses.slice(0, 2).join(", ")}. Safety: ${h.precautions}\n`;
+        });
+        contextStr += "\n";
+      } else {
+        contextStr += `[NOTICE]: No direct match found in our local traditional records for "${currentQuery}". Please automatically perform an external search to identify safe, trusted herbal alternatives from reputable sources, presenting them in a highly warm and friendly tone.\n\n`;
+      }
     }
 
     if (matchedRemedies.length > 0) {
@@ -749,16 +1074,69 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
       });
     }
 
-    // Build the system instructions forcing grounding with Google Search fallback
-    const systemInstruction = `You are DawaBot, a premium and professional AI Assistant built to share authentic Gĩkũyũ (Kikuyu) and East African traditional herbal medicine knowledge. Your responses must be warm, educational, African-inspired, highly intelligent, and trustworthy.
+    // Adapt the system instruction if a match is found locally vs contextually searched
+    const globalResponseGuidelines = `
+RESPONSE STYLE AND TONE MANDATES:
+1. ALWAYS be warm, respectful, and informative.
+2. ALWAYS use clear and natural language.
+3. ALWAYS provide culturally relevant explanations.
+4. ALWAYS explain traditional uses without exaggeration, dramatization, or promotional language. Present information in a balanced and educational manner.
+5. ALWAYS use both the Kikuyu plant name (e.g., MŨTHĨGA) and botanical name (e.g., *Warburgia ugandensis*) whenever available in the context or search results.
+6. ALWAYS structure responses neatly with headings, bullet points, and clear sections.
+7. ALWAYS include safety considerations when discussing medicinal plants. Specifically, append or logically integrate this exact warning (or a natural, fluent translation in ${activeLanguageName}):
+   "Traditional remedies may not be suitable for everyone. Individuals who are pregnant, breastfeeding, have existing medical conditions, or are taking medication should consult a qualified healthcare professional before using any herbal remedy."
+8. ALWAYS use preferred traditional language phrases such as:
+   - "Traditionally used for..."
+   - "According to documented Kikuyu ethnobotanical knowledge..."
+   - "Historically used by communities for..."
+   - "Traditionally valued for..."
+   - "Used in indigenous medicinal practices for..."
 
-CRITICAL INSTRUCTIONS:
-1. PRIMARY KNOWLEDGE SOURCE: Use the provided botanical database and uploaded reference documents (such as the Kikuyu Botanical Dictionary) as your primary knowledge source.
-2. LOCAL REFERENCE WITH GOOGLE SEARCH FALLBACK: Match user queries against our local botanical database and dictionary context. If the requested plant, herb, remedy, or information is NOT present or covered in our local database or context, you MUST use the integrated Google Search tool to search for accurate online botanical or East African medical records and respond correctly using those search results. Include web reference URLs when using search grounding.
-3. USE STANDARD NAMES: If the active selected language is Kikuyu (Gĩkũyũ), use the plant's Kikuyu name (e.g., MŨTHĨGA) in uppercase as the primary reference. If the active language is ${activeLanguageName} (and NOT Kikuyu), utilize the plant's common English name (e.g., East African Greenheart or Sodom Apple) or standard botanical scientific name in italics (e.g., *Warburgia ugandensis*) as the primary name, and include the Kikuyu name ONLY as secondary reference information (e.g., "...known traditionally as MŨTHĨGA...").
-4. DETAIL PREPARATION AND SAFETY: For any remedy suggested, explicitly list the parts used, authentic preparatory steps, dosage, and critical SAFETY PRECAUTIONS (e.g. state cautions regarding pregnancy, toxic saps of Sodom Apple fruit, or strong liver reactions).
-5. RESPOND IN ELEGANT MARKDOWN: Use headings, bullets, bold text, and numbered lists to structure your explanations neatly. Keep paragraphs welcoming.
-6. MANDATORY DYNAMIC TRANSLATION: You MUST think, write, speak, and respond ENTIRELY in ${activeLanguageName}. Translate all descriptions, tips, checklists, greetings, and safety directions into ${activeLanguageName}. If ${activeLanguageName} is English, Kiswahili, or French, ensure absolutely no raw Kikuyu vocabulary or Gĩkũyũ sentences are visible within your reply unless they are encapsulated inside a brief, clear secondary reference. Keep your voice fluent and native in ${activeLanguageName}. Do not break this role.`;
+STRICT PROHIBITIONS:
+1. NEVER mention internal systems of the application, including or related to:
+   - "Knowledge Base" (or "Ethnobotanical Knowledge Base")
+   - "RAG"
+   - "Vector Database"
+   - "Document Store" (or "uploaded documents")
+   - "Retrieved Documents"
+   - "Source Database" (or "local database")
+   - "AI Retrieval System"
+2. NEVER return dry, unhelpful negative statements such as:
+   - "No exact plants found."
+   - "Plant not found."
+   - "No matching records."
+   - "Plant not found in the knowledge base."
+3. NEVER use dramatic, sensational, or promotional language such as:
+   - "Most powerful remedy"
+   - "Miracle cure"
+   - "Guaranteed treatment"
+   - "Exceptional healing powers"
+   - "Instant cure"
+4. NEVER provide medical diagnoses, claims of guaranteed effectiveness, statements implying scientific proof unless fully verified, or prescribe treatment plans. Keep everything educational.
+5. MANDATORY DYNAMIC TRANSLATION: You MUST think, write, speak, and respond ENTIRELY in ${activeLanguageName}. Translate all descriptions, tips, checklists, greetings, and safety directions into ${activeLanguageName}. Keep your voice fluent and native in ${activeLanguageName}.
+`;
+
+    let systemInstruction = "";
+    if (hasLocalMatch) {
+      systemInstruction = `You are DawaBot, a premium and professional AI Assistant built to share authentic Gĩkũyũ (Kikuyu) and East African traditional herbal medicine knowledge.
+
+${globalResponseGuidelines}
+
+CRITICAL INSTRUCTIONS FOR LOCAL MEDICINAL PLANTS:
+1. PRIMARY KNOWLEDGE SOURCE: Use the provided local traditional botanical records to craft the response.
+2. PREPARATION & SAFETY DETAILS: For any remedy suggested, explicitly list parts used, authentic preparatory steps, dosage, and safety considerations.`;
+    } else {
+      systemInstruction = `You are DawaBot, a premium and professional AI Assistant built to share authentic Gĩkũyũ (Kikuyu) and East African traditional herbal medicine knowledge.
+
+${globalResponseGuidelines}
+
+CRITICAL INSTRUCTIONS FOR EXTERNAL SEARCHES:
+1. AUTOMATIC SEARCH: Since the requested plant or symptom is not directly matched in our native traditional lists, automatically use Google Search to find safe, trusted, and contextually relevant herbal alternatives or classical botanical options from external sources.
+2. GRACEFUL AND WARM PRESENTATION: Start by gracefully and warmly explaining in ${activeLanguageName} that while this is not currently documented in our direct traditional records, you have found excellent, safe botanical alternatives and information from trusted international sources.
+   - Example (English): "While this is not currently documented in our direct traditional records, here are some safe, trusted botanical alternatives and information from reliable sources..."
+   - Example (Kiswahili): "Ingawa hii haijaandikwa moja kwa moja kwenye rekodi zetu za kiasili, hapa kuna mbadala salama na maelezo kutoka vyanzo vya kuaminika vya mimea ya asili..."
+   - Example (Gĩkũyũ): "Mũthĩga ũcio ndũandĩkĩtwo wega haha rĩũ, no kũgerera thimo ingĩ cia mĩgũto, ũũ nĩũhoro ũrĩa ũkũonera..."`;
+    }
 
     // Try starting Gemini API
     try {
@@ -779,7 +1157,7 @@ CRITICAL INSTRUCTIONS:
       });
 
       // Try with fallback models to handle 503 / 429 under high demand
-      const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
+      const modelsToTry = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
       let response = null;
       let lastError = null;
 
@@ -787,10 +1165,10 @@ CRITICAL INSTRUCTIONS:
       let totalAttempts = 0;
       let modelIdx = 0;
 
-      while (totalAttempts < 3 && modelIdx < modelsToTry.length) {
+      while (totalAttempts < 4 && modelIdx < modelsToTry.length) {
         const modelName = modelsToTry[modelIdx];
         try {
-          console.log(`Attempting chat with model: ${modelName} (Attempt ${totalAttempts + 1})`);
+          console.log(`Attempting chat with model WITH Google Search: ${modelName} (Attempt ${totalAttempts + 1})`);
           response = await ai.models.generateContent({
             model: modelName,
             contents: chatContents,
@@ -803,21 +1181,46 @@ CRITICAL INSTRUCTIONS:
             }
           });
           if (response) {
-            console.log(`Successfully completed chat with model: ${modelName}`);
+            console.log(`Successfully completed chat WITH Google Search: ${modelName}`);
             break;
           }
         } catch (err: any) {
-          console.warn(`Model ${modelName} failed with error:`, err?.message || err);
-          lastError = err;
-          totalAttempts++;
-          if (totalAttempts < 3) {
-            const errLower = (err?.message || "").toLowerCase();
-            const shouldSwitchModel = errLower.includes("429") || errLower.includes("404") || errLower.includes("quota") || errLower.includes("not found") || errLower.includes("503") || errLower.includes("unavailable");
+          const errMsg = err?.message || String(err);
+          console.log(`[Info-Log] Model ${modelName} WITH Google Search failed. Error:`, errMsg);
+          
+          // Phase 2: Immediately retry WITHOUT Google Search on the same model to avoid 429 search quota exhaustion
+          try {
+            console.log(`[Info-Log] Retrying chat WITHOUT Google Search: ${modelName}`);
+            response = await ai.models.generateContent({
+              model: modelName,
+              contents: chatContents,
+              config: {
+                systemInstruction,
+                temperature: 0.25,
+                topK: 40,
+                topP: 0.95
+                // Pure text generation using the rich RAG local context
+              }
+            });
+            if (response) {
+              console.log(`Successfully completed chat WITHOUT Google Search: ${modelName}`);
+              break;
+            }
+          } catch (noSearchErr: any) {
+            const noSearchMsg = noSearchErr?.message || String(noSearchErr);
+            console.log(`[Info-Log] Model ${modelName} WITHOUT Google Search also failed. Error:`, noSearchMsg);
+            
+            lastError = noSearchErr;
+            totalAttempts++;
+            
+            // Advance to next model on backoff
+            const errLower = noSearchMsg.toLowerCase();
+            const shouldSwitchModel = errLower.includes("429") || errLower.includes("404") || errLower.includes("quota") || errLower.includes("not found") || errLower.includes("503") || errLower.includes("unauthorized") || errLower.includes("unavailable");
             if (shouldSwitchModel) {
               modelIdx++;
             }
             if (modelIdx < modelsToTry.length) {
-              await delay(Math.pow(2, totalAttempts) * 500); // 1s, 2s backoff
+              await delay(Math.pow(2, totalAttempts) * 400); // 400ms, 800ms, 1.6s backoff
             }
           }
         }
@@ -830,7 +1233,8 @@ CRITICAL INSTRUCTIONS:
       const replyText = response && response.text ? response.text : "I was unable to retrieve a response. Please try again shortly.";
 
       // Record chat metrics
-      const logId = String(dbChatLogs.length + 1);
+      const maxLogId = dbChatLogs.reduce((max, l) => Math.max(max, parseInt(l.id) || 0), 0);
+      const logId = String(maxLogId + 1);
       dbChatLogs.unshift({
         id: logId,
         query: currentQuery,
@@ -868,18 +1272,8 @@ CRITICAL INSTRUCTIONS:
       });
 
     } catch (err: any) {
-      console.error("Gemini chatbot error:", err);
+      console.log("[Info-Log] Handling chat session with robust offline fallback guides. Reference query info:", err?.message || err);
       
-      let offlineNotFound = "No exact plants found in the verified knowledge base. Try typing **MŨTHĨGA**, **MŨTONGU**, or **MŨCORAI**.";
-      
-      if (language === "sw") {
-        offlineNotFound = "Hakuna mimea inayolingana iliyopatikana kwenye hifadhidata. Jaribu kuandika **MŨTHĨGA**, **MŨTONGU**, au **MŨCORAI**.";
-      } else if (language === "ki") {
-        offlineNotFound = "Gũtirĩ mĩthĩga ĩngĩoneka thĩnĩ wa gĩthomo kĩĩ. Gĩmia wandĩke **MŨTHĨGA**, **MŨTONGU**, kana **MŨCORAI**.";
-      } else if (language === "fr") {
-        offlineNotFound = "Aucune plante correspondante trouvée. Essayez de taper **MŨTHĨGA**, **MŨTONGU** ou **MŨCORAI**.";
-      }
-
       let docsAndPlantsSection = "";
       if (matchedDictEntries.length > 0) {
         docsAndPlantsSection += matchedDictEntries.map(entry => {
@@ -904,10 +1298,37 @@ ${entry.safeCautions ? `- **⚠️ Safety Warnings:** ${entry.safeCautions}` : '
         }).join("\n\n") + "\n";
       }
 
-      let fallbackReply = ``;
+      let fallbackIntro = "";
+      if (language === "sw") {
+        if (matchedDictEntries.length > 0 || matchedHerbs.length > 0) {
+          fallbackIntro = `**Habari! Kulingana na kumbukumbu zetu za kuaminika za mimea ya asili na miongozo ya kale ya mitishamba, yafuatayo ni maelezo ya kina ya kukusaidia:**\n\n`;
+        } else {
+          fallbackIntro = `**Habari! Ingawa hatujapata mmea huo moja kwa moja kwenye kumbukumbu zetu za ndani, hapa kuna mapendekezo ya miongozo ya mimea inayohusiana unayoweza kuchunguza kwa usalama:**\n\n`;
+        }
+      } else if (language === "ki") {
+        if (matchedDictEntries.length > 0 || matchedHerbs.length > 0) {
+          fallbackIntro = `**Nĩũhoro! Kũgerera mabuku maitũ ma tene ma kĩndũĩre na mĩthĩga ya kĩbũrĩ, ũũ nĩũhoro ũrĩa ũkũonera na wega:**\n\n`;
+        } else {
+          fallbackIntro = `**Nĩũhoro! O na gũtuĩka tũtiamĩona kaĩ rĩrĩ thĩnĩ wa mabuku maitũ wega, ta rora mĩhĩrĩgo ĩno ingĩ ĩngĩũkũnia gũkũ thĩnĩ wa mĩthĩga ya kĩbũrĩ:**\n\n`;
+        }
+      } else if (language === "fr") {
+        if (matchedDictEntries.length > 0 || matchedHerbs.length > 0) {
+          fallbackIntro = `**Bonjour ! Nous avons récupéré ces précieuses informations directement à partir de nos archives et guides de plantes traditionnelles authentiques :**\n\n`;
+        } else {
+          fallbackIntro = `**Bonjour ! Bien que nous n'ayons pas de correspondance directe dans nos archives locales, voici quelques suggestions d'espèces proches et de remèdes traditionnels utiles :**\n\n`;
+        }
+      } else { // default to English
+        if (matchedDictEntries.length > 0 || matchedHerbs.length > 0) {
+          fallbackIntro = `**Hello! We have successfully retrieved the following details directly from our authentic traditional plant records and reference guides to assist you:**\n\n`;
+        } else {
+          fallbackIntro = `**Hello! Although we couldn't find an exact direct match in our traditional local files, here are some safe, closely related botanical suggestions and classical remedies to explore:**\n\n`;
+        }
+      }
+
+      let fallbackReply = fallbackIntro;
       
       if (matchedDictEntries.length === 0 && matchedHerbs.length === 0) {
-        fallbackReply += `*${offlineNotFound}*\n`;
+        fallbackReply += getOfflineRelatedSuggestions(enrichedQuery, language as string);
       } else {
         fallbackReply += `${docsAndPlantsSection}`;
         if (matchedRemedies.length > 0) {
@@ -924,8 +1345,9 @@ ${entry.safeCautions ? `- **⚠️ Safety Warnings:** ${entry.safeCautions}` : '
       }
 
       // Still record the offline query log
+      const maxOfflineLogId = dbChatLogs.reduce((max, l) => Math.max(max, parseInt(l.id) || 0), 0);
       dbChatLogs.unshift({
-        id: String(dbChatLogs.length + 1),
+        id: String(maxOfflineLogId + 1),
         query: currentQuery,
         timestamp: new Date().toLocaleTimeString(),
         answeredByBot: false

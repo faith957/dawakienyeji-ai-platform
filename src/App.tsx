@@ -307,37 +307,40 @@ export default function App() {
               {/* Background Images with Zoom Parallax Effect and Dark Greens Overlays */}
               <div className="absolute inset-0 w-full h-full z-0 select-none">
                 <AnimatePresence mode="wait">
-                  {heroSlides.map((slide, idx) => idx === currentSlide && (
-                    <motion.div
-                      key={slide.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.9, ease: "easeInOut" }}
-                      className="absolute inset-0 w-full h-full"
-                    >
-                      {/* Dual-layered professional ambient masks for perfect readability */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-stone-950 via-stone-950/75 to-transparent z-10" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/20 to-transparent z-10" />
-                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(26,47,26,0.15),transparent)] z-10" />
-                      
-                      <motion.img
-                        src={slide.bgImage}
-                        alt="African traditional herbs"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover origin-center filter brightness-[0.85] contrast-[1.05]"
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          if (target.src !== slide.fallbackImage) {
-                            target.src = slide.fallbackImage;
-                          }
-                        }}
-                        initial={{ scale: 1.08 }}
-                        animate={{ scale: 1 }}
-                        transition={{ duration: 7, ease: "easeOut" }}
-                      />
-                    </motion.div>
-                  ))}
+                  {(() => {
+                    const slide = heroSlides[currentSlide];
+                    return slide ? (
+                      <motion.div
+                        key={slide.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.9, ease: "easeInOut" }}
+                        className="absolute inset-0 w-full h-full"
+                      >
+                        {/* Dual-layered professional ambient masks for perfect readability */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-stone-950 via-stone-950/75 to-transparent z-10" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/20 to-transparent z-10" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(26,47,26,0.15),transparent)] z-10" />
+                        
+                        <motion.img
+                          src={slide.bgImage}
+                          alt="African traditional herbs"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover origin-center filter brightness-[0.85] contrast-[1.05]"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (target.src !== slide.fallbackImage) {
+                              target.src = slide.fallbackImage;
+                            }
+                          }}
+                          initial={{ scale: 1.08 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 7, ease: "easeOut" }}
+                        />
+                      </motion.div>
+                    ) : null;
+                  })()}
                 </AnimatePresence>
               </div>
 
@@ -350,46 +353,47 @@ export default function App() {
               <div className="max-w-7xl mx-auto w-full px-6 md:px-8 z-20 relative text-white">
                 <div className="max-w-4xl">
                   <AnimatePresence mode="wait">
-                  {heroSlides.map((slide, idx) => idx === currentSlide && (
-                    <motion.div
-                      key={slide.id}
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -15 }}
-                      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                      className="space-y-6 md:space-y-8 text-left"
-                    >
-
-
-                      {/* Display Headings with deep bold typeface */}
-                      <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-white drop-shadow-md">
-                        {t(slide.titleKey)}
-                      </h1>
-
-                      {/* Descriptive supporting line */}
-                      <p className="text-stone-300 text-xs md:text-base leading-relaxed font-medium max-w-2xl drop-shadow text-stone-200/90">
-                        {t(slide.subtitleKey)}
-                      </p>
-
-                      {/* Styled Action CTA buttons */}
-                      <div className="pt-4 flex flex-wrap gap-4">
-                        <button
-                          onClick={() => navigateTo(slide.btn1Route)}
-                          className="py-3 px-7 md:py-3.5 md:px-9 bg-[#D4A017] hover:bg-[#c09115] active:bg-[#e0b020] text-emerald-950 rounded-2xl font-black text-xs md:text-sm shadow-lg hover:shadow-[#D4A017]/10 transition-all duration-200 hover:scale-[1.03] cursor-pointer"
+                    {(() => {
+                      const slide = heroSlides[currentSlide];
+                      return slide ? (
+                        <motion.div
+                          key={slide.id}
+                          initial={{ opacity: 0, y: 15 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -15 }}
+                          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                          className="space-y-6 md:space-y-8 text-left"
                         >
-                          {t(slide.btn1Key)}
-                        </button>
-                        <button
-                          onClick={() => navigateTo(slide.btn2Route)}
-                          className="py-3 px-7 md:py-3.5 md:px-9 bg-white/10 hover:bg-white/15 active:bg-white/20 text-white border border-white/15 hover:border-white/30 rounded-2xl font-black text-xs md:text-sm backdrop-blur-md transition-all duration-200 hover:scale-[1.03] flex items-center justify-center gap-2.5 cursor-pointer"
-                        >
-                          {slide.btn2Route === "chatbot" && <Bot className="w-4 h-4 text-amber-305" />}
-                          {t(slide.btn2Key)}
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                          {/* Display Headings with deep bold typeface */}
+                          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-white drop-shadow-md">
+                            {t(slide.titleKey)}
+                          </h1>
+
+                          {/* Descriptive supporting line */}
+                          <p className="text-stone-300 text-xs md:text-base leading-relaxed font-medium max-w-2xl drop-shadow text-stone-200/90">
+                            {t(slide.subtitleKey)}
+                          </p>
+
+                          {/* Styled Action CTA buttons */}
+                          <div className="pt-4 flex flex-wrap gap-4">
+                            <button
+                              onClick={() => navigateTo(slide.btn1Route)}
+                              className="py-3 px-7 md:py-3.5 md:px-9 bg-[#D4A017] hover:bg-[#c09115] active:bg-[#e0b020] text-emerald-950 rounded-2xl font-black text-xs md:text-sm shadow-lg hover:shadow-[#D4A017]/10 transition-all duration-200 hover:scale-[1.03] cursor-pointer"
+                            >
+                              {t(slide.btn1Key)}
+                            </button>
+                            <button
+                              onClick={() => navigateTo(slide.btn2Route)}
+                              className="py-3 px-7 md:py-3.5 md:px-9 bg-white/10 hover:bg-white/15 active:bg-white/20 text-white border border-white/15 hover:border-white/30 rounded-2xl font-black text-xs md:text-sm backdrop-blur-md transition-all duration-200 hover:scale-[1.03] flex items-center justify-center gap-2.5 cursor-pointer"
+                            >
+                              {slide.btn2Route === "chatbot" && <Bot className="w-4 h-4 text-amber-305" />}
+                              {t(slide.btn2Key)}
+                            </button>
+                          </div>
+                        </motion.div>
+                      ) : null;
+                    })()}
+                  </AnimatePresence>
                 </div>
               </div>
 

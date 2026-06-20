@@ -416,7 +416,7 @@ export default function AdminDashboard() {
   };
 
   const triggerDeletePlant = async (id: string, name: string) => {
-    if (confirm(`Are you absolutely sure you want to remove ${name} from the database? This affects chatbot knowledge base.`)) {
+    if (confirm(`Are you absolutely sure you want to remove ${name} from the database? This affects chatbot references.`)) {
       try {
         await deletePlant(id, adminPin);
         showStatus(`Deleted plant listing: ${name}`);
@@ -760,7 +760,7 @@ function UserSessionHistory({ email }: { email: string }) {
                   s.messages.map((m: any, mIdx: number) => {
                     const isUser = m.role === 'user';
                     return (
-                      <div key={m.id || mIdx} className="space-y-1 text-xs">
+                      <div key={m.id ? `adm-msg-${m.id}-${mIdx}` : `adm-msg-${mIdx}`} className="space-y-1 text-xs">
                         <div className="flex items-center justify-between text-[10px] uppercase font-black text-stone-450">
                           <span>{isUser ? "You (User Inquiry)" : "DawaBot Response"}</span>
                           <span>{m.timestamp}</span>

@@ -51,10 +51,10 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
     fr: "Remèdes Traditionnels"
   },
   "nav.knowledge": {
-    en: "Knowledge Base",
-    sw: "Hifadhi ya Maarifa",
-    ki: "Ũgĩ wa Matũũra",
-    fr: "Base de Connaissances"
+    en: "Botanical Library",
+    sw: "Maktaba ya Mimea",
+    ki: "Mabuku ma Mĩthĩga",
+    fr: "Bibliothèque Botanique"
   },
   "nav.blog": {
     en: "Blogs",
@@ -251,10 +251,10 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
     fr: "Assistant DawaBot"
   },
   "chat.ethnobotanyKB": {
-    en: "Ethnobotany Knowledge Base",
-    sw: "Hifadhi ya Maarifa ya Etnobotaniki",
-    ki: "Ũgĩ wa mĩthĩga ya kĩbũrĩ",
-    fr: "Base de Connaissance Ethnobotanique"
+    en: "Traditional Botanical Guide",
+    sw: "Mwongozo wa Mimea ya Kiasili",
+    ki: "Ũtaaro wa mĩthĩga ya tene",
+    fr: "Guide Botanique Traditionnel"
   },
   "chat.newHerbSession": {
     en: "New Herb Session",

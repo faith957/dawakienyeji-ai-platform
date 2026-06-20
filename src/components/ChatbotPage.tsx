@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { 
   Send, Bot, CornerDownLeft, Volume2, Mic, MicOff, Sun, Moon, 
-  Trash2, Copy, Check, ThumbsUp, ThumbsDown, ArrowLeft, Leaf, AlertCircle, HelpCircle, X
+  Trash2, Copy, Check, ThumbsUp, ThumbsDown, ArrowLeft, Leaf, AlertCircle, HelpCircle, X,
+  MoreVertical, Pin, LogOut, Lock, Eye, EyeOff, Plus, Share2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Markdown from "react-markdown";
 import { ChatMessage, ChatSession } from "../types";
-import { postChat, sendChatFeedback, signupUser } from "../utils/api";
+import { postChat, sendChatFeedback, signupUser, loginAdmin } from "../utils/api";
 import { useLanguage } from "../utils/LanguageContext";
 import { INITIAL_HERBS } from "../data/herbalDatabase";
 
@@ -96,6 +97,15 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
   const { language, t } = useLanguage();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(prev => prev === msg ? null : prev);
+    }, 3000);
+  };
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -119,8 +129,19 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupRepeatPassword, setSignupRepeatPassword] = useState("");
   const [signupError, setSignupError] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
+
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loginSuccessMsg, setLoginSuccessMsg] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const [activeMenuSessionId, setActiveMenuSessionId] = useState<string | null>(null);
 
   const handleModalSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,20 +149,68 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
     setIsSigningUp(true);
 
     try {
-      if (!signupName.trim() || !signupEmail.trim() || !signupPassword.trim()) {
-        throw new Error("All fields are required. Please fill in Name, Email, and Password.");
+      if (!signupName.trim() || !signupEmail.trim() || !signupPassword.trim() || !signupRepeatPassword.trim()) {
+        throw new Error("All fields are required. Please fill in Name, Email, Password, and Repeat Password.");
+      }
+
+      // Email format verification
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(signupEmail.trim())) {
+        throw new Error("Please enter a valid email address.");
+      }
+
+      // Password matching verification
+      if (signupPassword !== signupRepeatPassword) {
+        throw new Error("Password and Repeat Password must match.");
       }
       
       const data = await signupUser(signupEmail, signupPassword, signupName);
       
-      // Update local state
-      const newUser = { email: data.email, name: data.name };
-      setCurrentUser(newUser);
+      // Hide signup modal and clear fields
+      setShowSignupModal(false);
+      setSignupName("");
+      setSignupEmail("");
+      setSignupPassword("");
+      setSignupRepeatPassword("");
+      
+      // Automatically transition to the Login Modal
+      setLoginEmail(data.email);
+      setLoginSuccessMsg("Vault registration successful! Please enter your password to log in and synchronize your chat sessions.");
+      setLoginError("");
+      setShowLoginModal(true);
+      
+    } catch (err: any) {
+      setSignupError(err.message || "Sign up failed. Please check your details or try a different email.");
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
+  const handleModalLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    setLoginSuccessMsg("");
+    setIsLoggingIn(true);
+
+    try {
+      if (!loginEmail.trim() || !loginPassword.trim()) {
+        throw new Error("Please fill in both Email and Password.");
+      }
+
+      const emailLower = loginEmail.toLowerCase().trim();
+      const data = await loginAdmin(emailLower, loginPassword);
+      
+      const loggedUser = { 
+        email: data.email || emailLower, 
+        name: data.name || "DawaKienyeji Member" 
+      };
+      
+      setCurrentUser(loggedUser);
 
       // Save user to localStorage
       localStorage.setItem("dawa_logged_in_user", JSON.stringify({
-        email: data.email,
-        name: data.name,
+        email: loggedUser.email,
+        name: loggedUser.name,
         isAdmin: data.isAdmin || false
       }));
 
@@ -150,27 +219,65 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
       localStorage.setItem("dawa_admin_pin", data.adminPin || "");
       localStorage.setItem("dawa_isAdmin", String(data.isAdmin || false));
 
-      // Sync active local guest sessions
+      // Sync active local guest sessions to cloud
       if (sessions.length > 0) {
         await fetch("/api/user/sessions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ email: data.email, sessions }),
-        }).catch(e => console.error("Cloud sessions sync error after modal sign up:", e));
+          body: JSON.stringify({ email: loggedUser.email, sessions }),
+        }).catch(e => console.error("Cloud sessions sync error after modal login:", e));
       }
 
-      // Hide modal and clear fields
-      setShowSignupModal(false);
-      setSignupName("");
-      setSignupEmail("");
-      setSignupPassword("");
-      
+      // Try fetching existing cloud sessions
+      const res = await fetch(`/api/user/sessions?email=${encodeURIComponent(loggedUser.email)}`);
+      if (res.ok) {
+        const sessData = await res.json();
+        if (sessData.success && Array.isArray(sessData.sessions) && sessData.sessions.length > 0) {
+          setSessions(sessData.sessions);
+          const savedActiveId = localStorage.getItem("dawa_current_session_id");
+          if (savedActiveId && sessData.sessions.some((s: any) => s.id === savedActiveId)) {
+            setCurrentSessionId(savedActiveId);
+          } else {
+            setCurrentSessionId(sessData.sessions[0].id);
+          }
+        }
+      }
+
+      // Hide login modal and clear password
+      setShowLoginModal(false);
+      setLoginPassword("");
+      setLoginEmail("");
     } catch (err: any) {
-      setSignupError(err.message || "Sign up failed. Please check your details or try a different email.");
+      setLoginError(err.message || "Login failed. Please verify your credentials.");
     } finally {
-      setIsSigningUp(false);
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = () => {
+    if (confirm("Are you sure you want to sign out and clear your active session keys?")) {
+      setCurrentUser(null);
+      localStorage.removeItem("dawa_logged_in_user");
+      localStorage.removeItem("dawa_isAuthenticated");
+      localStorage.removeItem("dawa_admin_pin");
+      localStorage.removeItem("dawa_isAdmin");
+      localStorage.removeItem("dawa_chat_sessions");
+      localStorage.removeItem("dawa_current_session_id");
+
+      // Reset sessions to default
+      const defaultSessionId = 's-default';
+      setSessions([{
+        id: defaultSessionId,
+        title: "DawaBot",
+        messages: []
+      }]);
+      setCurrentSessionId(defaultSessionId);
+
+      if (onBackToHome) {
+        onBackToHome();
+      }
     }
   };
   
@@ -321,7 +428,7 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
       const defaultSessionId = 's-default';
       const initialSession: ChatSession = {
         id: defaultSessionId,
-        title: "Botanical Wisdom Chat",
+        title: "DawaBot",
         messages: []
       };
       setSessions([initialSession]);
@@ -479,7 +586,7 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
       const defaultSessionId = 's-default';
       const initialSession: ChatSession = {
         id: defaultSessionId,
-        title: "Botanical Wisdom Chat",
+        title: "DawaBot",
         messages: []
       };
       setSessions([initialSession]);
@@ -621,7 +728,7 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
           </div>
           <div>
             <h1 className="font-bold text-sm tracking-tight">{t("chat.dawaBotAssistant") || "DawaBot Assistant"}</h1>
-            <p className="text-[10px] opacity-70">{t("chat.ethnobotanyKB") || "Ethnobotany Knowledge Base"}</p>
+            <p className="text-[10px] opacity-70">{t("chat.ethnobotanyKB") || "Traditional Botanical Guide"}</p>
           </div>
         </div>
 
@@ -637,22 +744,143 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
         {/* Sessions list */}
         <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-48 md:max-h-full">
           <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700/80 mb-2">{t("chat.historySessions") || "History Sessions"}</p>
-          {sessions.map(s => {
-            const isActive = s.id === currentSessionId;
-            return (
-              <button
-                key={s.id}
-                onClick={() => setCurrentSessionId(s.id)}
-                className={`w-full text-left p-3 rounded-lg text-xs font-semibold truncate transition duration-150 ${
-                  isActive 
-                    ? 'bg-emerald-700 text-white shadow-sm' 
-                    : isDark ? 'bg-zinc-800/40 text-zinc-300 hover:bg-zinc-800/80' : 'bg-white hover:bg-stone-200 text-emerald-950 border border-stone-200/50'
-                }`}
-              >
-                {s.title}
-              </button>
-            );
-          })}
+          {(() => {
+            const sortedSessions = [...sessions].sort((a, b) => {
+              const aPinned = !!a.pinned;
+              const bPinned = !!b.pinned;
+              if (aPinned && !bPinned) return -1;
+              if (!aPinned && bPinned) return 1;
+              return 0; // maintain default chron order
+            });
+
+            return sortedSessions.map(s => {
+              const isActive = s.id === currentSessionId;
+              const isMenuOpen = activeMenuSessionId === s.id;
+              
+              const handleShareSession = (e: React.MouseEvent) => {
+                e.stopPropagation();
+                setActiveMenuSessionId(null);
+                try {
+                  const shareUrl = `${window.location.origin}/?route=chatbot&session=${s.id}`;
+                  
+                  // Textarea fallback copy - 100% reliable inside frame sandboxes
+                  const textArea = document.createElement("textarea");
+                  textArea.value = shareUrl;
+                  textArea.style.position = "fixed";
+                  document.body.appendChild(textArea);
+                  textArea.focus();
+                  textArea.select();
+                  const successful = document.execCommand('copy');
+                  document.body.removeChild(textArea);
+                  
+                  if (successful) {
+                    triggerToast(`Link for "${s.title}" copied to clipboard!`);
+                  } else {
+                    triggerToast("Failed to copy link. Please copy browser URL.");
+                  }
+                } catch (err) {
+                  triggerToast(`Share code: ${s.id}`);
+                }
+              };
+
+              const handlePinSession = (e: React.MouseEvent) => {
+                e.stopPropagation();
+                setActiveMenuSessionId(null);
+                const willPin = !s.pinned;
+                setSessions(prev => prev.map(item => {
+                  if (item.id === s.id) {
+                    return { ...item, pinned: willPin };
+                  }
+                  return item;
+                }));
+                triggerToast(willPin ? "Chat pinned to top!" : "Chat unpinned!");
+              };
+
+              const handleDeleteSession = (e: React.MouseEvent) => {
+                e.stopPropagation();
+                setActiveMenuSessionId(null);
+                setDeletingSessionId(s.id);
+              };
+
+              return (
+                <div 
+                  key={s.id} 
+                  className="relative group flex items-center justify-between w-full"
+                >
+                  <button
+                    onClick={() => setCurrentSessionId(s.id)}
+                    className={`w-full text-left pl-3 pr-8 py-3 rounded-lg text-xs font-semibold truncate transition duration-150 flex items-center gap-1.5 ${
+                      isActive 
+                        ? 'bg-emerald-700 text-white shadow-sm' 
+                        : isDark ? 'bg-zinc-800/40 text-zinc-300 hover:bg-zinc-800/80' : 'bg-white hover:bg-stone-200 text-emerald-950 border border-stone-200/50'
+                    }`}
+                  >
+                    <span className="truncate flex items-center gap-1.5 w-full">
+                      {s.pinned && <Pin className="w-3 h-3 text-amber-500 shrink-0 transform -rotate-45 fill-amber-500" />}
+                      <span className="truncate">{s.title}</span>
+                    </span>
+                  </button>
+
+                  {/* Three Dots Button */}
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuSessionId(isMenuOpen ? null : s.id);
+                      }}
+                      className={`p-1 rounded hover:bg-stone-500/10 transition cursor-pointer ${
+                        isActive ? 'text-white/80 hover:text-white' : 'text-stone-500 hover:text-emerald-950'
+                      }`}
+                      title="Manage session"
+                    >
+                      <MoreVertical className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {isMenuOpen && (
+                      <>
+                        {/* Invisible Fullscreen backdrop overlay to capture clicking outside */}
+                        <div 
+                          className="fixed inset-0 z-20 cursor-default" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuSessionId(null);
+                          }} 
+                        />
+                        <div 
+                          className={`absolute right-0 top-6 mt-1 w-36 rounded-xl shadow-xl border z-30 py-1.5 font-sans ${
+                            isDark ? 'bg-zinc-900 border-zinc-700 text-white shadow-black/50' : 'bg-white border-stone-200 text-stone-900 font-normal'
+                          }`}
+                        >
+                          <button
+                            onClick={handlePinSession}
+                            className="w-full text-left px-3 py-1.5 text-[11px] font-bold hover:bg-stone-500/10 flex items-center gap-2 transition cursor-pointer text-stone-800 dark:text-zinc-200"
+                          >
+                            <Pin className="w-3.5 h-3.5 opacity-75 text-emerald-700" />
+                            <span>{s.pinned ? "Unpin Chat" : "Pin Chat"}</span>
+                          </button>
+                          <button
+                            onClick={handleShareSession}
+                            className="w-full text-left px-3 py-1.5 text-[11px] font-bold hover:bg-stone-500/10 flex items-center gap-2 transition cursor-pointer text-stone-800 dark:text-zinc-200"
+                          >
+                            <Share2 className="w-3.5 h-3.5 opacity-75 text-[#D4A017]" />
+                            <span>Share Chat</span>
+                          </button>
+                          <button
+                            onClick={handleDeleteSession}
+                            className="w-full text-left px-3 py-1.5 text-[11px] font-extrabold text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2 transition cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 opacity-75 text-red-500" />
+                            <span>Delete Chat</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            });
+          })()}
         </div>
 
         {/* Member Profile, Sign Up & Cloud Vault Sync */}
@@ -665,22 +893,27 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
             <p className="text-[10px] text-stone-500 font-medium">
               Hello, <span className="font-bold text-emerald-900">{currentUser.name}</span>. Your chats sync automatically.
             </p>
-            <button
-              onClick={() => onNavigateTo?.('admin')}
-              className="mt-1 w-full py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-[10px] rounded-lg transition text-center cursor-pointer"
-            >
-              Access Member Portal
-            </button>
+            <div className="flex flex-col gap-1 mt-1">
+              <button
+                onClick={() => onNavigateTo?.('admin')}
+                className="w-full py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-[10px] rounded-lg transition text-center cursor-pointer"
+              >
+                Access Member Portal
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full py-1.5 bg-red-100 hover:bg-red-200 text-red-800 font-extrabold text-[10px] rounded-lg transition text-center cursor-pointer flex items-center justify-center gap-1 border border-red-200"
+              >
+                <LogOut className="w-3 h-3" />
+                <span>Sign Out</span>
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="mt-3 font-sans">
-            <button
-              onClick={() => setShowSignupModal(true)}
-              className="w-full py-2.5 bg-amber-650 hover:bg-amber-700 text-white font-extrabold text-xs rounded-lg transition duration-200 text-center cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
-              style={{ backgroundColor: "#D4A017" }}
-            >
-              Sign Up & Save Chats 🔐
-            </button>
+          <div className="mt-3 font-sans text-center">
+            <p className="text-[10px] text-stone-400 font-medium italic">
+              Chatting as Guest member. Register above to preserve chats.
+            </p>
           </div>
         )}
 
@@ -699,6 +932,73 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
 
       {/* Main Chat Interface */}
       <div id="chat-scroller" className="flex-1 flex flex-col min-h-0 relative">
+        {/* Top Header Bar */}
+        <div className={`px-4 py-3.5 border-b flex items-center justify-between z-10 shrink-0 select-none ${
+          isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-stone-200 text-emerald-950'
+        }`}>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-emerald-950 flex items-center justify-center p-0.5 border border-amber-500/20 shrink-0">
+              <img 
+                src="https://i.postimg.cc/VkwT0rck/Chat-GPT-Image-Jun-7-2026-09-17-26-PM.png" 
+                alt="DawaBot Logo" 
+                className="w-full h-full object-cover rounded"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="font-extrabold text-xs tracking-tight md:text-sm">
+                Dawa<span className="text-[#D4A017]">Bot</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {currentUser ? (
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline text-[10px] font-extrabold px-2 py-1 bg-emerald-100 text-emerald-950 rounded-lg dark:bg-zinc-850 dark:text-zinc-300">
+                  {currentUser.name}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="py-1.5 px-3 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 text-red-750 dark:text-red-400 dark:hover:text-white rounded-lg text-xs font-black transition flex items-center gap-1 cursor-pointer"
+                  title="Sign Out as traditional vault member"
+                >
+                  <LogOut className="w-3 h-3" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    setLoginSuccessMsg("");
+                    setLoginError("");
+                    setShowLoginModal(true);
+                  }}
+                  className={`py-1.5 px-3 rounded-lg text-xs font-extrabold transition cursor-pointer border ${
+                    isDark 
+                      ? 'bg-zinc-800 hover:bg-zinc-750 text-stone-200 border-zinc-700' 
+                      : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
+                  }`}
+                >
+                  Log In
+                </button>
+                <button
+                  onClick={() => {
+                    setSignupError("");
+                    setShowSignupModal(true);
+                  }}
+                  className="py-1.5 px-3.5 bg-[#D4A017] hover:bg-[#c09115] text-emerald-950 rounded-lg font-black text-xs transition shadow-sm flex items-center gap-1 hover:scale-[1.03] cursor-pointer"
+                  style={{ backgroundColor: "#D4A017" }}
+                >
+                  <Lock className="w-3 h-3 text-emerald-950 shrink-0" />
+                  <span>Sign Up</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Conversation flow arena */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
           <div className="max-w-3xl mx-auto space-y-6">
@@ -728,12 +1028,12 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
               
               <p className="text-xs leading-relaxed font-semibold opacity-90">
                 {language === 'sw' ? 
-                 'Mimi ni msaidizi wako wa AI kwa ajili ya DawaKienyeji. Uliza maswali kuhusu mimea ya kitiba, tiba za asili, maarifa ya ethnobotaniki, mbinu za uhifadhi, na habari zilizopo kwenye hifadhi ya maarifa ya DawaKienyeji.' :
+                 'Mimi ni msaidizi wako wa AI kwa ajili ya DawaKienyeji. Uliza maswali kuhusu mimea ya kitiba, tiba za asili, maarifa ya ethnobotaniki, mbinu za uhifadhi, na habari zilizopo kwenye rekodi za kiasili za DawaKienyeji.' :
                  language === 'ki' ? 
                  'Nĩ niĩ mũteithia waku wa AI wa muthemba wa DawaKienyeji. Ũria kĩndũ kĩĩgĩĩ mĩthĩga ya tene, mĩrimu ya nda, ũrĩndĩri wa mĩgũmo, na ũgĩ wothe rũrĩ thĩnĩ wa DawaKienyeji.' :
                  language === 'fr' ? 
-                 'Je suis votre assistant IA pour DawaKienyeji. Posez vos questions sur les plantes médicinales, les remèdes traditionnels, les connaissances ethnobotaniques, les pratiques de conservation et les informations disponibles dans la base de connaissances DawaKienyeji.' :
-                 'I am your AI assistant for DawaKienyeji. Ask questions about medicinal plants, traditional remedies, ethnobotanical knowledge, conservation practices, and information available in the DawaKienyeji knowledge base.'}
+                 'Je suis votre assistant IA pour DawaKienyeji. Posez vos questions sur les plantes médicinales, les remèdes traditionnels, les connaissances ethnobotaniques, les pratiques de conservation et les informations disponibles dans les archives traditionnelles de DawaKienyeji.' :
+                 'I am your AI assistant for DawaKienyeji. Ask questions about medicinal plants, traditional remedies, ethnobotanical knowledge, conservation practices, and information on our authentic traditional plant records.'}
               </p>
             </div>
 
@@ -742,7 +1042,7 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
                 const isUser = msg.role === 'user';
                 return (
                   <motion.div
-                    key={msg.id}
+                    key={msg.id ? `msg-${msg.id}-${i}` : `msg-index-${i}`}
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.25 }}
@@ -832,10 +1132,10 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
                                   <div className="mt-3.5 pt-3 border-t border-emerald-600/10 space-y-2.5">
                                     <span className="text-[9px] uppercase font-extrabold tracking-wider opacity-60 block">Verified Specimen Library Reference:</span>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                      {matchedWithImages.map(herb => {
+                                      {matchedWithImages.map((herb, herbIdx) => {
                                         return (
                                           <div 
-                                            key={herb.id} 
+                                            key={`${msg.id || 'msg'}-herb-${herb.id}-${herbIdx}`} 
                                             className={`flex flex-col gap-2 p-2.5 rounded-xl transition ${
                                               isDark ? 'bg-zinc-800 border border-zinc-700' : 'bg-stone-50 border border-stone-200/75'
                                             }`}
@@ -1134,7 +1434,7 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              className={`relative w-full max-w-md p-6 rounded-2xl shadow-2xl border font-sans select-none overflow-hidden ${
+              className={`relative w-full max-w-sm p-6 rounded-2xl shadow-2xl border font-sans select-none overflow-hidden ${
                 isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-stone-200 text-stone-900'
               }`}
             >
@@ -1154,21 +1454,21 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
                   <Leaf className="w-5 h-5 animate-pulse text-emerald-700" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-800">Create Member Vault</h3>
-                  <p className="text-[10px] text-stone-500 font-medium">Verify credentials to backup & synchronize botanical wisdom</p>
+                  <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-800">DawaBot Sign Up</h3>
+                  <p className="text-[10px] text-stone-400 font-medium">Create a personal member vault to preserve your chats</p>
                 </div>
               </div>
 
               {signupError && (
-                <div className="p-3 mb-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs font-semibold flex items-start gap-2">
+                <div className="p-3 mb-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-[11px] font-semibold flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <span>{signupError}</span>
                 </div>
               )}
 
-              <form onSubmit={handleModalSignup} className="space-y-4">
+              <form onSubmit={handleModalSignup} className="space-y-3.5">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-stone-500 mb-1">Full Name</label>
+                  <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">Full Name</label>
                   <input
                     type="text"
                     required
@@ -1182,7 +1482,7 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-stone-500 mb-1">Email Address</label>
+                  <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">Email Address</label>
                   <input
                     type="email"
                     required
@@ -1196,12 +1496,26 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-stone-500 mb-1">Password</label>
+                  <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">Password</label>
                   <input
                     type="password"
                     required
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className={`w-full p-2.5 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
+                      isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">Repeat Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={signupRepeatPassword}
+                    onChange={(e) => setSignupRepeatPassword(e.target.value)}
                     placeholder="••••••••"
                     className={`w-full p-2.5 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
                       isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
@@ -1218,22 +1532,271 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
                     {isSigningUp ? (
                       <>
                         <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Establishing Vault...</span>
+                        <span>Registering...</span>
                       </>
                     ) : (
-                      <>
-                        <span>Establish Personal Member Vault 🔐</span>
-                      </>
+                      <span>Sign Up</span>
                     )}
                   </button>
                 </div>
               </form>
 
-              <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-center">
+              <div className="mt-4 pt-3.5 border-t border-stone-100 dark:border-zinc-800 flex flex-col gap-2 items-center justify-center text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSignupModal(false);
+                    setLoginSuccessMsg("");
+                    setLoginError("");
+                    setShowLoginModal(true);
+                  }}
+                  className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-850 transition cursor-pointer"
+                >
+                  Already have a member vault? Log In
+                </button>
                 <p className="text-[9px] text-stone-400 font-medium">Your connection is fully secure. 256-bit encryption active.</p>
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Botanical Vault Login Popup Modal */}
+      <AnimatePresence>
+        {showLoginModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLoginModal(false)}
+              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
+            />
+            
+            {/* Modal Body */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              className={`relative w-full max-w-sm p-6 rounded-2xl shadow-2xl border font-sans select-none overflow-hidden ${
+                isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-stone-200 text-stone-900'
+              }`}
+            >
+              <div className="absolute top-4 right-4">
+                <button
+                  type="button"
+                  onClick={() => setShowLoginModal(false)}
+                  className="p-1.5 rounded-full transition hover:bg-stone-500/10 cursor-pointer"
+                >
+                  <X className="w-5 h-5 opacity-60" />
+                </button>
+              </div>
+
+              {/* Header Title */}
+              <div className="flex items-center gap-2.5 mb-5 mt-2">
+                <div className="p-2 rounded-lg bg-emerald-100 text-emerald-800 shrink-0 border border-emerald-200/50">
+                  <Leaf className="w-5 h-5 animate-pulse text-emerald-700" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wide text-emerald-700">DawaBot Log In</h3>
+                  <p className="text-[10px] text-stone-400 font-medium">Enter your member vault credentials to synchronize chats</p>
+                </div>
+              </div>
+
+              {loginSuccessMsg && (
+                <div className="p-3 mb-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-900 text-[10px] font-bold">
+                  <span>{loginSuccessMsg}</span>
+                </div>
+              )}
+
+              {loginError && (
+                <div className="p-3 mb-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{loginError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleModalLogin} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="wanjiku@domain.ke"
+                    className={`w-full p-2.5 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
+                      isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
+                    }`}
+                  />
+                </div>
+
+                <div className="relative">
+                  <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showLoginPassword ? "text" : "password"}
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className={`w-full p-2.5 pr-10 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
+                        isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition cursor-pointer"
+                    >
+                      {showLoginPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isLoggingIn || !loginEmail.trim() || !loginPassword.trim()}
+                    className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow transition active:scale-95 duration-150 cursor-pointer flex items-center justify-center gap-2 disabled:bg-stone-300 disabled:dark:bg-zinc-800 disabled:text-stone-400 disabled:scale-100 disabled:cursor-not-allowed"
+                  >
+                    {isLoggingIn ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <span>Log In</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              <div className="mt-4 pt-3.5 border-t border-stone-100 dark:border-zinc-800 flex flex-col gap-2 items-center justify-center text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    setSignupError("");
+                    setShowSignupModal(true);
+                  }}
+                  className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-850 transition cursor-pointer"
+                >
+                  Need to back up your chat sessions? Sign Up
+                </button>
+                <p className="text-[9px] text-stone-400 font-medium">Your connection is fully secure. 256-bit encryption active.</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Chat Confirmation Modal */}
+      <AnimatePresence>
+        {deletingSessionId && (() => {
+          const sToDel = sessions.find(s => s.id === deletingSessionId);
+          if (!sToDel) return null;
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setDeletingSessionId(null)}
+                className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
+              />
+              
+              {/* Modal Card */}
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 15 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 15 }}
+                className={`relative w-full max-w-sm p-6 rounded-2xl shadow-2xl border font-sans select-none overflow-hidden ${
+                  isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-stone-200 text-stone-900'
+                }`}
+              >
+                <div className="absolute top-4 right-4">
+                  <button
+                    type="button"
+                    onClick={() => setDeletingSessionId(null)}
+                    className="p-1.5 rounded-full transition hover:bg-stone-500/10 cursor-pointer text-stone-400 hover:text-stone-600"
+                  >
+                    <X className="w-5 h-5 opacity-60" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2.5 mb-4 mt-2">
+                  <div className="p-2 rounded-lg bg-red-100 text-red-800 shrink-0 border border-red-200/50">
+                    <Trash2 className="w-5 h-5 text-red-650" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-red-650">Delete Conversation?</h3>
+                    <p className="text-[10px] text-stone-400 font-medium font-semibold">This action is permanent</p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-stone-500 dark:text-zinc-300 font-medium mb-6 leading-relaxed">
+                  Are you sure you want to permanently delete <span className="font-bold text-stone-800 dark:text-white">"{sToDel.title}"</span>? All messages in this session will be lost.
+                </p>
+
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setDeletingSessionId(null)}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                      isDark ? 'border-zinc-700 text-zinc-300 hover:bg-zinc-800' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const remaining = sessions.filter(item => item.id !== deletingSessionId);
+                      if (remaining.length === 0) {
+                        const defaultSessionId = 's-default';
+                        setSessions([{
+                          id: defaultSessionId,
+                          title: "DawaBot",
+                          messages: []
+                        }]);
+                        setCurrentSessionId(defaultSessionId);
+                      } else {
+                        setSessions(remaining);
+                        if (currentSessionId === deletingSessionId) {
+                          setCurrentSessionId(remaining[0].id);
+                        }
+                      }
+                      setDeletingSessionId(null);
+                      triggerToast("Conversation deleted successfully");
+                    }}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs rounded-lg shadow transition cursor-pointer"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Floating Auto-dismiss Notification Toast Container */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-6 right-6 z-50 px-4 py-3 bg-emerald-950 text-white border border-emerald-800 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-bold"
+          >
+            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </motion.div>
         )}
       </AnimatePresence>
 

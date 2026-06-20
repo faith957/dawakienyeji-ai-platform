@@ -61,6 +61,7 @@ export interface ChatSession {
   id: string;
   title: string;
   messages: ChatMessage[];
+  pinned?: boolean;
 }
 
 export interface ChatLog {
