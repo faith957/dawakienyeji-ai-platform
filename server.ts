@@ -902,7 +902,8 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
     const stopwords = new Set([
       "i", "have", "a", "the", "and", "of", "to", "for", "in", "is", "it", "on", "with", "at",
       "using", "how", "do", "you", "use", "what", "can", "treat", "cure", "remedy", "medicinal",
-      "plant", "herb", "for", "about", "find", "search", "where", "my", "some", "any", "me", "give", "tell"
+      "plant", "herb", "for", "about", "find", "search", "where", "my", "some", "any", "me", "give", "tell",
+      "good", "bad", "very", "much", "well", "best", "help", "need", "please", "like", "will", "would", "should", "could"
     ]);
     const queryKeywords = queryNorm.split(/\s+/)
       .filter(word => word.length > 2 && !stopwords.has(word));
@@ -984,13 +985,13 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
     };
 
     // Find matching herbs
-    const matchedHerbs = getBestMatches(dbHerbs, (h) => [
+    let matchedHerbs = getBestMatches(dbHerbs, (h) => [
       h.kikuyuName,
       h.commonName,
       h.scientificName,
       h.description,
       ...h.medicinalUses
-    ]);
+    ]).slice(0, 3);
 
     // Find matching entries from Kikuyu Botanical Dictionary document
     const rawMatchedDictEntries = findDictionaryMatches(enrichedQuery);
@@ -1011,21 +1012,21 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
         return normEntryName.includes(normHerbName) || normHerbName.includes(normEntryName);
       });
       return !isAlreadyInDetailed;
-    });
+    }).slice(0, 3);
 
     // Find matching remedies
-    const matchedRemedies = getBestMatches(dbRemedies, (r) => [
+    let matchedRemedies = getBestMatches(dbRemedies, (r) => [
       r.title,
       ...r.symptoms,
       ...r.recommendedHerbs
-    ]);
+    ]).slice(0, 2);
 
     // Find custom articles/knowledge chunks
-    const matchedArticles = getBestMatches(dbArticles, (a) => [
+    let matchedArticles = getBestMatches(dbArticles, (a) => [
       a.title,
       a.excerpt,
       a.content
-    ]);
+    ]).slice(0, 2);
 
     // Build context string from indexed database matches
     let contextStr = "--- AUTHENTIC TRADITIONAL BOTANICAL RECORDS ---\n\n";
@@ -1157,7 +1158,7 @@ CRITICAL INSTRUCTIONS FOR EXTERNAL SEARCHES:
       });
 
       // Try with fallback models to handle 503 / 429 under high demand
-      const modelsToTry = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
+      const modelsToTry = ["gemini-3.1-pro-preview", "gemini-3.1-flash", "gemini-flash-latest", "gemini-2.5-flash", "gemini-1.5-flash"];
       let response = null;
       let lastError = null;
 

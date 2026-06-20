@@ -393,7 +393,8 @@ export function findDictionaryMatches(query: string): DictionaryEntry[] {
   const stopwords = new Set([
     "i", "have", "a", "the", "and", "of", "to", "for", "in", "is", "it", "on", "with", "at",
     "using", "how", "do", "you", "use", "what", "can", "treat", "cure", "remedy", "medicinal",
-    "plant", "herb", "for", "about", "find", "search", "where", "my", "some", "any", "me", "give", "tell"
+    "plant", "herb", "for", "about", "find", "search", "where", "my", "some", "any", "me", "give", "tell",
+    "good", "bad", "very", "much", "well", "best", "help", "need", "please", "like", "will", "would", "should", "could"
   ]);
 
   // Extract relevant keywords
