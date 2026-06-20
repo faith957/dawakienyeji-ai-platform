@@ -1049,14 +1049,7 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
         contextStr += `- Kikuyu Name: ${h.kikuyuName}\n  Scientific Name: ${h.scientificName}\n  English Name: ${h.commonName}\n  Parts Used: ${h.partUsed}\n  Uses: ${h.medicinalUses.join(", ")}\n  Preparation: ${h.preparation}\n  Traditional Context: ${h.traditionalContext}\n  Safety Precautions: ${h.precautions}\n  Type Class: ${h.category}\n  Danger Rating: ${h.severityRating || 'Normal'}\n\n`;
       });
     } else if (matchedDictEntries.length === 0) {
-      if (hasLocalMatch) {
-        // Pour out a general overview of the top 5 herbs as supportive details
-        contextStr += "GENERAL POPULAR BOTANICAL FLORA REFFERENCE:\n";
-        dbHerbs.slice(0, 5).forEach((h) => {
-          contextStr += `- Kikuyu Name: ${h.kikuyuName} (${h.scientificName} / ${h.commonName}): Prep: ${h.preparation}. Uses: ${h.medicinalUses.slice(0, 2).join(", ")}. Safety: ${h.precautions}\n`;
-        });
-        contextStr += "\n";
-      } else {
+      if (!hasLocalMatch) {
         contextStr += `[NOTICE]: No direct match found in our local traditional records for "${currentQuery}". Please automatically perform an external search to identify safe, trusted herbal alternatives from reputable sources, presenting them in a highly warm and friendly tone.\n\n`;
       }
     }
@@ -1092,6 +1085,12 @@ RESPONSE STYLE AND TONE MANDATES:
    - "Historically used by communities for..."
    - "Traditionally valued for..."
    - "Used in indigenous medicinal practices for..."
+
+CRITICAL QUERY PROCESSING & ANTI-REPETITION MANDATES:
+1. UNDERSTAND THE SPECIFIC INTENT: Carefully analyze the user's exact query to identify the primary subject (e.g., a specific plant, a health condition, preparation methods, dosage).
+2. GENERATE CONTEXT-SPECIFIC RESPONSES: Your answer MUST directly and specifically answer the user's question based on the identified intent. Do NOT return a generic plant profile if the user asked a specific question about symptoms, and conversely, do not just list remedies if the user asked for a plant profile.
+3. BE UNIQUE & PREVENT REPETITIVE RESPONSES: Avoid reusing the same generic introduction, body text patterns, or conclusions across unrelated queries. Synthesize a fresh, unique response tailored specifically to the new question each time.
+4. ONLY USE RELEVANT CONTEXT: Use the provided context strictly to answer the user's actual question. Do not regurgitate all provided context unless it is directly relevant.
 
 STRICT PROHIBITIONS:
 1. NEVER mention internal systems of the application, including or related to:
@@ -1158,7 +1157,7 @@ CRITICAL INSTRUCTIONS FOR EXTERNAL SEARCHES:
       });
 
       // Try with fallback models to handle 503 / 429 under high demand
-      const modelsToTry = ["gemini-3.1-pro-preview", "gemini-3.1-flash", "gemini-flash-latest", "gemini-2.5-flash", "gemini-1.5-flash"];
+      const modelsToTry = ["gemini-3.1-pro-preview", "gemini-3.5-flash", "gemini-flash-latest"];
       let response = null;
       let lastError = null;
 
@@ -1175,7 +1174,7 @@ CRITICAL INSTRUCTIONS FOR EXTERNAL SEARCHES:
             contents: chatContents,
             config: {
               systemInstruction,
-              temperature: 0.25, // Conservative, high adherence
+              temperature: 0.6,
               topK: 40,
               topP: 0.95,
               tools: [{ googleSearch: {} }]
@@ -1197,7 +1196,7 @@ CRITICAL INSTRUCTIONS FOR EXTERNAL SEARCHES:
               contents: chatContents,
               config: {
                 systemInstruction,
-                temperature: 0.25,
+                temperature: 0.6,
                 topK: 40,
                 topP: 0.95
                 // Pure text generation using the rich RAG local context
