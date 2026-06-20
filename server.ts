@@ -779,7 +779,7 @@ CRITICAL INSTRUCTIONS:
       });
 
       // Try with fallback models to handle 503 / 429 under high demand
-      const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite-preview-02-05"];
+      const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
       let response = null;
       let lastError = null;
 
@@ -812,7 +812,7 @@ CRITICAL INSTRUCTIONS:
           totalAttempts++;
           if (totalAttempts < 3) {
             const errLower = (err?.message || "").toLowerCase();
-            const shouldSwitchModel = errLower.includes("429") || errLower.includes("404") || errLower.includes("quota") || errLower.includes("not found");
+            const shouldSwitchModel = errLower.includes("429") || errLower.includes("404") || errLower.includes("quota") || errLower.includes("not found") || errLower.includes("503") || errLower.includes("unavailable");
             if (shouldSwitchModel) {
               modelIdx++;
             }
@@ -882,7 +882,7 @@ CRITICAL INSTRUCTIONS:
 
       let docsAndPlantsSection = "";
       if (matchedDictEntries.length > 0) {
-        docsAndPlantsSection += "\n### 📖 Matches from Kikuyu Botanical Dictionary:\n" + matchedDictEntries.map(entry => {
+        docsAndPlantsSection += matchedDictEntries.map(entry => {
           return `#### **${entry.kikuyuName}** (*${entry.scientificName}* - ${entry.commonName})
 - **Category:** ${entry.category}
 - **Family:** ${entry.family}
@@ -893,7 +893,7 @@ ${entry.safeCautions ? `- **⚠️ Safety Warnings:** ${entry.safeCautions}` : '
       }
 
       if (matchedHerbs.length > 0) {
-        docsAndPlantsSection += "\n### 🍃 Matches from Verified Specimen Library:\n" + matchedHerbs.map(h => {
+        docsAndPlantsSection += matchedHerbs.map(h => {
           const th = translateHerb(h, language as any);
           return `#### **${th.kikuyuName}** (*${th.scientificName}* - ${th.commonName})
 - **Part used:** ${th.partUsed}
@@ -947,7 +947,7 @@ ${entry.safeCautions ? `- **⚠️ Safety Warnings:** ${entry.safeCautions}` : '
   // --- STANDALONE OR CONTAINER DIRECT EXECUTION LISTENER ---
 
   if (process.env.VERCEL !== "1") {
-    const PORT = 3000;
+    const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
     const setupAndListen = async () => {
       if (process.env.NODE_ENV !== "production") {
         console.log("Starting in development Mode with Vite Middleware...");

@@ -421,7 +421,7 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
       const result = await postChat(historyMsg, textToSend, language);
 
       const botMsg: ChatMessage = {
-        id: result.logId || `msg-bot-${Date.now()}`,
+        id: result.logId ? `msg-bot-${result.logId}-${Date.now()}` : `msg-bot-${Date.now()}`,
         role: 'model',
         text: result.reply,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -528,7 +528,7 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
       const result = await postChat(historyWithEdit, newText, language);
 
       const botMsg: ChatMessage = {
-        id: result.logId || `msg-bot-${Date.now()}`,
+        id: result.logId ? `msg-bot-${result.logId}-${Date.now()}` : `msg-bot-${Date.now()}`,
         role: 'model',
         text: result.reply,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -809,15 +809,6 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
                               <Markdown>{msg.text}</Markdown>
                             </div>
                             
-                            {/* Source Badge */}
-                            {!isUser && msg.source && (
-                              <div className={`mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] uppercase font-extrabold tracking-wider ${
-                                isDark ? 'bg-zinc-800 text-emerald-400' : 'bg-emerald-50 text-emerald-700'
-                              }`}>
-                                {msg.source === 'ai' ? '✨ AI Response' : '📚 Knowledge Base Response'}
-                              </div>
-                            )}
-
                             {/* Verified Plant Specimen Images sourced dynamically from Database */}
                             {!isUser && (
                               (() => {
