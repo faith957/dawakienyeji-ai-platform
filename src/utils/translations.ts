@@ -1019,6 +1019,42 @@ export const UI_TRANSLATIONS: TranslationDictionary = {
     ki: "Mbarũthi matathomwo",
     fr: "Courriels Non Lus"
   },
+  "admin.tabDashboard": {
+    en: "Dashboard",
+    sw: "Dawati la Mbele",
+    ki: "Gĩkundi kĩa Admin",
+    fr: "Tableau de Bord"
+  },
+  "admin.tabUpload": {
+    en: "Upload Docs",
+    sw: "Pakia Nyaraka",
+    ki: "Rekia Maratathi",
+    fr: "Uploader Docs"
+  },
+  "admin.tabChatbot": {
+    en: "Chatbot Training",
+    sw: "Mafunzo ya Chatbot",
+    ki: "Gũthomithia Chatbot",
+    fr: "Entraînement Chatbot"
+  },
+  "admin.tabAnalytics": {
+    en: "Analytics",
+    sw: "Uchanganuzi",
+    ki: "Mathabu",
+    fr: "Analytique"
+  },
+  "admin.tabMessages": {
+    en: "Messages",
+    sw: "Ujumbe",
+    ki: "Ndũmĩrĩri",
+    fr: "Messages"
+  },
+  "admin.tabSettings": {
+    en: "Settings",
+    sw: "Mipangilio",
+    ki: "Mĩbango",
+    fr: "Paramètres"
+  },
   "admin.remedies": {
     en: "Treatises Indexed",
     sw: "Maandiko Yaliyosasishwa",
