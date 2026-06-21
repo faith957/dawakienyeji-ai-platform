@@ -20,14 +20,42 @@ import heroSlide4 from "./assets/images/hero_slide_4_1780660023541.png";
 import ContactPage from "./components/ContactPage";
 import ChatbotPage from "./components/ChatbotPage";
 import AdminDashboard from "./components/AdminDashboard";
+import { fetchPlants, fetchBlogs } from "./utils/api";
+import { Herb, BlogPost } from "./types";
 
 type PageRoute = 'home' | 'about' | 'plants' | 'remedies' | 'knowledge' | 'blog' | 'contact' | 'admin' | 'chatbot';
 
 export default function App() {
   const { t, translateHerb, language } = useLanguage();
-  const [currentRoute, setCurrentRoute] = useState<PageRoute>('home');
+  const [currentRoute, setCurrentRoute] = useState<PageRoute>(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('admin=true')) {
+      return 'admin';
+    }
+    return 'home';
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedPlantForModal, setSelectedPlantForModal] = useState<any | null>(null);
+
+  const [featuredHerbs, setFeaturedHerbs] = useState<Herb[]>(INITIAL_HERBS.slice(0, 3));
+  const [featuredBlogs, setFeaturedBlogs] = useState<BlogPost[]>(INITIAL_BLOGS.slice(0, 2));
+
+  useEffect(() => {
+    async function fetchFeatured() {
+      try {
+        const plants = await fetchPlants();
+        if (plants && plants.length > 0) {
+          setFeaturedHerbs(plants.slice(0, 3));
+        }
+        const blogs = await fetchBlogs();
+        if (blogs && blogs.length > 0) {
+          setFeaturedBlogs(blogs.slice(0, 2));
+        }
+      } catch (e) {
+        console.error("Failed to fetch featured active content", e);
+      }
+    }
+    fetchFeatured();
+  }, []);
 
   // Hero carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -251,17 +279,7 @@ export default function App() {
               <span>{t("nav.askBot")}</span>
             </button>
 
-            <button
-              id="signup-btn-header"
-              onClick={() => navigateTo('admin')}
-              className={`py-2 px-4 transition border text-[11px] font-bold tracking-wider uppercase rounded-full shadow-sm hover:scale-[1.02] active:scale-[0.98] duration-150 cursor-pointer ${
-                currentRoute === 'admin' 
-                  ? 'bg-[#D4A017] border-[#D4A017] text-emerald-950 font-black shadow-inner' 
-                  : 'bg-white border-stone-250/90 text-stone-700 hover:bg-stone-50'
-              }`}
-            >
-              {t("nav.signUp")}
-            </button>
+
 
             {/* Hamburger Trigger */}
             <button
@@ -289,8 +307,7 @@ export default function App() {
             <button onClick={() => navigateTo('plants')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.plants")}</button>
             <button onClick={() => navigateTo('remedies')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.remedies")}</button>
             <button onClick={() => navigateTo('blog')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.blog")}</button>
-            <button onClick={() => navigateTo('contact')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.contact")}</button>
-            <button onClick={() => navigateTo('admin')} className="py-2 text-left hover:text-emerald-700">{t("nav.admin")}</button>
+            <button onClick={() => navigateTo('contact')} className="py-2 text-left hover:text-emerald-700">{t("nav.contact")}</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -642,7 +659,7 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {INITIAL_HERBS.slice(0, 3).map((herb) => {
+                {featuredHerbs.map((herb) => {
                   const th = translateHerb(herb);
                   return (
                     <div 
@@ -783,7 +800,7 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {INITIAL_BLOGS.slice(0, 2).map((blog) => (
+                {featuredBlogs.map((blog) => (
                   <div 
                     key={blog.id} 
                     onClick={() => navigateTo('blog')}
