@@ -28,9 +28,16 @@ type PageRoute = 'home' | 'about' | 'plants' | 'remedies' | 'knowledge' | 'blog'
 export default function App() {
   const { t, translateHerb, language } = useLanguage();
   const [currentRoute, setCurrentRoute] = useState<PageRoute>(() => {
-    if (typeof window !== 'undefined' && window.location.search.includes('admin=true')) {
-      return 'admin';
-    }
+    if (typeof window === 'undefined') return 'home';
+    const path = window.location.pathname;
+    if (path === '/about') return 'about';
+    if (path === '/herbal-plants') return 'plants';
+    if (path === '/traditional-remedies') return 'remedies';
+    if (path === '/blogs') return 'blog';
+    if (path === '/contact') return 'contact';
+    if (path === '/dawabot' || path === '/dawabot/signup') return 'chatbot';
+    if (path === '/admin' || window.location.search.includes('admin=true')) return 'admin';
+    if (path === '/knowledge-base') return 'knowledge';
     return 'home';
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -155,13 +162,91 @@ export default function App() {
     setMobileMenuOpen(false);
   }, [currentRoute]);
 
+  // Handle browser Back / Forward events cleanly
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const path = window.location.pathname;
+      if (path === '/about') setCurrentRoute('about');
+      else if (path === '/herbal-plants') setCurrentRoute('plants');
+      else if (path === '/traditional-remedies') setCurrentRoute('remedies');
+      else if (path === '/blogs') setCurrentRoute('blog');
+      else if (path === '/contact') setCurrentRoute('contact');
+      else if (path === '/dawabot' || path === '/dawabot/signup') setCurrentRoute('chatbot');
+      else if (path === '/admin') setCurrentRoute('admin');
+      else if (path === '/knowledge-base') setCurrentRoute('knowledge');
+      else setCurrentRoute('home');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // Sync document title cleanly on route transition
+  useEffect(() => {
+    let title = 'DawaKienyeji | Traditional Herbal Safeguard & Botanical Library';
+    
+    if (currentRoute === 'about') {
+      title = 'About | DawaKienyeji';
+    } else if (currentRoute === 'plants') {
+      title = 'Herbal Plants | DawaKienyeji';
+    } else if (currentRoute === 'remedies') {
+      title = 'Traditional Remedies | DawaKienyeji';
+    } else if (currentRoute === 'blog') {
+      title = 'Blogs | DawaKienyeji';
+    } else if (currentRoute === 'contact') {
+      title = 'Contact | DawaKienyeji';
+    } else if (currentRoute === 'chatbot') {
+      const isSignup = typeof window !== 'undefined' && window.location.pathname === '/dawabot/signup';
+      title = isSignup ? 'Sign Up | DawaBot | DawaKienyeji' : 'DawaBot | DawaKienyeji';
+    } else if (currentRoute === 'admin') {
+      title = 'Admin Dashboard | DawaKienyeji';
+    } else if (currentRoute === 'knowledge') {
+      title = 'Knowledge Base | DawaKienyeji';
+    }
+    
+    document.title = title;
+  }, [currentRoute]);
+
   const navigateTo = (route: PageRoute) => {
+    if (typeof window !== 'undefined') {
+      let path = '/';
+      if (route === 'about') path = '/about';
+      else if (route === 'plants') path = '/herbal-plants';
+      else if (route === 'remedies') path = '/traditional-remedies';
+      else if (route === 'blog') path = '/blogs';
+      else if (route === 'contact') path = '/contact';
+      else if (route === 'chatbot') path = '/dawabot';
+      else if (route === 'admin') path = '/admin';
+      else if (route === 'knowledge') path = '/knowledge-base';
+
+      if (window.location.pathname !== path) {
+        window.history.pushState({ route }, '', path);
+      }
+    }
     setCurrentRoute(route);
   };
 
   // Render an immersive chatbot view with zero frame clutter
   if (currentRoute === 'chatbot') {
-    return <ChatbotPage onBackToHome={() => navigateTo('home')} onNavigateTo={navigateTo} />;
+    return (
+      <ChatbotPage 
+        onBackToHome={() => navigateTo('home')} 
+        onNavigateTo={navigateTo} 
+        initialShowSignup={typeof window !== 'undefined' && window.location.pathname === '/dawabot/signup'}
+        onSignupModalChange={(open) => {
+          if (typeof window !== 'undefined') {
+            const newPath = open ? '/dawabot/signup' : '/dawabot';
+            if (window.location.pathname !== newPath) {
+              window.history.pushState({ route: 'chatbot' }, '', newPath);
+              let title = open ? 'Sign Up | DawaBot | DawaKienyeji' : 'DawaBot | DawaKienyeji';
+              document.title = title;
+            }
+          }
+        }}
+      />
+    );
   }
 
   // Render admin dashboard directly with zero frame clutter
@@ -207,7 +292,7 @@ export default function App() {
           </div>
 
           {/* Desktop Nav menu */}
-          <nav className="hidden lg:flex items-center gap-7 text-[11px] font-extrabold text-stone-600/85 tracking-widest uppercase">
+          <nav className="hidden lg:flex items-center gap-7 text-[13px] font-extrabold text-stone-600/85 tracking-widest uppercase">
             <button 
               id="nav-home" 
               onClick={() => navigateTo('home')}
@@ -215,7 +300,7 @@ export default function App() {
             >
               <span>{t("nav.home")}</span>
               {currentRoute === 'home' && (
-                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-800" />
               )}
             </button>
             <button 
@@ -225,7 +310,7 @@ export default function App() {
             >
               <span>{t("nav.about") || "About"}</span>
               {currentRoute === 'about' && (
-                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-800" />
               )}
             </button>
             <button 
@@ -235,7 +320,7 @@ export default function App() {
             >
               <span>{t("nav.plants")}</span>
               {currentRoute === 'plants' && (
-                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-800" />
               )}
             </button>
             <button 
@@ -245,7 +330,7 @@ export default function App() {
             >
               <span>{t("nav.remedies")}</span>
               {currentRoute === 'remedies' && (
-                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-800" />
               )}
             </button>
 
@@ -256,7 +341,7 @@ export default function App() {
             >
               <span>{t("nav.blog")}</span>
               {currentRoute === 'blog' && (
-                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-800" />
               )}
             </button>
             <button 
@@ -266,7 +351,7 @@ export default function App() {
             >
               <span>{t("nav.contact")}</span>
               {currentRoute === 'contact' && (
-                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-800" />
+                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-800" />
               )}
             </button>
           </nav>
@@ -279,7 +364,7 @@ export default function App() {
             <button
               id="ask-dawabot-btn-header"
               onClick={() => navigateTo('chatbot')}
-              className="py-2 px-4 bg-emerald-950 hover:bg-emerald-900 active:bg-emerald-950 border border-emerald-900/50 text-emerald-100 rounded-full text-[11px] font-bold tracking-wider uppercase transition shadow-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] duration-150 cursor-pointer"
+              className="py-2.5 px-4.5 bg-emerald-950 hover:bg-emerald-900 active:bg-emerald-950 border border-emerald-900/50 text-emerald-100 rounded-full text-[12.5px] font-bold tracking-wider uppercase transition shadow-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] duration-150 cursor-pointer"
             >
               <div className="relative flex items-center justify-center">
                 <span className="absolute animate-ping inline-flex h-1.5 w-1.5 rounded-full bg-amber-400 opacity-75" />
@@ -309,14 +394,14 @@ export default function App() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-stone-100 border-b border-stone-200 text-emerald-950 flex flex-col p-4 space-y-3 font-semibold text-xs tracking-wider uppercase"
+            className="lg:hidden bg-stone-100 border-b border-stone-200 text-emerald-950 flex flex-col p-5 space-y-4 font-extrabold text-sm tracking-widest uppercase"
           >
-            <button onClick={() => navigateTo('home')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.home")}</button>
-            <button onClick={() => navigateTo('about')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.about") || "About"}</button>
-            <button onClick={() => navigateTo('plants')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.plants")}</button>
-            <button onClick={() => navigateTo('remedies')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.remedies")}</button>
-            <button onClick={() => navigateTo('blog')} className="py-2 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.blog")}</button>
-            <button onClick={() => navigateTo('contact')} className="py-2 text-left hover:text-emerald-700">{t("nav.contact")}</button>
+            <button onClick={() => navigateTo('home')} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.home")}</button>
+            <button onClick={() => navigateTo('about')} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.about") || "About"}</button>
+            <button onClick={() => navigateTo('plants')} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.plants")}</button>
+            <button onClick={() => navigateTo('remedies')} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.remedies")}</button>
+            <button onClick={() => navigateTo('blog')} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.blog")}</button>
+            <button onClick={() => navigateTo('contact')} className="py-2.5 text-left hover:text-emerald-700">{t("nav.contact")}</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1108,10 +1193,6 @@ export default function App() {
             <h4 className="text-xs font-extrabold tracking-widest text-[#D4A017] uppercase border-b border-[#1a3a2a] pb-2 font-sans">{t("nav.contactUs") || "Contact Us"}</h4>
             <div className="text-xs md:text-sm text-white space-y-3 font-normal">
               <p className="flex items-start gap-2 group text-white">
-                <MapPin className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-200" />
-                <span>Nyeri County slopes, Central Province, Kenya</span>
-              </p>
-              <p className="flex items-start gap-2 group text-white">
                 <Phone className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-200" />
                 <span>+254 141 063 174</span>
               </p>
@@ -1126,7 +1207,7 @@ export default function App() {
 
         {/* Copyright and lower meta row */}
         <div className="max-w-7xl mx-auto pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white font-semibold tracking-wide">
-          <p>© {new Date().getFullYear()} DawaKienyeji. Digitalized with support from Mojatu Foundation.</p>
+          <p>© {new Date().getFullYear()} DawaKienyeji.</p>
           <div className="flex gap-4 items-center">
             <span className="text-white/80 uppercase font-medium">Educational Project only</span>
           </div>

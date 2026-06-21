@@ -16,6 +16,8 @@ import { signInWithPopup } from "firebase/auth";
 interface ChatbotPageProps {
   onBackToHome: () => void;
   onNavigateTo?: (route: any) => void;
+  initialShowSignup?: boolean;
+  onSignupModalChange?: (open: boolean) => void;
 }
 
 const VOICE_LANGUAGES = [
@@ -95,7 +97,7 @@ function isBotanicalQuery(userQueryText?: string): boolean {
   return BOTANICAL_KEYWORDS.some(keyword => combined.includes(keyword));
 }
 
-export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageProps) {
+export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSignup = false, onSignupModalChange }: ChatbotPageProps) {
   const { language, t } = useLanguage();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -127,13 +129,26 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
     }
   });
 
-  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [showSignupModal, setShowSignupModalState] = useState(initialShowSignup);
+
+  const setShowSignupModal = (val: boolean) => {
+    setShowSignupModalState(val);
+    if (onSignupModalChange) {
+      onSignupModalChange(val);
+    }
+  };
+
+  useEffect(() => {
+    setShowSignupModalState(initialShowSignup);
+  }, [initialShowSignup]);
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupRepeatPassword, setSignupRepeatPassword] = useState("");
   const [signupError, setSignupError] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showSignupRepeatPassword, setShowSignupRepeatPassword] = useState(false);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
@@ -1532,30 +1547,56 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
 
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className={`w-full p-2.5 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
-                      isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
-                    }`}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showSignupPassword ? "text" : "password"}
+                      required
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className={`w-full p-2.5 pr-10 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
+                        isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition cursor-pointer"
+                    >
+                      {showSignupPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-stone-400 mb-1">Repeat Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={signupRepeatPassword}
-                    onChange={(e) => setSignupRepeatPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className={`w-full p-2.5 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
-                      isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
-                    }`}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showSignupRepeatPassword ? "text" : "password"}
+                      required
+                      value={signupRepeatPassword}
+                      onChange={(e) => setSignupRepeatPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className={`w-full p-2.5 pr-10 rounded-lg border text-xs focus:ring-2 focus:ring-emerald-700/60 focus:outline-none transition-all ${
+                        isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-900'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupRepeatPassword(!showSignupRepeatPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition cursor-pointer"
+                    >
+                      {showSignupRepeatPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-2">

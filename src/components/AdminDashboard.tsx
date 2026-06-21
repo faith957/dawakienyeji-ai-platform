@@ -3,7 +3,8 @@ import {
   Lock, Key, Shield, LayoutDashboard, PlusCircle, FileText, BarChart3, 
   Trash2, Edit, Save, Plus, X, UploadCloud, CheckCircle, Flame, User, Mail,
   Clock, AlertTriangle, Inbox, Settings, LogOut, Sliders, RefreshCw, HelpCircle,
-  BookOpen, Compass, Search, ToggleLeft, ToggleRight, MessageSquare, Send, Check, AlertCircle
+  BookOpen, Compass, Search, ToggleLeft, ToggleRight, MessageSquare, Send, Check, AlertCircle,
+  Eye, EyeOff
 } from "lucide-react";
 import { Herb, BlogPost, KnowledgeBaseArticle, ChatLog, ContactMessage, BlogComment } from "../types";
 import { 
@@ -48,6 +49,7 @@ export default function AdminDashboard() {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   // Navigation
   const [activeTab, setActiveTab] = useState<SidebarTab>('dashboard');
@@ -667,13 +669,24 @@ export default function AdminDashboard() {
             <div className="relative flex items-center">
               <Key className="absolute left-3.5 w-4.5 h-4.5 text-stone-400" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="••••••••"
-                className="w-full py-2.5 pl-11 pr-4 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 placeholder-stone-400"
+                className="w-full py-2.5 pl-11 pr-10 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 placeholder-stone-400 font-semibold text-stone-850"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 text-stone-400 hover:text-stone-600 transition cursor-pointer"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4.5 h-4.5" />
+                ) : (
+                  <Eye className="w-4.5 h-4.5" />
+                )}
+              </button>
             </div>
           </div>
 

@@ -60,10 +60,14 @@
 }
 
 @layer base {
+  html {
+    font-size: 17.5px; /* Increase standard 16px base font by ~10% for improved legibility across all devices */
+  }
   body {
     background-color: #FDFCF0; /* Natural Tones warm ivory background */
     color: #1A2F1A; /* Natural Tones rich charcoal forest dark text */
     font-family: var(--font-sans);
+    line-height: 1.6;
   }
 }
 
