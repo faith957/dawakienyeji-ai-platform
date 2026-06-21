@@ -315,7 +315,11 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
 
       setShowLoginModal(false);
     } catch (err: any) {
-      setLoginError(err.message || "Google sign in failed.");
+      if (err?.code === 'auth/unauthorized-domain' || (err?.message && err.message.includes('unauthorized-domain'))) {
+        setLoginError(`Domain Unauthorized. Please add "${window.location.hostname}" to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+      } else {
+        setLoginError(err.message || "Google sign in failed.");
+      }
     }
   };
 
