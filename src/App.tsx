@@ -164,6 +164,15 @@ export default function App() {
     return <ChatbotPage onBackToHome={() => navigateTo('home')} onNavigateTo={navigateTo} />;
   }
 
+  // Render admin dashboard directly with zero frame clutter
+  if (currentRoute === 'admin') {
+    return (
+      <div className="min-h-screen bg-stone-50/45 bg-grain selection:bg-emerald-200">
+        <AdminDashboard />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-stone-50/45 bg-grain text-emerald-950 flex flex-col font-sans selection:bg-emerald-200 selection:text-emerald-905">
       
@@ -974,13 +983,6 @@ export default function App() {
         {currentRoute === 'contact' && (
           <div className="py-8 md:py-12">
             <ContactPage />
-          </div>
-        )}
-
-        {/* Tab 8: Security Admin dashboard */}
-        {currentRoute === 'admin' && (
-          <div className="py-8 md:py-12">
-            <AdminDashboard />
           </div>
         )}
 
