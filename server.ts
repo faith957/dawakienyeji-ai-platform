@@ -1198,7 +1198,7 @@ CRITICAL INSTRUCTIONS FOR EXTERNAL SEARCHES:
       });
 
       // Try with fallback models to handle 503 / 429 under high demand
-      const modelsToTry = ["gemini-3.1-pro-preview", "gemini-3.1-flash", "gemini-flash-latest"];
+      const modelsToTry = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-1.5-flash"];
       let response = null;
       let lastError = null;
 
