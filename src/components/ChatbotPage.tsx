@@ -950,39 +950,7 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo }: ChatbotPageP
           })()}
         </div>
 
-        {/* Member Profile, Sign Up & Cloud Vault Sync */}
-        {currentUser ? (
-          <div className="mt-3 p-3.5 rounded-xl bg-emerald-50 text-emerald-950 border border-emerald-100/80 flex flex-col gap-1.5 font-sans">
-            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-800">
-              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Botanical Vault Active</span>
-            </div>
-            <p className="text-[10px] text-stone-500 font-medium">
-              Hello, <span className="font-bold text-emerald-900">{currentUser.name}</span>. Your chats sync automatically.
-            </p>
-            <div className="flex flex-col gap-1 mt-1">
-              <button
-                onClick={() => onNavigateTo?.('admin')}
-                className="w-full py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-[10px] rounded-lg transition text-center cursor-pointer"
-              >
-                Access Member Portal
-              </button>
-              <button
-                onClick={handleLogout}
-                className="w-full py-1.5 bg-red-100 hover:bg-red-200 text-red-800 font-extrabold text-[10px] rounded-lg transition text-center cursor-pointer flex items-center justify-center gap-1 border border-red-200"
-              >
-                <LogOut className="w-3 h-3" />
-                <span>Sign Out</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-3 font-sans text-center">
-            <p className="text-[10px] text-stone-400 font-medium italic">
-              Chatting as Guest member. Register above to preserve chats.
-            </p>
-          </div>
-        )}
+
 
         <div className="mt-4 pt-4 border-t border-stone-300/40 md:border-t flex items-center justify-between">
           <p className="text-[10px] opacity-60">{t("chat.statusSecure") || "Status: Secure Sandbox"}</p>
