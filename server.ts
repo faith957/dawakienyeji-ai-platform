@@ -184,16 +184,14 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
     }
     const emailLower = email.toLowerCase().trim();
     
-    const foundUser = appUsers.find(u => u.email.toLowerCase() === emailLower && u.password === password);
-    if (foundUser || (emailLower === "joseph@yflab.org" && password === "Joseph@60")) {
-      const isJoseph = emailLower === "joseph@yflab.org";
-      const userName = foundUser?.name || (isJoseph ? "Dr. Joseph Ndingi" : "Faith Mojatu");
+    // Only allow the specified admin user
+    if (emailLower === "faith@mojatu.com" && password === "1990@Syzygy") {
       res.json({ 
         success: true, 
-        adminPin: isJoseph ? ADMIN_SECURITY_PIN : ("MEMBER_" + emailLower),
-        isAdmin: isJoseph,
+        adminPin: ADMIN_SECURITY_PIN,
+        isAdmin: true,
         email: emailLower,
-        name: userName
+        name: "Faith Mojatu"
       });
     } else {
       res.status(401).json({ error: "Invalid credentials. Please verify your email and password." });
