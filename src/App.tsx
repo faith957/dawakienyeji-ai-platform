@@ -1211,24 +1211,6 @@ export default function App() {
                   <span>{t("nav.contact") || "Contact"}</span>
                 </button>
               </li>
-              <li>
-                <button 
-                  onClick={() => navigateTo('privacy')} 
-                  className="group flex items-center gap-1.5 text-stone-300 hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span>Privacy Policy</span>
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => navigateTo('terms')} 
-                  className="group flex items-center gap-1.5 text-stone-300 hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
-                  <span>Terms of Use</span>
-                </button>
-              </li>
             </ul>
           </div>
 

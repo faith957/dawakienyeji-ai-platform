@@ -222,6 +222,14 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
     res.json({ success: true });
   });
 
+  // Get active configurations (like Web3Forms access keys) for client use
+  app.get("/api/config", (req, res) => {
+    const web3FormsKey = (process.env.WEB3FORMS_ACCESS_KEY || process.env.VITE_WEB3FORMS_ACCESS_KEY || "").trim();
+    res.json({
+      web3FormsKey
+    });
+  });
+
   // Get all user contact messages (Admin only)
   app.get("/api/messages", verifyAdmin, (req, res) => {
     res.json(dbMessages);
@@ -251,6 +259,11 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
       status: "unread" as const
     };
     dbMessages.unshift(newMessage);
+
+    // Direct SMTP Mail Notification straight to info@dawakienyeji.com
+    sendContactNotificationToAdmin(name, email, subject || "New Inquiry", message).catch(err => {
+      console.warn("[Admin Notification] Background email dispatch failed helper report:", err);
+    });
 
     // Dynamic Server-side Web3Forms submission proxy
     const web3FormsKey = (process.env.WEB3FORMS_ACCESS_KEY || process.env.VITE_WEB3FORMS_ACCESS_KEY || "").trim();
@@ -320,6 +333,82 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
     dbSubscriptions.push(newSubscription);
     res.json({ success: true, message: "Thank you for subscribing to our traditional herbal updates!" });
   });
+
+// Professional SMTP/simulated email sender helper
+async function sendContactNotificationToAdmin(name: string, email: string, subject: string, message: string) {
+  const adminTargetEmail = "info@dawakienyeji.com";
+  const htmlContent = `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 2px solid #16a34a; border-radius: 12px; background-color: #fafbf9; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+      <div style="text-align: center; border-bottom: 2px solid #1a3a2a; padding-bottom: 15px; margin-bottom: 20px;">
+        <h2 style="color: #0b1f14; margin: 10px 0 0 0; font-weight: 800; letter-spacing: -0.5px;">New Contact Inquiry</h2>
+        <span style="font-size: 11px; text-transform: uppercase; color: #d4a017; font-weight: 700; letter-spacing: 1px;">DawaKienyeji Indigenous Portal</span>
+      </div>
+      
+      <div style="color: #2c3e50; line-height: 1.6; font-size: 14px; padding: 10px 0;">
+        <p>You have received a new contact submission from the platform website.</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px;">
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold; color: #1e293b; width: 120px;">Sender Name:</td>
+            <td style="padding: 8px 0; color: #475569;">${name}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold; color: #1e293b;">Sender Email:</td>
+            <td style="padding: 8px 0; color: #475569;"><a href="mailto:${email}" style="color: #16a34a; text-decoration: underline;">${email}</a></td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold; color: #1e293b;">Subject Topic:</td>
+            <td style="padding: 8px 0; color: #475569; font-weight: 600;">${subject}</td>
+          </tr>
+        </table>
+        
+        <div style="background-color: #ffffff; border-left: 4px solid #d4a017; padding: 18px; margin: 20px 0; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #f1f5f9; border-left-width: 4px;">
+          <h4 style="margin: 0 0 10px 0; color: #0b1f14; text-transform: uppercase; font-size: 11px; tracking-widest: 1px; font-weight: 800;">Message Content</h4>
+          <p style="margin: 0; color: #1e293b; font-size: 13.5px; white-space: pre-wrap; font-weight: 500; line-height: 1.7;">${message}</p>
+        </div>
+      </div>
+      
+      <div style="margin-top: 35px; padding-top: 15px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5;">
+        <p>Reply directly to this email to contact the user, or go to the Admin Dashboard to review and resolve this query.</p>
+        <p><strong>DawaKienyeji Conservation Center</strong></p>
+      </div>
+    </div>
+  `;
+
+  console.log(`[SMTP Engine] Direct notification init: dispatching to ${adminTargetEmail}`);
+  const host = process.env.SMTP_HOST || "smtp.gmail.com";
+  const port = parseInt(process.env.SMTP_PORT || "587");
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (user && pass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure: port === 465,
+        auth: { user, pass },
+      });
+
+      const info = await transporter.sendMail({
+        from: `"DawaKienyeji Notification" <${user}>`,
+        to: adminTargetEmail,
+        replyTo: email,
+        subject: `[DawaKienyeji Contact] ${subject || "New Inquiry"} - ${name}`,
+        html: htmlContent,
+      });
+
+      console.log(`[SMTP Engine] Contact Notification successfully sent to ${adminTargetEmail}. MessageID: ${info.messageId}`);
+      return { success: true, mode: "smtp", messageId: info.messageId };
+    } catch (err: any) {
+      console.warn(`[SMTP Engine] SMTP Contact notification send failed:`, err?.message || err);
+      return { success: false, error: err?.message || err };
+    }
+  } else {
+    console.log(`[SMTP Engine] SMTP is not active. Logged simulation generated for admin notification.`);
+    return { success: true, mode: "simulated" };
+  }
+}
 
 // Professional SMTP/simulated email sender helper
 async function sendReplyEmail(userEmail: string, userName: string, originalMessage: string, replyText: string, subject: string) {

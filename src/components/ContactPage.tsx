@@ -33,40 +33,13 @@ export default function ContactPage() {
     setIsSending(true);
     setSubmitError("");
     try {
-      // 1. Save to the database first so the administrator dashboard has the record
+      // Save directly to the backend database which automatically handles Web3Forms dispatch securely in the background!
       await postMessage({
         name,
         email,
         subject: subject || "Advisory Inquiry",
         message
       });
-
-      // 2. Safely trigger Web3Forms submission if a key is configured
-      const accessKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY;
-      if (accessKey && accessKey.trim() !== "") {
-        const response = await fetch("https://api.web3forms.com/submit", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json"
-          },
-          body: JSON.stringify({
-            access_key: accessKey.trim(),
-            name,
-            email,
-            subject: `[DawaKienyeji] Contact Form - ${subject || "General Inquiry"}`,
-            message,
-            from_name: "DawaKienyeji Platform Website"
-          })
-        });
-
-        const resData = await response.json();
-        if (!response.ok || !resData.success) {
-          console.warn("Web3Forms endpoint responded with an error or invalid state:", resData);
-        }
-      } else {
-        console.info("Web3Forms token is not configured in environment (VITE_WEB3FORMS_ACCESS_KEY). Saved to internal dashboard DB only.");
-      }
 
       setSubmitted(true);
       setName("");
