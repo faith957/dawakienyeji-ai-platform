@@ -20,10 +20,12 @@ import heroSlide4 from "./assets/images/hero_slide_4_1780660023541.png";
 import ContactPage from "./components/ContactPage";
 import ChatbotPage from "./components/ChatbotPage";
 import AdminDashboard from "./components/AdminDashboard";
+import PrivacyPolicyPage from "./components/PrivacyPolicyPage";
+import TermsOfUsePage from "./components/TermsOfUsePage";
 import { fetchPlants, fetchBlogs } from "./utils/api";
 import { Herb, BlogPost } from "./types";
 
-type PageRoute = 'home' | 'about' | 'plants' | 'remedies' | 'knowledge' | 'blog' | 'contact' | 'admin' | 'chatbot';
+type PageRoute = 'home' | 'about' | 'plants' | 'remedies' | 'knowledge' | 'blog' | 'contact' | 'admin' | 'chatbot' | 'privacy' | 'terms';
 
 export default function App() {
   const { t, translateHerb, language } = useLanguage();
@@ -35,6 +37,8 @@ export default function App() {
     if (path === '/traditional-remedies') return 'remedies';
     if (path === '/blogs') return 'blog';
     if (path === '/contact') return 'contact';
+    if (path === '/privacy-policy') return 'privacy';
+    if (path === '/terms-of-use') return 'terms';
     if (path === '/dawabot' || path === '/dawabot/signup') return 'chatbot';
     if (path === '/admin' || window.location.search.includes('admin=true')) return 'admin';
     if (path === '/knowledge-base') return 'knowledge';
@@ -171,6 +175,8 @@ export default function App() {
       else if (path === '/traditional-remedies') setCurrentRoute('remedies');
       else if (path === '/blogs') setCurrentRoute('blog');
       else if (path === '/contact') setCurrentRoute('contact');
+      else if (path === '/privacy-policy') setCurrentRoute('privacy');
+      else if (path === '/terms-of-use') setCurrentRoute('terms');
       else if (path === '/dawabot' || path === '/dawabot/signup') setCurrentRoute('chatbot');
       else if (path === '/admin') setCurrentRoute('admin');
       else if (path === '/knowledge-base') setCurrentRoute('knowledge');
@@ -197,6 +203,10 @@ export default function App() {
       title = 'Blogs | DawaKienyeji';
     } else if (currentRoute === 'contact') {
       title = 'Contact | DawaKienyeji';
+    } else if (currentRoute === 'privacy') {
+      title = 'Privacy Policy | DawaKienyeji';
+    } else if (currentRoute === 'terms') {
+      title = 'Terms of Use | DawaKienyeji';
     } else if (currentRoute === 'chatbot') {
       const isSignup = typeof window !== 'undefined' && window.location.pathname === '/dawabot/signup';
       title = isSignup ? 'Sign Up | DawaBot | DawaKienyeji' : 'DawaBot | DawaKienyeji';
@@ -217,6 +227,8 @@ export default function App() {
       else if (route === 'remedies') path = '/traditional-remedies';
       else if (route === 'blog') path = '/blogs';
       else if (route === 'contact') path = '/contact';
+      else if (route === 'privacy') path = '/privacy-policy';
+      else if (route === 'terms') path = '/terms-of-use';
       else if (route === 'chatbot') path = '/dawabot';
       else if (route === 'admin') path = '/admin';
       else if (route === 'knowledge') path = '/knowledge-base';
@@ -1071,6 +1083,20 @@ export default function App() {
           </div>
         )}
 
+        {/* Tab 9: Privacy Policy */}
+        {currentRoute === 'privacy' && (
+          <div className="py-8 md:py-12">
+            <PrivacyPolicyPage onBackToHome={() => navigateTo('home')} />
+          </div>
+        )}
+
+        {/* Tab 10: Terms of Use */}
+        {currentRoute === 'terms' && (
+          <div className="py-8 md:py-12">
+            <TermsOfUsePage onBackToHome={() => navigateTo('home')} />
+          </div>
+        )}
+
       </main>
 
       <footer id="main-footer" className="bg-[#0a1e15] text-white border-t-2 border-[#D4A017]/30 mt-20 font-sans p-8 md:p-16 transition-colors duration-300">
@@ -1185,6 +1211,24 @@ export default function App() {
                   <span>{t("nav.contact") || "Contact"}</span>
                 </button>
               </li>
+              <li>
+                <button 
+                  onClick={() => navigateTo('privacy')} 
+                  className="group flex items-center gap-1.5 text-stone-300 hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
+                  <span>Privacy Policy</span>
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => navigateTo('terms')} 
+                  className="group flex items-center gap-1.5 text-stone-300 hover:text-[#D4A017] transition-all duration-300 text-left cursor-pointer font-medium hover:translate-x-1"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#D4A017] opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
+                  <span>Terms of Use</span>
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -1206,10 +1250,22 @@ export default function App() {
         </div>
 
         {/* Copyright and lower meta row */}
-        <div className="max-w-7xl mx-auto pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white font-semibold tracking-wide">
+        <div className="max-w-7xl mx-auto pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white font-semibold tracking-wide border-t border-[#1a3a2a]/40 mt-4">
           <p>© {new Date().getFullYear()} DawaKienyeji.</p>
-          <div className="flex gap-4 items-center">
-            <span className="text-white/80 uppercase font-medium">Educational Project only</span>
+          <div className="flex gap-6 items-center flex-wrap justify-center md:justify-end">
+            <button 
+              onClick={() => navigateTo('privacy')} 
+              className="hover:text-[#D4A017] transition underline cursor-pointer decoration-dotted decoration-stone-500 hover:decoration-solid"
+            >
+              Privacy Policy
+            </button>
+            <button 
+              onClick={() => navigateTo('terms')} 
+              className="hover:text-[#D4A017] transition underline cursor-pointer decoration-dotted decoration-stone-500 hover:decoration-solid"
+            >
+              Terms of Use
+            </button>
+            <span className="text-white/60 uppercase font-medium">Educational Project only</span>
           </div>
         </div>
       </footer>
