@@ -226,8 +226,8 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
     res.json(dbMessages);
   });
 
-  // Post a new contact message (Public client-side submission)
-  app.post("/api/messages", (req, res) => {
+  // Post a new contact message (Public client-side submission with backend Web3Forms proxy)
+  app.post("/api/messages", async (req, res) => {
     const { name, email, subject, message } = req.body;
     if (!name || !email || !message) {
       return res.status(400).json({ error: "Name, email, and message body are required inputs." });
@@ -250,6 +250,53 @@ const verifyAdmin = (req: express.Request, res: express.Response, next: express.
       status: "unread" as const
     };
     dbMessages.unshift(newMessage);
+
+    // Dynamic Server-side Web3Forms submission proxy
+    const web3FormsKey = (process.env.WEB3FORMS_ACCESS_KEY || process.env.VITE_WEB3FORMS_ACCESS_KEY || "").trim();
+    if (web3FormsKey) {
+      console.log("[Web3Forms Proxy] Dispatching submission securely to Web3Forms API...");
+      try {
+        const web3Response = await fetch("https://api.web3forms.com/submit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json"
+          },
+          body: JSON.stringify({
+            access_key: web3FormsKey,
+            name,
+            email,
+            subject: `[DawaKienyeji] Contact Form - ${subject || "General Inquiry"}`,
+            message,
+            from_name: "DawaKienyeji Platform Website"
+          })
+        });
+
+        const textData = await web3Response.text();
+        let resData: any = null;
+        let isJson = false;
+        try {
+          resData = JSON.parse(textData);
+          isJson = true;
+        } catch (parseErr) {
+          isJson = false;
+        }
+
+        if (isJson && web3Response.ok && resData && resData.success) {
+          console.log("[Web3Forms Proxy] Web3Forms submission completed successfully!");
+        } else {
+          console.warn(
+            `[Web3Forms Proxy] Web3Forms API returned non-success (status: ${web3Response.status}). Response fragment:`,
+            textData ? textData.substring(0, 300) : "empty"
+          );
+        }
+      } catch (err: any) {
+        console.error("[Web3Forms Proxy] Network error when submitting to Web3Forms API:", err?.message || err);
+      }
+    } else {
+      console.info("[Web3Forms Proxy] No Web3Forms access key is active in environment. Stored in internal dashboard DB only.");
+    }
+
     res.json({ success: true, message: newMessage });
   });
 
