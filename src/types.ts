@@ -9,7 +9,7 @@ export interface Herb {
   medicinalUses: string[];
   traditionalContext: string;
   precautions: string;
-  category: 'Respiratory' | 'Digestive' | 'Pain relief' | 'Skin & Wounds' | 'General Vitality' | 'Prostate & Urinary' | 'Fevers';
+  category: string;
   imageColor: string; // Tailwind color combination for visual representation
   imageUrl?: string; // High-quality royalty-free botanical image/illustration or user upload
   severityRating?: 'Safe' | 'Caution' | 'Medicinal Only';

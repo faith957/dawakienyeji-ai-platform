@@ -107,6 +107,7 @@ export default function AdminDashboard() {
   // CRUD Forms States
   // Plant Form
   const [editingPlantId, setEditingPlantId] = useState<string | null>(null);
+  const [useCustomCategory, setUseCustomCategory] = useState(false);
   const [plantForm, setPlantForm] = useState<Omit<Herb, 'id'>>({
     kikuyuName: "",
     commonName: "",
@@ -423,6 +424,7 @@ export default function AdminDashboard() {
         imageColor: "from-green-800 to-emerald-900",
         imageUrl: ""
       });
+      setUseCustomCategory(false);
       setUploadSuccess(false);
       setShowAISuggestions(false);
       loadAdminData();
@@ -433,6 +435,8 @@ export default function AdminDashboard() {
 
   const triggerEdit = (herb: Herb) => {
     setEditingPlantId(herb.id);
+    const predefined = ["Respiratory", "Digestive", "Pain relief", "Skin & Wounds", "General Vitality", "Prostate & Urinary", "Fevers"];
+    setUseCustomCategory(!predefined.includes(herb.category));
     setPlantForm({
       kikuyuName: herb.kikuyuName,
       commonName: herb.commonName,
@@ -1618,20 +1622,45 @@ function UserSessionHistory({ email }: { email: string }) {
                   </div>
 
                   <div>
-                    <label className="block mb-1 font-bold text-stone-900 uppercase">Ailment Scope</label>
-                    <select
-                      value={plantForm.category}
-                      onChange={(e: any) => setPlantForm({ ...plantForm, category: e.target.value })}
-                      className="w-full p-2.5 border border-stone-300 bg-white rounded-xl text-stone-900 font-bold"
-                    >
-                      <option value="Respiratory">Severe Respiratory & Coughs</option>
-                      <option value="Digestive">Digestive & Deworming</option>
-                      <option value="Pain relief">Pain relief & Joint Rheumatism</option>
-                      <option value="Skin & Wounds">Skin & Wound recovery</option>
-                      <option value="General Vitality">General Tonic & Vitality</option>
-                      <option value="Prostate & Urinary">Prostate & Urinary balance</option>
-                      <option value="Fevers">Fevers & Chills (Malaria)</option>
-                    </select>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-bold text-stone-900 uppercase">Ailment Scope</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextVal = useCustomCategory ? "Respiratory" : "";
+                          setUseCustomCategory(!useCustomCategory);
+                          setPlantForm(prev => ({ ...prev, category: nextVal }));
+                        }}
+                        className="text-[10px] text-emerald-800 hover:text-emerald-950 font-extrabold flex items-center gap-1 bg-stone-100 hover:bg-stone-200 px-2 py-0.5 rounded-full transition"
+                      >
+                        {useCustomCategory ? "📋 Choose from list" : "✍️ Type custom scope"}
+                      </button>
+                    </div>
+
+                    {useCustomCategory ? (
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Traditional Nerve Repair"
+                        value={plantForm.category}
+                        onChange={(e) => setPlantForm({ ...plantForm, category: e.target.value })}
+                        className="w-full p-2.5 border border-stone-300 rounded-xl text-stone-900 font-bold bg-white"
+                      />
+                    ) : (
+                      <select
+                        value={plantForm.category}
+                        onChange={(e: any) => setPlantForm({ ...plantForm, category: e.target.value })}
+                        className="w-full p-2.5 border border-stone-300 bg-white rounded-xl text-stone-900 font-bold"
+                      >
+                        <option value="Respiratory">Severe Respiratory & Coughs</option>
+                        <option value="Digestive">Digestive & Deworming</option>
+                        <option value="Pain relief">Pain relief & Joint Rheumatism</option>
+                        <option value="Skin & Wounds">Skin & Wound recovery</option>
+                        <option value="General Vitality">General Tonic & Vitality</option>
+                        <option value="Prostate & Urinary">Prostate & Urinary balance</option>
+                        <option value="Fevers">Fevers & Chills (Malaria)</option>
+                      </select>
+                    )}
                   </div>
 
                   <div>
@@ -1879,6 +1908,7 @@ function UserSessionHistory({ email }: { email: string }) {
                         type="button"
                         onClick={() => {
                           setEditingPlantId(null);
+                          setUseCustomCategory(false);
                           setPlantForm({
                             kikuyuName: "",
                             commonName: "",
