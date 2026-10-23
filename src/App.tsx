@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { 
   Leaf, Bot, BookOpen, MapPin, Phone, Mail, ArrowRight, ShieldCheck, 
   Sparkles, Menu, X, Landmark, Compass, BrainCircuit, Users, Database, Globe, TreePine,
-  ChevronLeft, ChevronRight, Facebook, Twitter, Instagram, Youtube, History
+  ChevronLeft, ChevronRight, ChevronDown, Facebook, Twitter, Instagram, Youtube, History, Camera
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { INITIAL_HERBS, INITIAL_BLOGS } from "./data/herbalDatabase";
@@ -10,6 +10,9 @@ import { useLanguage } from "./utils/LanguageContext";
 import { getPlantImage } from "./utils/herbImages";
 import LanguageSelector from "./components/LanguageSelector";
 import PlantsCatalog from "./components/PlantsCatalog";
+import PlantIdentifier from "./components/PlantIdentifier";
+import PlantIdentificationPage from "./components/PlantIdentificationPage";
+import PlantProfileModal from "./components/PlantProfileModal";
 import TraditionalRemedies from "./components/TraditionalRemedies";
 import BlogFeed from "./components/BlogFeed";
 
@@ -25,7 +28,7 @@ import TermsOfUsePage from "./components/TermsOfUsePage";
 import { fetchPlants, fetchBlogs } from "./utils/api";
 import { Herb, BlogPost } from "./types";
 
-type PageRoute = 'home' | 'about' | 'plants' | 'remedies' | 'knowledge' | 'blog' | 'contact' | 'admin' | 'chatbot' | 'privacy' | 'terms';
+type PageRoute = 'home' | 'about' | 'plants' | 'identify' | 'remedies' | 'knowledge' | 'blog' | 'contact' | 'admin' | 'chatbot' | 'privacy' | 'terms';
 
 export default function App() {
   const { t, translateHerb, language } = useLanguage();
@@ -34,6 +37,7 @@ export default function App() {
     const path = window.location.pathname;
     if (path === '/about') return 'about';
     if (path === '/herbal-plants') return 'plants';
+    if (path === '/identify' || path === '/photo-id' || path === '/herbal-plants/identify') return 'identify';
     if (path === '/traditional-remedies') return 'remedies';
     if (path === '/blogs') return 'blog';
     if (path === '/contact') return 'contact';
@@ -45,8 +49,11 @@ export default function App() {
     return 'home';
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedPlantForModal, setSelectedPlantForModal] = useState<any | null>(null);
+  const [plantsDropdownOpen, setPlantsDropdownOpen] = useState(false);
+  const [mobilePlantsSubmenuOpen, setMobilePlantsSubmenuOpen] = useState(false);
+  const [selectedPlantForModal, setSelectedPlantForModal] = useState<Herb | null>(null);
 
+  const [allPlants, setAllPlants] = useState<Herb[]>(INITIAL_HERBS);
   const [featuredHerbs, setFeaturedHerbs] = useState<Herb[]>(INITIAL_HERBS.slice(0, 3));
   const [featuredBlogs, setFeaturedBlogs] = useState<BlogPost[]>(INITIAL_BLOGS.slice(0, 2));
 
@@ -55,6 +62,7 @@ export default function App() {
       try {
         const plants = await fetchPlants();
         if (plants && plants.length > 0) {
+          setAllPlants(plants);
           setFeaturedHerbs(plants.slice(0, 3));
         }
         const blogs = await fetchBlogs();
@@ -172,6 +180,7 @@ export default function App() {
       const path = window.location.pathname;
       if (path === '/about') setCurrentRoute('about');
       else if (path === '/herbal-plants') setCurrentRoute('plants');
+      else if (path === '/identify' || path === '/photo-id') setCurrentRoute('identify');
       else if (path === '/traditional-remedies') setCurrentRoute('remedies');
       else if (path === '/blogs') setCurrentRoute('blog');
       else if (path === '/contact') setCurrentRoute('contact');
@@ -197,6 +206,8 @@ export default function App() {
       title = 'About | DawaKienyeji';
     } else if (currentRoute === 'plants') {
       title = 'Herbal Plants | DawaKienyeji';
+    } else if (currentRoute === 'identify') {
+      title = 'Photo Plant Identification | DawaKienyeji';
     } else if (currentRoute === 'remedies') {
       title = 'Traditional Remedies | DawaKienyeji';
     } else if (currentRoute === 'blog') {
@@ -224,6 +235,7 @@ export default function App() {
       let path = '/';
       if (route === 'about') path = '/about';
       else if (route === 'plants') path = '/herbal-plants';
+      else if (route === 'identify') path = '/identify';
       else if (route === 'remedies') path = '/traditional-remedies';
       else if (route === 'blog') path = '/blogs';
       else if (route === 'contact') path = '/contact';
@@ -280,9 +292,12 @@ export default function App() {
         
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           
-          <div 
+          <button 
+            type="button"
             onClick={() => navigateTo('home')}
-            className="flex items-center gap-3.5 cursor-pointer group"
+            aria-label="DawaKienyeji Home"
+            title="DawaKienyeji Home - Click to return to home page"
+            className="flex items-center gap-3.5 cursor-pointer group text-left border-none bg-transparent p-0 shrink-0 mr-6 lg:mr-10"
           >
             <div className="relative">
               <div className="absolute inset-0 bg-emerald-800/15 rounded-full blur group-hover:scale-110 transition duration-300" />
@@ -301,20 +316,10 @@ export default function App() {
               </span>
               <span className="text-[9px] uppercase tracking-wider text-stone-400 block -mt-1 font-mono font-bold">Heritage Preservation</span>
             </div>
-          </div>
+          </button>
 
           {/* Desktop Nav menu */}
           <nav className="hidden lg:flex items-center gap-7 text-[13px] font-extrabold text-stone-600/85 tracking-widest uppercase">
-            <button 
-              id="nav-home" 
-              onClick={() => navigateTo('home')}
-              className={`hover:text-emerald-950 transition cursor-pointer py-1.5 relative flex items-center gap-1.5 ${currentRoute === 'home' ? 'text-emerald-950 font-black' : 'text-stone-550'}`}
-            >
-              <span>{t("nav.home")}</span>
-              {currentRoute === 'home' && (
-                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-800" />
-              )}
-            </button>
             <button 
               id="nav-about" 
               onClick={() => navigateTo('about')}
@@ -325,16 +330,98 @@ export default function App() {
                 <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-800" />
               )}
             </button>
-            <button 
-              id="nav-plants" 
-              onClick={() => navigateTo('plants')}
-              className={`hover:text-emerald-950 transition cursor-pointer py-1.5 relative flex items-center gap-1.5 ${currentRoute === 'plants' ? 'text-emerald-950 font-black' : 'text-stone-550'}`}
+            {/* Herbal Plants Menu with Dropdown Submenu */}
+            <div 
+              className="relative"
+              onMouseEnter={() => setPlantsDropdownOpen(true)}
+              onMouseLeave={() => setPlantsDropdownOpen(false)}
             >
-              <span>{t("nav.plants")}</span>
-              {currentRoute === 'plants' && (
-                <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-800" />
-              )}
-            </button>
+              <button 
+                id="nav-plants" 
+                onClick={() => navigateTo('plants')}
+                className={`hover:text-emerald-950 transition cursor-pointer py-1.5 relative flex items-center gap-1 ${
+                  currentRoute === 'plants' || currentRoute === 'identify' 
+                    ? 'text-emerald-950 font-black' 
+                    : 'text-stone-550'
+                }`}
+                aria-expanded={plantsDropdownOpen}
+                aria-haspopup="true"
+              >
+                <span>{t("nav.plants")}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${plantsDropdownOpen ? 'rotate-180 text-emerald-800' : 'text-stone-400'}`} />
+                {(currentRoute === 'plants' || currentRoute === 'identify') && (
+                  <motion.span layoutId="navDot" className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-800" />
+                )}
+              </button>
+
+              {/* Submenu Dropdown Panel */}
+              <AnimatePresence>
+                {plantsDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute left-0 top-full pt-2 w-72 z-50"
+                  >
+                    <div className="bg-white rounded-2xl shadow-xl border border-stone-200 p-2 space-y-1 text-left">
+                      {/* Submenu Option 1: Existing Plant Directory */}
+                      <button
+                        id="nav-sub-plants-directory"
+                        onClick={() => {
+                          setPlantsDropdownOpen(false);
+                          navigateTo('plants');
+                        }}
+                        className={`w-full text-left p-2.5 rounded-xl transition duration-150 flex items-center gap-3 cursor-pointer ${
+                          currentRoute === 'plants' 
+                            ? 'bg-emerald-50 text-emerald-950 font-bold border border-emerald-100' 
+                            : 'hover:bg-stone-50 text-stone-700'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100/70 text-emerald-800 flex items-center justify-center shrink-0">
+                          <Leaf className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold capitalize truncate">
+                            {language === 'sw' ? 'Mimea Yote ya Tiba' : language === 'ki' ? 'Mĩmera Yothe' : 'Browse Plant Directory'}
+                          </div>
+                          <div className="text-[10px] text-stone-500 font-normal">
+                            {language === 'sw' ? 'Tazama orodha kamili ya mimea' : 'Complete catalog & remedies'}
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Submenu Option 2: Identify a Plant */}
+                      <button
+                        id="nav-sub-plants-identify"
+                        onClick={() => {
+                          setPlantsDropdownOpen(false);
+                          navigateTo('identify');
+                        }}
+                        className={`w-full text-left p-2.5 rounded-xl transition duration-150 flex items-center gap-3 cursor-pointer ${
+                          currentRoute === 'identify' 
+                            ? 'bg-emerald-50 text-emerald-950 font-bold border border-emerald-100' 
+                            : 'hover:bg-stone-50 text-stone-700'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-amber-100/80 text-amber-800 flex items-center justify-center shrink-0">
+                          <Camera className="w-4 h-4 text-amber-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold capitalize flex items-center gap-1.5 truncate">
+                            <span>{language === 'sw' ? 'Tambua Mmea kwa Picha' : language === 'ki' ? 'Kũmenya Mũmera na Mbica' : 'Identify a Plant'}</span>
+                            <span className="text-[8.5px] bg-amber-400 text-stone-900 font-black px-1.5 py-0.2 rounded uppercase">Photo ID</span>
+                          </div>
+                          <div className="text-[10px] text-stone-500 font-normal">
+                            {language === 'sw' ? 'Piga picha au pakia picha ya mmea' : 'Snap photo or upload image'}
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <button 
               id="nav-remedies" 
               onClick={() => navigateTo('remedies')}
@@ -408,12 +495,63 @@ export default function App() {
             exit={{ opacity: 0, height: 0 }}
             className="lg:hidden bg-stone-100 border-b border-stone-200 text-emerald-950 flex flex-col p-5 space-y-4 font-extrabold text-sm tracking-widest uppercase"
           >
-            <button onClick={() => navigateTo('home')} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.home")}</button>
-            <button onClick={() => navigateTo('about')} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.about") || "About"}</button>
-            <button onClick={() => navigateTo('plants')} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.plants")}</button>
-            <button onClick={() => navigateTo('remedies')} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.remedies")}</button>
-            <button onClick={() => navigateTo('blog')} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.blog")}</button>
-            <button onClick={() => navigateTo('contact')} className="py-2.5 text-left hover:text-emerald-700">{t("nav.contact")}</button>
+            <button onClick={() => { setMobileMenuOpen(false); navigateTo('about'); }} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.about") || "About"}</button>
+            
+            {/* Herbal Plants expandable submenu on mobile */}
+            <div className="border-b border-stone-200 pb-1">
+              <button 
+                onClick={() => setMobilePlantsSubmenuOpen(!mobilePlantsSubmenuOpen)}
+                className="w-full py-2.5 text-left hover:text-emerald-700 flex items-center justify-between"
+              >
+                <span className={currentRoute === 'plants' || currentRoute === 'identify' ? 'text-emerald-850 font-black' : ''}>
+                  {t("nav.plants")}
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobilePlantsSubmenuOpen ? 'rotate-180 text-emerald-800' : 'text-stone-400'}`} />
+              </button>
+
+              <AnimatePresence>
+                {mobilePlantsSubmenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="pl-3 pb-2 space-y-2 overflow-hidden"
+                  >
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        navigateTo('plants');
+                      }}
+                      className={`w-full py-2 text-left text-xs font-bold flex items-center gap-2.5 ${
+                        currentRoute === 'plants' ? 'text-emerald-850 font-black' : 'text-stone-600 hover:text-emerald-800'
+                      }`}
+                    >
+                      <Leaf className="w-4 h-4 text-emerald-700" />
+                      <span>{language === 'sw' ? 'Mimea Yote ya Tiba (Katalogi)' : language === 'ki' ? 'Mĩmera Yothe' : 'Browse Plant Directory'}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        navigateTo('identify');
+                      }}
+                      className={`w-full py-2 text-left text-xs font-bold flex items-center justify-between ${
+                        currentRoute === 'identify' ? 'text-emerald-850 font-black' : 'text-stone-600 hover:text-emerald-800'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Camera className="w-4 h-4 text-amber-600" />
+                        <span>{language === 'sw' ? 'Tambua Mmea kwa Picha' : language === 'ki' ? 'Kũmenya Mũmera' : 'Identify a Plant'}</span>
+                      </span>
+                      <span className="text-[9px] bg-amber-400 text-stone-900 font-black px-1.5 py-0.2 rounded uppercase">Photo ID</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <button onClick={() => { setMobileMenuOpen(false); navigateTo('remedies'); }} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.remedies")}</button>
+            <button onClick={() => { setMobileMenuOpen(false); navigateTo('blog'); }} className="py-2.5 text-left hover:text-emerald-700 border-b border-stone-200">{t("nav.blog")}</button>
+            <button onClick={() => { setMobileMenuOpen(false); navigateTo('contact'); }} className="py-2.5 text-left hover:text-emerald-700">{t("nav.contact")}</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1058,7 +1196,17 @@ export default function App() {
         {/* Tab 3: Plants catalog (Main browsable cards) */}
         {currentRoute === 'plants' && (
           <div className="py-8 md:py-12">
-            <PlantsCatalog />
+            <PlantsCatalog initialMode="catalog" />
+          </div>
+        )}
+
+        {/* Tab 3b: Dedicated Photo Plant Identification Page */}
+        {currentRoute === 'identify' && (
+          <div className="py-4 md:py-8">
+            <PlantIdentificationPage 
+              allPlants={allPlants}
+              onNavigateTo={navigateTo}
+            />
           </div>
         )}
 
@@ -1252,82 +1400,17 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Shared Mini modal overlay to display plant details on featured home clicks */}
-      {selectedPlantForModal && (() => {
-        const pm = translateHerb(selectedPlantForModal);
-        return (
-          <div id="quick-plant-modal" className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-xl w-full p-6 space-y-5 border text-stone-900 border-stone-200">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[9px] uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded font-bold">{pm.category}</span>
-                    {language !== 'ki' && (
-                      <span className="text-[9px] uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-bold">{pm.kikuyuName}</span>
-                    )}
-                  </div>
-                  <h3 className="text-xl font-extrabold text-stone-950 mt-1.5 uppercase leading-none">
-                    {language === 'ki' ? pm.kikuyuName : pm.commonName}
-                  </h3>
-                  {language !== 'ki' && (
-                    <p className="text-xs text-stone-500 font-semibold mt-1">
-                      (Kikuyu: {pm.kikuyuName})
-                    </p>
-                  )}
-                  {language === 'ki' && (
-                    <p className="text-xs text-stone-500 font-semibold mt-1">
-                      (English: {pm.commonName})
-                    </p>
-                  )}
-                </div>
-                <button 
-                  onClick={() => setSelectedPlantForModal(null)}
-                  className="p-1.5 bg-stone-100 hover:bg-stone-200 border rounded-full text-stone-500"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="text-xs text-stone-600 font-semibold space-y-3">
-                <p>Scientific taxonomy: <strong className="italic text-emerald-950">{pm.scientificName}</strong></p>
-                <p className="font-normal">{pm.description}</p>
-                
-                <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1">
-                  <span className="text-[10px] font-bold text-emerald-850 uppercase">Registered uses:</span>
-                  <ul className="list-disc pl-4 space-y-1">
-                    {pm.medicinalUses.map((use: string, idx: number) => (
-                      <li key={idx}>{use}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="p-3.5 bg-emerald-50/60 border border-emerald-100/50 rounded-xl">
-                  <strong className="text-[10px] uppercase block text-emerald-850 mb-1">Traditional Decoction:</strong>
-                  <p className="leading-relaxed font-semibold text-stone-850">{pm.preparation}</p>
-                </div>
-
-                <div className="p-3.5 bg-red-50 border border-red-150 rounded-xl">
-                  <strong className="text-[10px] uppercase block text-red-800 mb-1">Safety Warnings:</strong>
-                  <p className="leading-relaxed font-semibold text-red-950">{pm.precautions}</p>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t text-right flex justify-between items-center">
-                <p className="text-[8px] uppercase tracking-wider text-stone-400">CC CC BY licenced</p>
-                <button 
-                  onClick={() => {
-                    setSelectedPlantForModal(null);
-                    navigateTo('plants');
-                  }}
-                  className="py-1.5 px-4 bg-emerald-950 text-white rounded-lg text-xs font-bold hover:bg-emerald-800"
-                >
-                  Go to Catalog
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Comprehensive Plant Profile Detail Modal for featured cards */}
+      {selectedPlantForModal && (
+        <PlantProfileModal
+          plant={selectedPlantForModal}
+          onClose={() => setSelectedPlantForModal(null)}
+          onOpenIdentifier={() => {
+            setSelectedPlantForModal(null);
+            navigateTo('identify');
+          }}
+        />
+      )}
 
     </div>
   );

@@ -1,17 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { Search, Sprout, ShieldAlert, BookOpen, Coffee, FileSpreadsheet, X, HelpCircle, HeartPulse } from "lucide-react";
+import { 
+  Search, Sprout, ShieldAlert, BookOpen, Coffee, FileSpreadsheet, 
+  X, HelpCircle, HeartPulse, Camera, Sparkles, ArrowRight, Layers, Eye
+} from "lucide-react";
 import { Herb } from "../types";
 import { fetchPlants } from "../utils/api";
 import { useLanguage } from "../utils/LanguageContext";
 import { getPlantImage } from "../utils/herbImages";
+import PlantProfileModal from "./PlantProfileModal";
+import PlantIdentifier from "./PlantIdentifier";
 
-export default function PlantsCatalog() {
+interface PlantsCatalogProps {
+  initialMode?: 'catalog' | 'identify';
+  onIdentifyComplete?: (herbId: string) => void;
+}
+
+export default function PlantsCatalog({ initialMode = 'catalog' }: PlantsCatalogProps) {
   const { t, translateHerb, language } = useLanguage();
   const [plants, setPlants] = useState<Herb[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedPlant, setSelectedPlant] = useState<Herb | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // View mode: catalog vs photo identification
+  const [activeView, setActiveView] = useState<'catalog' | 'identify'>(initialMode);
 
   useEffect(() => {
     async function load() {
@@ -19,7 +32,7 @@ export default function PlantsCatalog() {
         const data = await fetchPlants();
         setPlants(data);
       } catch (e) {
-        console.error(e);
+        console.error("Failed to load plants catalog:", e);
       } finally {
         setLoading(false);
       }
@@ -44,148 +57,41 @@ export default function PlantsCatalog() {
 
   const getLabelText = (key: string) => {
     const dicts: Record<string, Record<string, string>> = {
-      "showing": {
-        en: "Showing",
-        sw: "Inaonyesha",
-        ki: "Iraonania",
-        fr: "Affichage de"
-      },
-      "of": {
-        en: "of",
-        sw: "kati ya",
-        ki: "gatagatĩ ka",
-        fr: "sur"
-      },
-      "mapped": {
-        en: "Traditional Species mapped in total",
-        sw: "Spishi za Kiasili zilizoramiwa kwa jumla",
-        ki: "Mũthemba wa mĩthĩga ĩrĩa yandĩkĩtwo yothe",
-        fr: "Espèces Traditionnelles cartographiées au total"
-      },
-      "loading": {
-        en: "Loading traditional herb indexes...",
-        sw: "Inapakia faharisi ya mitishamba ya kiasili...",
-        ki: "Iragondia mĩthemba ya mĩthĩga...",
-        fr: "Chargement des index des plantes traditionnelles..."
-      },
-      "noResultsTitle": {
-        en: "No exact matches found",
-        sw: "Hakuna mechi halisi zilizopatikana",
-        ki: "Gũtirĩ mĩthĩga mĩandĩke ĩgũanĩte",
-        fr: "Aucune correspondance exacte trouvée"
-      },
-      "noResultsDesc": {
-        en: "There are currently no plants matching this term under this tab. Check spelling, try Gĩkũyũ letters, or ask the AI Chatbot for options.",
-        sw: "Hakuna mimea inayolingana na neno hili chini ya kichupo hiki. Angalia tahajia, jaribu herufi za Kikuyu, au uulize Chatbot ya AI.",
-        ki: "Gũtirĩ mĩthĩga ĩhana ũguo thĩnĩ wa gĩcigo gĩkĩ. Cũthĩrĩria wandĩki, na ũũrie DawaBot igũrũ rĩa ũgũiki ũcio.",
-        fr: "Il n'y a actuellement aucune plante correspondant à ce terme. Vérifiez l'orthographe ou demandez au Chatbot IA."
-      },
-      "botanicalOverview": {
-        en: "Botanical Overview",
-        sw: "Muhtasari wa Kibotania",
-        ki: "Ũrĩa mũthĩga ũhanĩte",
-        fr: "Aperçu Botanique"
-      },
-      "healingRemedies": {
-        en: "Registered Healing Remedies",
-        sw: "Tiba za Uponyaji Zilizosajiliwa",
-        ki: "Mĩrimu ĩrĩa ĩhonagio nĩ mũthĩga",
-        fr: "Remèdes de Guérison Répertoriés"
-      },
-      "partUsed": {
-        en: "Part Utilized",
-        sw: "Sehemu Inayotumika",
-        ki: "Gĩcĩgo kĩrĩa kĩhũthagĩrũo",
-        fr: "Partie Utilisée"
-      },
-      "commonTreats": {
-        en: "Commonly treats:",
-        sw: "Hutibu hasa:",
-        ki: "Ũhonagia nĩ:",
-        fr: "Soigne couramment :"
-      },
-      "explorePreparation": {
-        en: "Explore Traditional Preparation",
-        sw: "Chunguza Maandalizi ya Kiasili",
-        ki: "Cũthĩrĩria ũrĩa ũrugagwo",
-        fr: "Explorer la Préparation Traditionnelle"
-      },
-      "traditionalPrep": {
-        en: "Traditional Preparation & Recipe Brew",
-        sw: "Maandalizi ya Kiasili & Mapishi ya Dawa",
-        ki: "Ũrĩa ũnyuagwo na ũrĩa ũrugagwo wega",
-        fr: "Préparation Traditionnelle & Recette"
-      },
-      "culturalContext": {
-        en: "Ethnobotanical Context & Customs",
-        sw: "Muktadha wa Kiasili & Mila na Desturi",
-        ki: "Ũũgĩ wa tene na mĩtugo ya mĩthĩga",
-        fr: "Contexte Ethnobotanique & Coutumes"
-      },
-      "safetyWarningTitle": {
-        en: "Critical Safety & Toxicity warning",
-        sw: "Onyo Muhimu la Usalama & Sumu",
-        ki: "Kũrũũithania igũrũ rĩa ũgĩtĩri na rũlũ",
-        fr: "Avertissement de Sécurité & Toxicité Critique"
-      },
-      "specimenVerified": {
-        en: "📷 Verified Specimen",
-        sw: "📷 Spishi Iliyothibitishwa",
-        ki: "📷 Mũthĩga mũtitũ",
-        fr: "📷 Spécimen Vérifié"
-      },
-      "specimenApprox": {
-        en: "🎨 Botanical Illustration",
-        sw: "🎨 Mchoro wa Kibotania",
-        ki: "🎨 Mbica ya kũerekeza",
-        fr: "🎨 Illustration Botanique"
-      },
-      "footerSafety": {
-        en: "All therapeutic parameters are catalogued from verified oral and literature reports. Always handle native plants ethically.",
-        sw: "Vipimo vyote vya matibabu vimeorodheshwa kutoka kwa ripoti zilizothibitishwa. Daima shughulikia mimea asilia kwa maadili.",
-        ki: "Ũũgĩ ũcio wothe wandĩkĩtwo nĩ makũgũanĩra na andũ a tene. Teithĩka na mĩthĩga na njĩra ya gĩtĩo.",
-        fr: "Tous les paramètres thérapeutiques proviennent de rapports vérifiés. Manipulez toujours les plantes avec éthique."
-      },
-      "scientificName": {
-        en: "Scientific Name",
-        sw: "Jina la Kisayansi",
-        ki: "Rĩĩtwa rĩa Sayansi",
-        fr: "Nom Scientifique"
-      },
-      "commonEnglishName": {
-        en: "Common English Name",
-        sw: "Jina la Kawaida la Kiingereza",
-        ki: "Rĩĩtwa rĩa Gĩthũngũ",
-        fr: "Nom Anglais Courant"
-      },
-      "symptomTabCategory": {
-        en: "Symptom Tab Category",
-        sw: "Kitengo cha Kichupo",
-        ki: "Mũthemba wa Mĩrimu",
-        fr: "Catégorie de Symptôme"
-      },
-      "verifiedLive": {
-        en: "Verified Live Specimen",
-        sw: "Sampuli Hai Iliyothibitishwa",
-        ki: "Kĩonereria mũgũgũ kĩrũmĩru",
-        fr: "Spécimen Réel Vérifié"
-      },
-      "botanicalApprox": {
-        en: "Botanical Illustration Approximation",
-        sw: "Mchoro wa Makadirio wa Kibotania",
-        ki: "Mbica ya kũerekeza mũgũgũ",
-        fr: "Illustration Botanique Approximative"
-      }
+      "showing": { en: "Showing", sw: "Inaonyesha", ki: "Iraonania", fr: "Affichage de" },
+      "of": { en: "of", sw: "kati ya", ki: "gatagatĩ ka", fr: "sur" },
+      "mapped": { en: "Traditional Species mapped in total", sw: "Spishi za Kiasili zilizoramiwa kwa jumla", ki: "Mũthemba wa mĩthĩga ĩrĩa yandĩkĩtwo yothe", fr: "Espèces Traditionnelles cartographiées au total" },
+      "loading": { en: "Loading traditional herb indexes...", sw: "Inapakia faharisi ya mitishamba ya kiasili...", ki: "Iragondia mĩthemba ya mĩthĩga...", fr: "Chargement des index des plantes traditionnelles..." },
+      "noResultsTitle": { en: "No exact matches found", sw: "Hakuna mechi halisi zilizopatikana", ki: "Gũtirĩ mĩthĩga mĩandĩke ĩgũanĩte", fr: "Aucune correspondance exacte trouvée" },
+      "noResultsDesc": { en: "There are currently no plants matching this term under this tab. Check spelling, try regional or botanical names, or use the Photo Identifier tool.", sw: "Hakuna mimea inayolingana na neno hili. Angalia tahajia au tumia kitambulisho cha picha.", ki: "Gũtirĩ mĩthĩga ĩhana ũguo thĩnĩ wa gĩcigo gĩkĩ.", fr: "Aucune plante correspondant à ce terme." },
+      "commonTreats": { en: "Commonly treats:", sw: "Hutibu hasa:", ki: "Ũhonagia nĩ:", fr: "Soigne couramment :" },
+      "explorePreparation": { en: "View Comprehensive Profile", sw: "Tazama Wasifu Kamili", ki: "Cũthĩrĩria Wega", fr: "Voir Profil Détaillé" },
+      "specimenVerified": { en: "📷 Verified Specimen", sw: "📷 Spishi Iliyothibitishwa", ki: "📷 Mũthĩga mũtitũ", fr: "📷 Spécimen Vérifié" },
+      "specimenApprox": { en: "🎨 Botanical Illustration", sw: "🎨 Mchoro wa Kibotania", ki: "🎨 Mbica ya kũerekeza", fr: "🎨 Illustration Botanique" }
     };
     return dicts[key]?.[language] || dicts[key]?.['en'] || key;
   };
 
+  // Enhanced search across all regional names, scientific names, uses, and habitats
   const filteredPlants = plants.filter((h) => {
-    const query = searchTerm.toLowerCase();
+    const query = searchTerm.toLowerCase().trim();
+    if (!query) {
+      return selectedCategory === "All" || h.category === selectedCategory;
+    }
+
+    const otherNamesCombined = (h.otherLocalNames || []).map(r => `${r.name} ${r.language} ${r.locality}`).join(" ").toLowerCase();
+
     const matchesSearch = 
       h.kikuyuName.toLowerCase().includes(query) ||
       h.commonName.toLowerCase().includes(query) ||
+      (h.englishName && h.englishName.toLowerCase().includes(query)) ||
       h.scientificName.toLowerCase().includes(query) ||
+      (h.acceptedBotanicalName && h.acceptedBotanicalName.toLowerCase().includes(query)) ||
+      (h.swahiliName && h.swahiliName.toLowerCase().includes(query)) ||
+      (h.luoName && h.luoName.toLowerCase().includes(query)) ||
+      (h.kambaName && h.kambaName.toLowerCase().includes(query)) ||
+      otherNamesCombined.includes(query) ||
+      (h.distinguishingCharacteristics && h.distinguishingCharacteristics.toLowerCase().includes(query)) ||
+      (h.habitat && h.habitat.toLowerCase().includes(query)) ||
       h.medicinalUses.some(use => use.toLowerCase().includes(query)) ||
       h.description.toLowerCase().includes(query) ||
       h.preparation.toLowerCase().includes(query);
@@ -195,330 +101,346 @@ export default function PlantsCatalog() {
     return matchesSearch && matchesCategory;
   });
 
+  const handleOpenFromIdentifier = (herbId: string) => {
+    const found = plants.find(p => p.id === herbId);
+    if (found) {
+      setSelectedPlant(found);
+    }
+  };
+
   return (
     <div id="plants-catalog-grid" className="space-y-8 font-sans max-w-7xl mx-auto px-4">
       
-      {/* Search Header Banner Deck */}
-      <div className="bg-gradient-to-br from-emerald-950 via-[#0B1E14] to-emerald-900 rounded-[2.5rem] p-8 md:p-12 text-white shadow-xl relative overflow-hidden border border-emerald-900/40">
-        <div className="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-12 -translate-y-6">
-          <Sprout className="w-96 h-96 animate-leaf-hover text-emerald-300" />
-        </div>
-
-        <div className="max-w-2xl space-y-5 relative z-10 text-left">
-          <span className="inline-flex items-center gap-1.5 text-[10px] md:text-xs font-extrabold uppercase tracking-widest text-[#D4A017] px-3.5 py-1.5 bg-white/5 backdrop-blur-md rounded-full border border-white/10">
-            <Sprout className="w-3.5 h-3.5" />
-            {t("label.category") || "Category"}
-          </span>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none">
-            {t("nav.plants") || "Medicinal Plants"}
-          </h1>
-          <p className="text-xs md:text-sm text-stone-300 leading-relaxed font-medium">
-            {t("plants.title") || "Browse through authenticated, scientifically mapped profiles of traditional Kenyan forest herbs. Learn Kikuyu names, preparation brews, and safety profiles verified with empirical ethnobotany."}
-          </p>
-          
-          {/* Main search input */}
-          <div className="relative flex items-center pt-3">
-            <Search className="absolute left-4 w-5 h-5 text-emerald-300 mr-2 z-10" />
-            <input
-              type="text"
-              id="herb-search-inp"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t("plants.searchPlaceholder") || "Search by name, remedy, or uses..."}
-              className="w-full py-4 pl-12 pr-4 bg-white/5 hover:bg-white/10 focus:bg-white text-white focus:text-emerald-950 rounded-2xl border border-white/15 focus:border-white focus:outline-none transition-all placeholder-stone-400 text-xs md:text-sm shadow-inner font-semibold"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Categories Horizontal Tabs bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-3 scrollbar-none">
-        {categories.map((cat) => (
+      {/* Top Mode Switcher Bar */}
+      <div className="bg-white border border-stone-250 p-2 rounded-2xl shadow-sm flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-1.5 p-1 bg-stone-100 rounded-xl">
           <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-5 py-3 rounded-xl text-xs font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 border cursor-pointer ${
-              selectedCategory === cat
-                ? "bg-emerald-950 text-amber-300 shadow-md border-emerald-950 scale-102 font-black"
-                : "bg-white text-stone-600 hover:text-emerald-950 hover:bg-stone-50 border-stone-250/90"
+            onClick={() => setActiveView('catalog')}
+            className={`py-2 px-4 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeView === 'catalog' 
+                ? 'bg-emerald-950 text-white shadow-sm' 
+                : 'text-stone-600 hover:text-emerald-950'
             }`}
           >
-            {getCategoryLabel(cat)}
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Botanical Directory ({plants.length})</span>
           </button>
-        ))}
+
+          <button
+            onClick={() => setActiveView('identify')}
+            className={`py-2 px-4 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeView === 'identify' 
+                ? 'bg-emerald-950 text-amber-300 shadow-sm font-black' 
+                : 'text-stone-600 hover:text-emerald-950'
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5 text-amber-500" />
+            <span>Photo Identification</span>
+            <span className="text-[9px] bg-amber-400/20 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded uppercase font-mono">
+              AI Vision
+            </span>
+          </button>
+        </div>
+
+        <div className="text-xs text-stone-500 font-semibold px-2">
+          {activeView === 'catalog' ? (
+            <span>Showing verified indigenous flora of East Africa</span>
+          ) : (
+            <span>Capture or upload a plant photo for instant analysis</span>
+          )}
+        </div>
       </div>
 
-      {/* Database Catalog grid */}
-      {loading ? (
-        <div className="py-20 text-center text-sm text-stone-400 font-bold">
-          {getLabelText("loading")}
-        </div>
-      ) : filteredPlants.length === 0 ? (
-        <div id="no-search-results" className="py-16 text-center max-w-md mx-auto bg-white border border-stone-200 rounded-3xl p-8 space-y-4 shadow-sm">
-          <HelpCircle className="w-12 h-12 text-[#D4A017] mx-auto animate-bounce" />
-          <h3 className="text-md font-extrabold text-emerald-950 uppercase">{getLabelText("noResultsTitle")}</h3>
-          <p className="text-xs text-stone-500 leading-relaxed font-normal">
-            {getLabelText("noResultsDesc")}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPlants.map((rawPlant) => {
-            const plant = translateHerb(rawPlant);
-            return (
-              <div 
-                key={plant.id}
-                id={`plant-card-${plant.id}`}
-                className="bg-white border border-stone-200/95 hover:border-emerald-850/30 rounded-[2.2rem] overflow-hidden shadow-sm hover:shadow-md transition-all duration-350 flex flex-col justify-between group cursor-pointer relative"
-              >
-                {/* Botanical Image with Premium Blend Overlays */}
-                <div className="h-48 relative overflow-hidden">
-                  <img 
-                    src={getPlantImage(rawPlant)}
-                    alt={plant.kikuyuName}
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    referrerPolicy="no-referrer"
-                  />
-                  {/* Subtle rich gradient overlay mask to guarantee readability and high contrast */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-emerald-950/45 to-stone-900/10 z-1" />
-                  
-                  {/* Floating header badges */}
-                  <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-                    {/* Category Pill Tag */}
-                    <span className="text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 bg-emerald-950/90 text-emerald-100 border border-emerald-800/40 rounded-full shadow-sm">
-                      {plant.category}
-                    </span>
+      {/* VIEW 1: PHOTO IDENTIFIER MODE */}
+      {activeView === 'identify' && (
+        <PlantIdentifier 
+          onOpenPlantProfile={handleOpenFromIdentifier}
+          onClose={() => setActiveView('catalog')}
+        />
+      )}
 
-                    {/* Safety Indicator Badge */}
-                    {plant.severityRating && (
-                      <span className={`text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full border shadow-sm ${
-                        plant.severityRating === 'Safe' 
-                          ? 'bg-emerald-900/90 text-emerald-100 border-emerald-700/50' 
-                          : plant.severityRating === 'Caution' 
-                            ? 'bg-amber-900/90 text-amber-100 border-amber-700/50' 
-                            : 'bg-red-900/90 text-red-100 border-red-700/50'
-                      }`}>
-                        {plant.severityRating}
-                      </span>
-                    )}
-                  </div>
+      {/* VIEW 2: BOTANICAL CATALOG DIRECTORY MODE */}
+      {activeView === 'catalog' && (
+        <div className="space-y-8">
+          
+          {/* Search Header Banner Deck */}
+          <div className="bg-gradient-to-br from-emerald-950 via-[#0B1E14] to-emerald-900 rounded-[2.5rem] p-8 md:p-12 text-white shadow-xl relative overflow-hidden border border-emerald-900/40">
+            <div className="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-12 -translate-y-6">
+              <Sprout className="w-96 h-96 animate-leaf-hover text-emerald-300" />
+            </div>
 
-                  {/* Subtle label explaining verified vs approximation source */}
-                  <div className="absolute top-12 left-4 z-10">
-                    <span className="text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 bg-black/60 backdrop-blur-sm text-stone-200 rounded border border-white/5">
-                      {rawPlant.imageUrl ? getLabelText("specimenVerified") : getLabelText("specimenApprox")}
-                    </span>
-                  </div>
+            <div className="max-w-3xl space-y-5 relative z-10 text-left">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 text-[10px] md:text-xs font-extrabold uppercase tracking-widest text-[#D4A017] px-3.5 py-1.5 bg-white/5 backdrop-blur-md rounded-full border border-white/10">
+                  <Sprout className="w-3.5 h-3.5" />
+                  {t("label.category") || "Botanical Directory"}
+                </span>
 
-                  {/* Overlaid Title Copy */}
-                  <div className="absolute bottom-4 left-4 right-4 z-10 text-left">
-                    <p className="text-[10px] font-mono text-amber-400 font-extrabold uppercase tracking-wider drop-shadow-sm">
-                      {language === 'ki' ? (plant.commonName || 'Indigenous Flora') : `Kikuyu: ${plant.kikuyuName}`}
-                    </p>
-                    <h3 className="text-xl font-black tracking-tight font-sans text-white uppercase drop-shadow">
-                      {language === 'ki' ? plant.kikuyuName : (plant.commonName || 'Indigenous Flora')}
-                    </h3>
-                  </div>
-                </div>
-
-                {/* Plant Meta Details */}
-                <div className="p-6 flex-1 flex flex-col justify-between space-y-4 text-left">
-                  
-                  <div className="space-y-3">
-                    <div className="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-50/50 border border-emerald-100/50 py-1.5 px-3 rounded-lg flex items-center gap-1.5 leading-none">
-                      <HeartPulse className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Scientific: <strong className="italic">{plant.scientificName}</strong></span>
-                    </div>
-
-                    <p className="text-xs text-stone-500 leading-relaxed font-normal line-clamp-3">
-                      {plant.description}
-                    </p>
-
-                    <div className="space-y-1">
-                      <h4 className="text-[10px] font-bold uppercase text-stone-400 tracking-wider">
-                        {getLabelText("commonTreats")}
-                      </h4>
-                      <ul className="space-y-1 pl-1">
-                        {plant.medicinalUses.slice(0, 3).map((use, i) => (
-                          <li key={i} className="text-stone-800 text-xs font-semibold flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full inline-block shrink-0" />
-                            <span className="truncate">{use}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  <button
-                    id={`learn-more-${plant.id}`}
-                    onClick={() => setSelectedPlant(rawPlant)}
-                    className="w-full py-2 px-4 bg-stone-50 hover:bg-emerald-800 hover:text-white border border-stone-250 hover:border-emerald-800 text-emerald-950 rounded-xl font-bold text-xs transition duration-200 flex items-center justify-center gap-2"
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                    {getLabelText("explorePreparation")}
-                  </button>
-
-                </div>
-
+                <button
+                  onClick={() => setActiveView('identify')}
+                  className="inline-flex items-center gap-1.5 text-[10px] md:text-xs font-bold uppercase tracking-wider text-amber-200 px-3.5 py-1.5 bg-amber-950/70 hover:bg-amber-900 border border-amber-500/40 rounded-full transition cursor-pointer"
+                >
+                  <Camera className="w-3.5 h-3.5 text-amber-400" />
+                  Have a plant photo? Identify here
+                </button>
               </div>
-            );
-          })}
+
+              <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none text-white">
+                {t("nav.plants") || "Medicinal Plant Profiles"}
+              </h1>
+
+              <p className="text-xs md:text-sm text-stone-300 leading-relaxed font-medium">
+                {t("plants.title") || "Browse through authenticated, scientifically mapped profiles of traditional Kenyan forest herbs. Learn Kikuyu names, preparation brews, and safety profiles verified with empirical ethnobotany."}
+              </p>
+              
+              {/* Main search input */}
+              <div className="relative flex items-center pt-2">
+                <Search className="absolute left-4 w-5 h-5 text-emerald-300 mr-2 z-10" />
+                <input
+                  type="text"
+                  id="herb-search-inp"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by scientific name, Kikuyu, Swahili, Luo, Kamba, ailment, or habitat..."
+                  className="w-full py-4 pl-12 pr-4 bg-white/10 hover:bg-white/15 focus:bg-white text-white focus:text-emerald-950 rounded-2xl border border-white/20 focus:border-white focus:outline-none transition-all placeholder-stone-300 text-xs md:text-sm shadow-inner font-semibold"
+                />
+              </div>
+
+              {searchTerm && (
+                <div className="flex items-center justify-between text-xs text-stone-300 pt-1">
+                  <span>Found {filteredPlants.length} species matching "{searchTerm}"</span>
+                  <button 
+                    onClick={() => setSearchTerm("")}
+                    className="underline text-amber-300 hover:text-white cursor-pointer"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Photo ID Promotion Ribbon */}
+          <div className="bg-gradient-to-r from-emerald-50 via-amber-50 to-emerald-50 border border-emerald-200/80 p-4 sm:p-5 rounded-2xl shadow-sm flex items-center justify-between flex-wrap gap-4 text-left">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-950 text-amber-300 flex items-center justify-center shrink-0 shadow-sm">
+                <Camera className="w-6 h-6" />
+              </div>
+              <div className="space-y-0.5">
+                <h3 className="text-xs sm:text-sm font-extrabold text-emerald-950">
+                  Uncertain about a wild specimen in your garden or field?
+                </h3>
+                <p className="text-[11px] sm:text-xs text-stone-600 font-medium">
+                  Use our photo identification tool to compare visual leaf traits against verified East African records.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setActiveView('identify')}
+              className="py-2.5 px-5 bg-emerald-950 hover:bg-emerald-850 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow hover:scale-[1.02]"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Launch Photo Identifier</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Categories Horizontal Tabs bar */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-5 py-3 rounded-xl text-xs font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 border cursor-pointer ${
+                  selectedCategory === cat
+                    ? "bg-emerald-950 text-amber-300 shadow-md border-emerald-950 scale-102 font-black"
+                    : "bg-white text-stone-600 hover:text-emerald-950 hover:bg-stone-50 border-stone-250/90"
+                }`}
+              >
+                {getCategoryLabel(cat)}
+              </button>
+            ))}
+          </div>
+
+          {/* Database Catalog grid */}
+          {loading ? (
+            <div className="py-20 text-center text-sm text-stone-400 font-bold">
+              {getLabelText("loading")}
+            </div>
+          ) : filteredPlants.length === 0 ? (
+            <div id="no-search-results" className="py-16 text-center max-w-md mx-auto bg-white border border-stone-200 rounded-3xl p-8 space-y-4 shadow-sm">
+              <HelpCircle className="w-12 h-12 text-[#D4A017] mx-auto animate-bounce" />
+              <h3 className="text-md font-extrabold text-emerald-950 uppercase">{getLabelText("noResultsTitle")}</h3>
+              <p className="text-xs text-stone-500 leading-relaxed font-normal">
+                {getLabelText("noResultsDesc")}
+              </p>
+              <button
+                onClick={() => setActiveView('identify')}
+                className="py-2.5 px-5 bg-emerald-950 text-white rounded-xl text-xs font-bold transition inline-flex items-center gap-2 cursor-pointer shadow"
+              >
+                <Camera className="w-4 h-4 text-amber-300" />
+                Try Photo Identification
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredPlants.map((rawPlant) => {
+                const plant = translateHerb(rawPlant);
+                return (
+                  <div 
+                    key={plant.id}
+                    id={`plant-card-${plant.id}`}
+                    onClick={() => setSelectedPlant(rawPlant)}
+                    className="bg-white border border-stone-200/95 hover:border-emerald-850/40 rounded-[2.2rem] overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group cursor-pointer relative"
+                  >
+                    {/* Botanical Image with Overlays */}
+                    <div className="h-52 relative overflow-hidden">
+                      <img 
+                        src={getPlantImage(rawPlant)}
+                        alt={plant.kikuyuName}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        referrerPolicy="no-referrer"
+                      />
+                      
+                      {/* Gradient Mask */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-stone-950/85 via-emerald-950/35 to-transparent z-1" />
+
+                      {/* Header floating tags */}
+                      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 gap-2">
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 bg-emerald-950/90 text-emerald-100 border border-emerald-800/40 rounded-full shadow-sm">
+                          {plant.category}
+                        </span>
+
+                        {plant.severityRating && (
+                          <span className={`text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full border shadow-sm ${
+                            plant.severityRating === 'Safe'
+                              ? 'bg-emerald-900/90 text-emerald-100 border-emerald-700/50'
+                              : plant.severityRating === 'Caution'
+                                ? 'bg-amber-900/90 text-amber-100 border-amber-700/50'
+                                : 'bg-red-900/90 text-red-100 border-red-700/50'
+                          }`}>
+                            {plant.severityRating}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Identification / Specimen verification badge */}
+                      <div className="absolute top-12 left-4 z-10">
+                        <span className="text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 bg-black/65 backdrop-blur-sm text-stone-200 rounded border border-white/10">
+                          {rawPlant.imageUrl ? getLabelText("specimenVerified") : getLabelText("specimenApprox")}
+                        </span>
+                      </div>
+
+                      {/* Conservation badge if available */}
+                      {rawPlant.conservationStatus && rawPlant.conservationStatus !== 'Not Evaluated' && (
+                        <div className="absolute top-12 right-4 z-10">
+                          <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded shadow-sm ${
+                            rawPlant.conservationStatus === 'Vulnerable' 
+                              ? 'bg-amber-950/90 text-amber-200 border border-amber-600/50' 
+                              : 'bg-black/65 text-emerald-200 border border-white/10'
+                          }`}>
+                            IUCN: {rawPlant.conservationStatus}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Overlaid Title Copy */}
+                      <div className="absolute bottom-4 left-4 right-4 z-10 text-left">
+                        <p className="text-[10px] font-mono text-amber-300 font-extrabold uppercase tracking-wider drop-shadow-sm">
+                          Kikuyu: {plant.kikuyuName}
+                        </p>
+                        <h3 className="text-xl font-black tracking-tight font-sans text-white uppercase drop-shadow leading-tight">
+                          {plant.commonName || plant.kikuyuName}
+                        </h3>
+                      </div>
+                    </div>
+
+                    {/* Plant Meta Details */}
+                    <div className="p-6 flex-1 flex flex-col justify-between space-y-4 text-left">
+                      
+                      <div className="space-y-3">
+                        <div className="text-[11px] font-mono text-emerald-900 font-bold bg-emerald-50/70 border border-emerald-100/70 py-1.5 px-3 rounded-lg flex items-center justify-between leading-none">
+                          <span className="italic truncate">{plant.scientificName}</span>
+                          {rawPlant.botanicalFamily && (
+                            <span className="text-[9px] uppercase font-mono text-stone-500 font-bold shrink-0 ml-1">
+                              {rawPlant.botanicalFamily}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Multilingual names pill row */}
+                        {(rawPlant.swahiliName || rawPlant.luoName || rawPlant.kambaName) && (
+                          <div className="flex flex-wrap gap-1 text-[10px] text-stone-600 font-medium">
+                            {rawPlant.swahiliName && (
+                              <span className="bg-stone-100 px-2 py-0.5 rounded border border-stone-200 truncate">
+                                Swahili: {rawPlant.swahiliName}
+                              </span>
+                            )}
+                            {rawPlant.luoName && (
+                              <span className="bg-stone-100 px-2 py-0.5 rounded border border-stone-200 truncate">
+                                Luo: {rawPlant.luoName}
+                              </span>
+                            )}
+                            {rawPlant.kambaName && (
+                              <span className="bg-stone-100 px-2 py-0.5 rounded border border-stone-200 truncate">
+                                Kamba: {rawPlant.kambaName}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        <p className="text-xs text-stone-600 leading-relaxed font-normal line-clamp-3">
+                          {plant.description}
+                        </p>
+
+                        <div className="space-y-1">
+                          <h4 className="text-[10px] font-bold uppercase text-stone-400 tracking-wider">
+                            {getLabelText("commonTreats")}
+                          </h4>
+                          <ul className="space-y-1 pl-1">
+                            {plant.medicinalUses.slice(0, 3).map((use, i) => (
+                              <li key={i} className="text-stone-800 text-xs font-semibold flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-emerald-700 rounded-full inline-block shrink-0" />
+                                <span className="truncate">{use}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        id={`learn-more-${plant.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPlant(rawPlant);
+                        }}
+                        className="w-full py-2.5 px-4 bg-stone-50 hover:bg-emerald-850 hover:text-white border border-stone-250 hover:border-emerald-850 text-emerald-950 rounded-xl font-bold text-xs transition duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        {getLabelText("explorePreparation")}
+                      </button>
+
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Side drawer to display botanical preparation and cultural details */}
-      {selectedPlant && (() => {
-        const p = translateHerb(selectedPlant);
-        return (
-          <div id="plant-details-drawer" className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end transition-opacity font-sans">
-            <div 
-              className="w-full max-w-xl h-full bg-white text-stone-900 overflow-y-auto shadow-2xl p-6 md:p-8 space-y-6 flex flex-col justify-between"
-              role="dialog"
-              aria-modal="true"
-            >
-              <div className="space-y-6 text-left">
-                {/* Header Action tab bar */}
-                <div className="flex items-center justify-between border-b border-stone-150 pb-4">
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] bg-emerald-50 text-emerald-800 font-extrabold uppercase px-2 py-1 rounded">
-                        {t("plants.detailsTitle") || "Traditional Mapped Profile"}
-                      </span>
-                      {language !== 'ki' && (
-                        <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200/50 font-extrabold uppercase px-2 py-1 rounded">
-                          {p.kikuyuName}
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="text-2xl font-extrabold text-stone-900 mt-2 tracking-tight uppercase flex items-center gap-2">
-                      {language === 'ki' ? p.kikuyuName : p.commonName}
-                    </h2>
-                    {language !== 'ki' && (
-                      <p className="text-xs text-stone-500 font-semibold mt-1">
-                        ({t("label.kikuyuLanguage") || "Kikuyu"}: {p.kikuyuName})
-                      </p>
-                    )}
-                    {language === 'ki' && (
-                      <p className="text-xs text-stone-500 font-semibold mt-1">
-                        ({t("label.englishLanguage") || "English"}: {p.commonName})
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    id="close-drawer-btn"
-                    onClick={() => setSelectedPlant(null)}
-                    className="p-2 hover:bg-stone-50 bg-stone-100 rounded-full text-stone-500 hover:text-stone-800 border cursor-pointer"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Specimen Image */}
-                <div id="drawer-specimen-banner" className="relative h-48 w-full rounded-2xl overflow-hidden border border-stone-200/50 shadow-inner">
-                  <img 
-                    src={getPlantImage(selectedPlant)} 
-                    alt={p.kikuyuName} 
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950/70 via-transparent to-transparent" />
-                  <div className="absolute bottom-3.5 left-3.5 bg-black/50 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 shadow flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-                    <span className="text-[10px] font-extrabold text-stone-100 uppercase tracking-wider">
-                      {selectedPlant.imageUrl ? getLabelText("verifiedLive") : getLabelText("botanicalApprox")}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Floating metadata tag info summary */}
-                <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
-                  <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-400">{getLabelText("scientificName")}</span>
-                    <p className="font-mono text-emerald-850 italic font-bold">{p.scientificName}</p>
-                  </div>
-                  <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-400">{getLabelText("commonEnglishName")}</span>
-                    <p className="text-stone-850 font-bold">{p.commonName || 'Indigenous Shrub'}</p>
-                  </div>
-                  <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-400">{getLabelText("partUsed")}</span>
-                    <p className="text-stone-850 font-bold">{p.partUsed}</p>
-                  </div>
-                  <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-400">{getLabelText("symptomTabCategory")}</span>
-                    <p className="text-stone-850 font-bold">{getCategoryLabel(p.category)}</p>
-                  </div>
-                </div>
-
-                {/* Description block */}
-                <div className="space-y-2">
-                  <h3 className="text-xs uppercase font-extrabold tracking-wider text-emerald-850">
-                    {getLabelText("botanicalOverview")}
-                  </h3>
-                  <p className="text-sm text-stone-600 leading-relaxed font-normal">{p.description}</p>
-                </div>
-
-                {/* Medicinal uses list */}
-                <div className="space-y-2">
-                  <h3 className="text-xs uppercase font-extrabold tracking-wider text-emerald-850">
-                    {getLabelText("healingRemedies")}
-                  </h3>
-                  <div className="space-y-2">
-                    {p.medicinalUses.map((use, index) => (
-                      <div key={index} className="flex items-start gap-3 bg-stone-100/50 p-3 rounded-xl border border-stone-200/40 text-xs">
-                        <span className="w-5 h-5 bg-emerald-600 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{index+1}</span>
-                        <p className="font-semibold text-stone-800">{use}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Preparation instructions */}
-                <div className="p-4 bg-emerald-50/70 border border-emerald-100/70 rounded-2xl space-y-2.5">
-                  <h3 className="text-xs uppercase font-extrabold tracking-wider text-emerald-850 flex items-center gap-1.5">
-                    <Coffee className="w-4 h-4 text-emerald-700" />
-                    {getLabelText("traditionalPrep")}
-                  </h3>
-                  <p className="text-xs text-stone-800 leading-relaxed font-semibold">
-                    {p.preparation}
-                  </p>
-                </div>
-
-                {/* Cultural Context */}
-                {p.traditionalContext && (
-                  <div className="space-y-2">
-                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-emerald-850">
-                      {getLabelText("culturalContext")}
-                    </h3>
-                    <p className="text-xs text-stone-500 leading-relaxed font-normal italic">
-                      "{p.traditionalContext}"
-                    </p>
-                  </div>
-                )}
-
-                {/* Safety Precautions warnings block */}
-                <div className="p-4 bg-red-50 border border-red-150 rounded-2xl flex items-start gap-3">
-                  <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-bold text-red-800 tracking-wide uppercase">
-                      {getLabelText("safetyWarningTitle")}
-                    </h4>
-                    <p className="text-xs text-red-950 leading-relaxed font-semibold">
-                      {p.precautions}
-                    </p>
-                  </div>
-                </div>
-
-              </div>
-
-              <p className="text-[10px] text-center opacity-50 block pt-4">
-                {getLabelText("footerSafety")}
-              </p>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Comprehensive Plant Profile Detail Modal */}
+      {selectedPlant && (
+        <PlantProfileModal
+          plant={selectedPlant}
+          onClose={() => setSelectedPlant(null)}
+          onOpenIdentifier={() => setActiveView('identify')}
+        />
+      )}
 
     </div>
   );

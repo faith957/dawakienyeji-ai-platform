@@ -2,16 +2,17 @@ import React, { useState, useEffect, useRef } from "react";
 import { 
   Send, Bot, CornerDownLeft, Volume2, Mic, MicOff, Sun, Moon, 
   Trash2, Copy, Check, ThumbsUp, ThumbsDown, ArrowLeft, Leaf, AlertCircle, HelpCircle, X,
-  MoreVertical, Pin, LogOut, Lock, Eye, EyeOff, Plus, Share2
+  MoreVertical, Pin, LogOut, Lock, Eye, EyeOff, Plus, Share2, Camera, BookOpen, ShieldAlert, ImageIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Markdown from "react-markdown";
-import { ChatMessage, ChatSession } from "../types";
-import { postChat, sendChatFeedback, signupUser, loginAdmin } from "../utils/api";
+import { ChatMessage, ChatSession, Herb, PlantIdentificationResponse } from "../types";
+import { postChat, sendChatFeedback, signupUser, loginAdmin, identifyPlant } from "../utils/api";
 import { useLanguage } from "../utils/LanguageContext";
 import { INITIAL_HERBS } from "../data/herbalDatabase";
 import { auth, googleProvider } from "../utils/firebase";
 import { signInWithPopup } from "firebase/auth";
+import PlantProfileModal from "./PlantProfileModal";
 
 interface ChatbotPageProps {
   onBackToHome: () => void;
@@ -120,6 +121,43 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
+
+  // DawaBot Plant Photo Identification States
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [pendingImageName, setPendingImageName] = useState<string>("");
+  const [pendingMimeType, setPendingMimeType] = useState<string>("image/jpeg");
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [selectedHerbForModal, setSelectedHerbForModal] = useState<Herb | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImageError(null);
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (!validTypes.includes(file.type.toLowerCase())) {
+      setImageError("Please upload a standard photograph in JPG, PNG, or WebP format.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setImageError("The selected image is larger than 10MB. Please choose a smaller photo.");
+      return;
+    }
+
+    setPendingImageName(file.name);
+    setPendingMimeType(file.type || "image/jpeg");
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      const rawDataUrl = loadEvent.target?.result as string;
+      setPendingImage(rawDataUrl);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   const [currentUser, setCurrentUser] = useState<{ email: string; name: string } | null>(() => {
     try {
       const saved = localStorage.getItem("dawa_logged_in_user");
@@ -582,13 +620,25 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
 
   const handleSendMessageWithRefs = async (textToSend: string) => {
     const activeId = currentSessionIdRef.current;
-    if (!textToSend.trim() || !activeId) return;
+    if ((!textToSend.trim() && !pendingImage) || !activeId) return;
+
+    const currentImage = pendingImage;
+    const currentMime = pendingMimeType;
+    const currentImageName = pendingImageName;
+
+    // Reset pending image inputs
+    setPendingImage(null);
+    setPendingImageName("");
+    setImageError(null);
+
+    const userText = textToSend.trim() || (currentImage ? "Please identify this plant photograph." : "");
 
     const userMsg: ChatMessage = {
       id: `msg-user-${Date.now()}`,
       role: 'user',
-      text: textToSend,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      text: userText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      imageUrl: currentImage || undefined
     };
 
     // Update active session with user message
@@ -604,31 +654,90 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
     setVoiceError(null);
 
     try {
-      const currentSessionSnapshot = sessionsRef.current.find(s => s.id === activeId);
-      const historyMsg = currentSessionSnapshot ? currentSessionSnapshot.messages : [];
+      if (currentImage) {
+        // Run photo-based plant identification through the shared backend endpoint
+        const idResult = await identifyPlant(currentImage, currentMime);
 
-      const result = await postChat(historyMsg, textToSend, language);
+        let responseMarkdown = "";
+        let matchedHerbId: string | undefined = undefined;
 
-      const botMsg: ChatMessage = {
-        id: result.logId ? `msg-bot-${result.logId}-${Date.now()}` : `msg-bot-${Date.now()}`,
-        role: 'model',
-        text: result.reply,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        citations: result.citations,
-        source: result.source
-      };
+        if (idResult.isInconclusive || idResult.possibleMatches.length === 0) {
+          responseMarkdown = `### 🔍 Plant Identification Assessment\n\n${idResult.generalObservations}\n\n**Observation:** ${idResult.inconclusiveReason || "Please capture a closer photograph showing leaf margins, venation, bark texture, or flowers."}\n\n> ⚠️ **Important Medical & Safety Notice:** AI plant identification is strictly provisional. Visually similar plants can have drastically different chemical compositions and toxicities. Never handle or medicinally use wild plants based solely on an image match.`;
+        } else {
+          const topMatch = idResult.possibleMatches[0];
+          matchedHerbId = topMatch.matchingHerbId;
 
-      setSessions(prev => prev.map(s => {
-        if (s.id === activeId) {
-          const title = s.messages.length === 1 ? (textToSend.slice(0, 24) + "...") : s.title;
-          return {
-            ...s,
-            title,
-            messages: [...s.messages, botMsg]
-          };
+          responseMarkdown = `### 🌿 Botanical Identification Results\n\n${idResult.generalObservations}\n\n`;
+          
+          idResult.possibleMatches.forEach((m, idx) => {
+            responseMarkdown += `#### Candidate ${idx + 1}: *${m.scientificName}* (${m.commonEnglishName || 'Indigenous Flora'})\n`;
+            responseMarkdown += `- **Plausibility Level:** ${m.confidenceLevel}\n`;
+            if (m.kikuyuName) responseMarkdown += `- **Gĩkũyũ Name:** **${m.kikuyuName}**\n`;
+            if (m.swahiliName) responseMarkdown += `- **Kiswahili Name:** ${m.swahiliName}\n`;
+            if (m.luoName) responseMarkdown += `- **Dholuo Name:** ${m.luoName}\n`;
+            if (m.kambaName) responseMarkdown += `- **Kikamba Name:** ${m.kambaName}\n`;
+            if (m.otherLocalNames) responseMarkdown += `- **Other Local Names:** ${m.otherLocalNames}\n`;
+            if (m.botanicalFamily) responseMarkdown += `- **Botanical Family:** ${m.botanicalFamily}\n`;
+            responseMarkdown += `- **Distinguishing Characteristics:** ${m.distinguishingCharacteristics}\n`;
+            if (m.cautionNotes) responseMarkdown += `- **Toxicology Caution:** ${m.cautionNotes}\n`;
+            if (m.inDirectory && m.matchingHerbId) {
+              responseMarkdown += `- **Directory Match:** ✅ Documented in Dawakienyeji local heritage records.\n\n`;
+            } else {
+              responseMarkdown += `- **Directory Match:** ℹ️ Not currently cataloged in the local directory. (We strictly avoid fabricating unverified medicinal claims).\n\n`;
+            }
+          });
+
+          responseMarkdown += `\n> ⚠️ **Mandatory Safety Warning:** AI visual identification is provisional and must not be used alone to determine whether a plant is safe for medicinal use or human handling. Visually similar species can possess differing toxicities.`;
         }
-        return s;
-      }));
+
+        const botMsg: ChatMessage = {
+          id: `msg-bot-identify-${Date.now()}`,
+          role: 'model',
+          text: responseMarkdown,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          plantIdentification: idResult,
+          matchedHerbId: matchedHerbId
+        };
+
+        setSessions(prev => prev.map(s => {
+          if (s.id === activeId) {
+            const title = s.messages.length <= 1 ? "Plant Photo ID" : s.title;
+            return {
+              ...s,
+              title,
+              messages: [...s.messages, botMsg]
+            };
+          }
+          return s;
+        }));
+
+      } else {
+        const currentSessionSnapshot = sessionsRef.current.find(s => s.id === activeId);
+        const historyMsg = currentSessionSnapshot ? currentSessionSnapshot.messages : [];
+
+        const result = await postChat(historyMsg, userText, language);
+
+        const botMsg: ChatMessage = {
+          id: result.logId ? `msg-bot-${result.logId}-${Date.now()}` : `msg-bot-${Date.now()}`,
+          role: 'model',
+          text: result.reply,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          citations: result.citations,
+          source: result.source
+        };
+
+        setSessions(prev => prev.map(s => {
+          if (s.id === activeId) {
+            const title = s.messages.length === 1 ? (userText.slice(0, 24) + "...") : s.title;
+            return {
+              ...s,
+              title,
+              messages: [...s.messages, botMsg]
+            };
+          }
+          return s;
+        }));
+      }
 
     } catch (err: any) {
       const errorMsg: ChatMessage = {
@@ -1154,10 +1263,43 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
                           </div>
                         ) : (
                           <>
+                            {/* User uploaded plant photo */}
+                            {isUser && msg.imageUrl && (
+                              <div className="mb-2.5 overflow-hidden rounded-xl border border-white/20 shadow-sm">
+                                <img 
+                                  src={msg.imageUrl} 
+                                  alt="Attached botanical specimen" 
+                                  className="max-h-64 max-w-full rounded-xl object-cover"
+                                />
+                                <div className="p-1.5 bg-black/40 text-[10px] text-emerald-100 flex items-center gap-1.5">
+                                  <Camera className="w-3 h-3 text-amber-300" />
+                                  <span>Botanical photo submitted for identification</span>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Markdown Renderer with container classes */}
                             <div className="prose prose-emerald max-w-none break-words text-inherit leading-relaxed space-y-2.5">
                               <Markdown>{msg.text}</Markdown>
                             </div>
+
+                            {/* Interactive Documented Profile Opener for Photo Matches */}
+                            {!isUser && msg.matchedHerbId && (() => {
+                              const matchedHerb = INITIAL_HERBS.find(h => h.id === msg.matchedHerbId);
+                              if (!matchedHerb) return null;
+                              return (
+                                <div className="mt-3 pt-3 border-t border-emerald-600/15">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedHerbForModal(matchedHerb)}
+                                    className="w-full sm:w-auto py-2 px-3.5 bg-emerald-950 hover:bg-emerald-900 active:bg-emerald-950 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:scale-[1.02]"
+                                  >
+                                    <BookOpen className="w-3.5 h-3.5 text-amber-300" />
+                                    <span>View {matchedHerb.kikuyuName} ({matchedHerb.scientificName}) Profile</span>
+                                  </button>
+                                </div>
+                              );
+                            })()}
                             
                             {/* Verified Plant Specimen Images sourced dynamically from Database */}
                             {!isUser && (
@@ -1404,6 +1546,64 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
               )}
             </AnimatePresence>
 
+            {/* Attached Plant Photo Preview */}
+            <AnimatePresence>
+              {pendingImage && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 shadow-sm ${
+                    isDark ? 'bg-zinc-900 border-zinc-700' : 'bg-emerald-50/90 border-emerald-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img 
+                      src={pendingImage} 
+                      alt="Selected plant specimen" 
+                      className="w-12 h-12 object-cover rounded-lg border border-emerald-400/40 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold truncate flex items-center gap-1.5 text-emerald-950 dark:text-emerald-100">
+                        <Camera className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                        <span>Plant Photo Attached</span>
+                        <span className="text-[9px] bg-amber-400 text-stone-900 font-black px-1.5 py-0.2 rounded uppercase">Ready</span>
+                      </div>
+                      <p className="text-[10px] text-stone-500 truncate mt-0.5">{pendingImageName}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingImage(null);
+                      setPendingImageName("");
+                    }}
+                    className="p-1.5 rounded-full hover:bg-stone-200 dark:hover:bg-zinc-800 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition cursor-pointer"
+                    title="Remove attached photo"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {imageError && (
+              <div className="p-2.5 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{imageError}</span>
+              </div>
+            )}
+
+            {/* Hidden Photo File Input for Camera and File Selection */}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/jpg"
+              capture="environment"
+              className="hidden"
+              onChange={handleImageFileChange}
+            />
+
             <form
               id="chat-send-frm"
               onSubmit={(e) => {
@@ -1417,8 +1617,12 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
                 autoFocus
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder=""
-                className={`w-full py-4 pl-4 pr-24 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-700/60 transition-all text-xs md:text-sm shadow-inner ${
+                placeholder={
+                  pendingImage 
+                    ? "Add a note or press send to identify this plant..." 
+                    : (isListening ? "Listening... speak now..." : (t("chat.inputPlaceholder") || "Ask DawaBot about Kikuyu herbs, or attach a photo..."))
+                }
+                className={`w-full py-4 pl-4 pr-32 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-700/60 transition-all text-xs md:text-sm shadow-inner ${
                   isDark 
                     ? 'bg-zinc-950 border-zinc-800 text-white placeholder-zinc-500' 
                     : 'bg-white border-stone-300 text-emerald-950 placeholder-stone-500'
@@ -1426,6 +1630,20 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
               />
 
               <div className="absolute right-2 flex items-center gap-1.5">
+                {/* Photo identification upload button */}
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  className={`p-2 rounded-lg transition-all shadow-md transform active:scale-95 duration-200 relative flex items-center justify-center cursor-pointer ${
+                    pendingImage
+                      ? 'bg-amber-400 text-stone-950 font-black ring-2 ring-amber-400/50'
+                      : isDark ? 'text-amber-400 bg-zinc-800 hover:bg-zinc-700' : 'text-emerald-950 bg-stone-100 hover:bg-emerald-50 hover:text-emerald-950'
+                  }`}
+                  title={pendingImage ? "Change attached plant photo" : "Take or upload plant photo for identification"}
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
+
                 {/* Advanced dictation toggle button */}
                 <button
                   type="button"
@@ -1446,12 +1664,13 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
 
                 <button
                   type="submit"
-                  disabled={!inputText.trim()}
+                  disabled={!inputText.trim() && !pendingImage}
                   className={`p-2 rounded-lg transition-all shadow-md cursor-pointer ${
-                    inputText.trim()
+                    inputText.trim() || pendingImage
                       ? 'bg-emerald-700 hover:bg-emerald-650 text-white active:scale-95 transform'
                       : isDark ? 'bg-zinc-800 text-zinc-650' : 'bg-stone-200 text-stone-400'
                   }`}
+                  title="Send message"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -1902,6 +2121,14 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Comprehensive Plant Profile Detail Modal in Chat */}
+      {selectedHerbForModal && (
+        <PlantProfileModal
+          plant={selectedHerbForModal}
+          onClose={() => setSelectedHerbForModal(null)}
+        />
+      )}
 
     </div>
   );

@@ -1,4 +1,4 @@
-import { Herb, BlogPost, TraditionalRemedy, KnowledgeBaseArticle, ChatMessage, ContactMessage, BlogComment } from "../types";
+import { Herb, BlogPost, TraditionalRemedy, KnowledgeBaseArticle, ChatMessage, ContactMessage, BlogComment, PlantIdentificationResponse } from "../types";
 
 export async function fetchPlants(): Promise<Herb[]> {
   const res = await fetch("/api/plants");
@@ -275,4 +275,19 @@ export async function deleteComment(id: string, adminPin: string): Promise<boole
   });
   if (!res.ok) throw new Error("Failed to delete comment.");
   return true;
+}
+
+export async function identifyPlant(imageBase64: string, mimeType: string): Promise<PlantIdentificationResponse> {
+  const res = await fetch("/api/plants/identify", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ imageBase64, mimeType }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to identify plant. Please try again.");
+  }
+  return res.json();
 }

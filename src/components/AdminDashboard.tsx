@@ -112,6 +112,16 @@ export default function AdminDashboard() {
     kikuyuName: "",
     commonName: "",
     scientificName: "",
+    acceptedBotanicalName: "",
+    botanicalFamily: "",
+    swahiliName: "",
+    luoName: "",
+    kambaName: "",
+    distinguishingCharacteristics: "",
+    habitatDistribution: "",
+    conservationStatus: "Least Concern",
+    identificationStatus: "expert_confirmed",
+    traditionalReferences: "",
     partUsed: "",
     description: "",
     preparation: "",
@@ -414,6 +424,16 @@ export default function AdminDashboard() {
         kikuyuName: "",
         commonName: "",
         scientificName: "",
+        acceptedBotanicalName: "",
+        botanicalFamily: "",
+        swahiliName: "",
+        luoName: "",
+        kambaName: "",
+        distinguishingCharacteristics: "",
+        habitatDistribution: "",
+        conservationStatus: "Least Concern",
+        identificationStatus: "expert_confirmed",
+        traditionalReferences: "",
         partUsed: "",
         description: "",
         preparation: "",
@@ -441,6 +461,16 @@ export default function AdminDashboard() {
       kikuyuName: herb.kikuyuName,
       commonName: herb.commonName,
       scientificName: herb.scientificName,
+      acceptedBotanicalName: herb.acceptedBotanicalName || "",
+      botanicalFamily: herb.botanicalFamily || "",
+      swahiliName: herb.swahiliName || "",
+      luoName: herb.luoName || "",
+      kambaName: herb.kambaName || "",
+      distinguishingCharacteristics: herb.distinguishingCharacteristics || "",
+      habitatDistribution: herb.habitatDistribution || "",
+      conservationStatus: herb.conservationStatus || "Least Concern",
+      identificationStatus: herb.identificationStatus || "expert_confirmed",
+      traditionalReferences: herb.traditionalReferences || "",
       partUsed: herb.partUsed,
       description: herb.description,
       preparation: herb.preparation,
@@ -1600,24 +1630,85 @@ function UserSessionHistory({ email }: { email: string }) {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block mb-1 font-bold text-stone-900 uppercase">English Name</label>
+                      <label className="block mb-1 font-bold text-stone-900 uppercase">Accepted Botanical Name</label>
                       <input
                         type="text"
-                        placeholder="e.g. Red Stinkwood"
-                        value={plantForm.commonName}
-                        onChange={(e) => setPlantForm({ ...plantForm, commonName: e.target.value })}
-                        className="w-full p-2 border border-stone-300 rounded-xl text-stone-900"
+                        placeholder="e.g. Prunus africana (Hook.f.) Kalkman"
+                        value={plantForm.acceptedBotanicalName || ""}
+                        onChange={(e) => setPlantForm({ ...plantForm, acceptedBotanicalName: e.target.value })}
+                        className="w-full p-2 border border-stone-300 rounded-xl text-stone-900 italic text-xs font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block mb-1 font-bold text-stone-900 uppercase">Part Used</label>
+                      <label className="block mb-1 font-bold text-stone-900 uppercase">Botanical Family</label>
                       <input
                         type="text"
-                        placeholder="e.g., Red timber bark shards"
-                        value={plantForm.partUsed}
-                        onChange={(e) => setPlantForm({ ...plantForm, partUsed: e.target.value })}
-                        className="w-full p-2 border border-stone-300 rounded-xl text-stone-900"
+                        placeholder="e.g. Rosaceae"
+                        value={plantForm.botanicalFamily || ""}
+                        onChange={(e) => setPlantForm({ ...plantForm, botanicalFamily: e.target.value })}
+                        className="w-full p-2 border border-stone-300 rounded-xl text-stone-900 text-xs"
                       />
+                    </div>
+                  </div>
+
+                  {/* Multilingual Local Names */}
+                  <div className="border border-stone-200 p-3 rounded-xl bg-stone-50/70 space-y-2.5">
+                    <span className="text-[10px] uppercase font-extrabold text-emerald-850 tracking-wider block">
+                      Multilingual & Regional Vernacular Names
+                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">English</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Red Stinkwood"
+                          value={plantForm.commonName}
+                          onChange={(e) => setPlantForm({ ...plantForm, commonName: e.target.value })}
+                          className="w-full p-2 border border-stone-300 rounded-lg text-stone-900 text-xs bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">Kiswahili</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Mkonde-konde"
+                          value={plantForm.swahiliName || ""}
+                          onChange={(e) => setPlantForm({ ...plantForm, swahiliName: e.target.value })}
+                          className="w-full p-2 border border-stone-300 rounded-lg text-stone-900 text-xs bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">Luo</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Yago / Ober"
+                          value={plantForm.luoName || ""}
+                          onChange={(e) => setPlantForm({ ...plantForm, luoName: e.target.value })}
+                          className="w-full p-2 border border-stone-300 rounded-lg text-stone-900 text-xs bg-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">Kamba</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Mũvau"
+                          value={plantForm.kambaName || ""}
+                          onChange={(e) => setPlantForm({ ...plantForm, kambaName: e.target.value })}
+                          className="w-full p-2 border border-stone-300 rounded-lg text-stone-900 text-xs bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">Part Used</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Bark, Leaves, Roots"
+                          value={plantForm.partUsed}
+                          onChange={(e) => setPlantForm({ ...plantForm, partUsed: e.target.value })}
+                          className="w-full p-2 border border-stone-300 rounded-lg text-stone-900 text-xs bg-white"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -1734,6 +1825,69 @@ function UserSessionHistory({ email }: { email: string }) {
                       value={plantForm.precautions}
                       onChange={(e) => setPlantForm({ ...plantForm, precautions: e.target.value })}
                       placeholder="Contraindications! Pregnancy warnings, gastric toxicity warnings..."
+                      className="w-full p-2 border border-stone-300 rounded-xl text-stone-900 font-normal leading-relaxed text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 font-bold text-stone-900 uppercase">Distinguishing Characteristics (Field Identification)</label>
+                    <textarea
+                      rows={2}
+                      value={plantForm.distinguishingCharacteristics || ""}
+                      onChange={(e) => setPlantForm({ ...plantForm, distinguishingCharacteristics: e.target.value })}
+                      placeholder="Bark texture, leaf margin, venation, floral structure, odor when crushed..."
+                      className="w-full p-2 border border-stone-300 rounded-xl text-stone-900 font-normal leading-relaxed text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 font-bold text-stone-900 uppercase">Habitat & Documented Geographical Distribution</label>
+                    <textarea
+                      rows={2}
+                      value={plantForm.habitatDistribution || ""}
+                      onChange={(e) => setPlantForm({ ...plantForm, habitatDistribution: e.target.value })}
+                      placeholder="Montane evergreen forest, 1500-2600m; Central Highlands, Aberdares, Mt Kenya..."
+                      className="w-full p-2 border border-stone-300 rounded-xl text-stone-900 font-normal leading-relaxed text-xs"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block mb-1 font-bold text-stone-900 uppercase">Conservation Status</label>
+                      <select
+                        value={plantForm.conservationStatus || "Least Concern"}
+                        onChange={(e: any) => setPlantForm({ ...plantForm, conservationStatus: e.target.value })}
+                        className="w-full p-2 border border-stone-300 bg-white rounded-xl text-stone-900 text-xs font-bold"
+                      >
+                        <option value="Least Concern">Least Concern (LC)</option>
+                        <option value="Near Threatened">Near Threatened (NT)</option>
+                        <option value="Vulnerable">Vulnerable (VU)</option>
+                        <option value="Endangered">Endangered (EN)</option>
+                        <option value="Critically Endangered">Critically Endangered (CR)</option>
+                        <option value="Data Deficient">Data Deficient (DD)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-bold text-stone-900 uppercase">Identification Status</label>
+                      <select
+                        value={plantForm.identificationStatus || "expert_confirmed"}
+                        onChange={(e: any) => setPlantForm({ ...plantForm, identificationStatus: e.target.value })}
+                        className="w-full p-2 border border-stone-300 bg-white rounded-xl text-stone-900 text-xs font-bold"
+                      >
+                        <option value="expert_confirmed">🌿 Expert Confirmed (Botanist/Herbarium)</option>
+                        <option value="community_reported">👥 Community Documented</option>
+                        <option value="pending_review">⏳ Pending Botanical Verification</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 font-bold text-stone-900 uppercase">Scientific References & Traditional Sources</label>
+                    <textarea
+                      rows={2}
+                      value={plantForm.traditionalReferences || ""}
+                      onChange={(e) => setPlantForm({ ...plantForm, traditionalReferences: e.target.value })}
+                      placeholder="Beentje (1994) Kenya Trees, Shrubs & Lianas; Kokwaro (2009); Elders oral archives..."
                       className="w-full p-2 border border-stone-300 rounded-xl text-stone-900 font-normal leading-relaxed text-xs"
                     />
                   </div>
@@ -1913,6 +2067,16 @@ function UserSessionHistory({ email }: { email: string }) {
                             kikuyuName: "",
                             commonName: "",
                             scientificName: "",
+                            acceptedBotanicalName: "",
+                            botanicalFamily: "",
+                            swahiliName: "",
+                            luoName: "",
+                            kambaName: "",
+                            distinguishingCharacteristics: "",
+                            habitatDistribution: "",
+                            conservationStatus: "Least Concern",
+                            identificationStatus: "expert_confirmed",
+                            traditionalReferences: "",
                             partUsed: "",
                             description: "",
                             preparation: "",

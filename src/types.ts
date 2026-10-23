@@ -1,3 +1,25 @@
+export interface LocalNameRecord {
+  language: string;
+  name: string;
+  locality?: string;
+  documentedBy?: string;
+}
+
+export interface DocumentedUseRecord {
+  use: string;
+  communityOrSource?: string;
+  verifiedStatus?: 'documented' | 'oral_lore' | 'unverified';
+}
+
+export interface PlantPhotograph {
+  url: string;
+  caption?: string;
+  provenance?: string;
+  photographer?: string;
+  license?: string;
+  isPrimary?: boolean;
+}
+
 export interface Herb {
   id: string;
   kikuyuName: string;
@@ -13,6 +35,44 @@ export interface Herb {
   imageColor: string; // Tailwind color combination for visual representation
   imageUrl?: string; // High-quality royalty-free botanical image/illustration or user upload
   severityRating?: 'Safe' | 'Caution' | 'Medicinal Only';
+
+  // --- Extended Comprehensive Profile Fields (Phase 1) ---
+  acceptedBotanicalName?: string; // Formally accepted botanical binomial
+  botanicalFamily?: string; // Plant family (e.g., Canellaceae, Solanaceae, Rosaceae)
+  englishName?: string; // English common name
+  swahiliName?: string; // Kiswahili local name
+  luoName?: string; // Dholuo local name
+  kambaName?: string; // Kikamba local name
+  otherLocalNames?: LocalNameRecord[]; // Extensible for Maa, Kalenjin, Luhya, Meru, Embu, etc. without schema changes
+
+  distinguishingCharacteristics?: string; // Morphological identification features (leaves, bark, flowers, aroma)
+  habitat?: string; // Ecological zone, altitude, habitat type
+  geographicalDistribution?: string; // Documented geographic presence (e.g. Aberdares, Mt Kenya, Rift Valley, Western highlands)
+  habitatDistribution?: string; // Combined habitat & distribution summary string
+
+  documentedUses?: DocumentedUseRecord[]; // Structured list of uses with documenting communities or sources
+  preparationMethods?: string[]; // Detailed stepwise traditional preparation methods
+  
+  culturalSignificance?: string; // Spiritual, customary, or sacred traditional context
+  oralHistory?: string; // Recorded oral narratives passed down across generations
+  culturalRestrictions?: string; // Taboos, sacred guidelines, contributor consent restrictions
+  consentStatus?: 'consent_given' | 'public_domain' | 'restricted' | 'undocumented';
+
+  conservationStatus?: 'Not Evaluated' | 'Least Concern' | 'Near Threatened' | 'Vulnerable' | 'Endangered' | 'Critically Endangered' | 'Data Deficient';
+  threats?: string[]; // e.g. Overharvesting for international trade, habitat destruction, deforestation
+  conservationPractices?: string; // Sustainable harvesting practices (e.g. vertical striping, replanting)
+
+  contraindications?: string[]; // Conditions where the herb must not be used (pregnancy, renal illness, children)
+  knownRisks?: string[]; // Documented toxicities, adverse interactions with pharmaceuticals
+  safetyWarnings?: string; // General safety statement and cautionary notes
+
+  scientificReferences?: string[]; // Peer-reviewed pharmacological, chemical, or ethnobotanical studies
+  traditionalKnowledgeSources?: string[]; // Documented elders, ethnobotanical surveys, cultural repositories
+  traditionalReferences?: string; // Combined scientific & traditional references string
+  sourceUrls?: string[]; // Reference web URLs
+
+  photographs?: PlantPhotograph[]; // Multiple photographs with provenance, photographer, and licensing
+  identificationStatus?: 'expert_confirmed' | 'community_verified' | 'community_reported' | 'ai_suggested' | 'pending_review' | 'unverified';
 }
 
 export interface BlogPost {
@@ -55,6 +115,9 @@ export interface ChatMessage {
   suggestions?: string[];
   citations?: string[];
   source?: 'ai' | 'local';
+  imageUrl?: string;
+  plantIdentification?: PlantIdentificationResponse;
+  matchedHerbId?: string;
 }
 
 export interface ChatSession {
@@ -95,3 +158,39 @@ export interface ContactMessage {
   replyTimestamp?: string;
   resolved?: boolean;
 }
+
+export interface PossiblePlantMatch {
+  scientificName: string;
+  botanicalFamily?: string;
+  commonEnglishName?: string;
+  swahiliName?: string;
+  kikuyuName?: string;
+  luoName?: string;
+  kambaName?: string;
+  otherLocalNames?: string;
+  distinguishingCharacteristics: string;
+  confidenceLevel: 'High Plausibility' | 'Moderate Plausibility' | 'Tentative / Low Plausibility';
+  matchingHerbId?: string; // If present in the local database
+  matchingHerbSummary?: {
+    id: string;
+    commonName: string;
+    kikuyuName: string;
+    scientificName: string;
+    category: string;
+    imageUrl?: string;
+    severityRating?: string;
+  };
+  inDirectory: boolean;
+  cautionNotes: string;
+}
+
+export interface PlantIdentificationResponse {
+  isInconclusive: boolean;
+  inconclusiveReason?: string;
+  possibleMatches: PossiblePlantMatch[];
+  generalObservations: string;
+  safetyNotice: string;
+  disclaimer: string;
+  modelUsed: string;
+}
+
