@@ -604,27 +604,35 @@ export default function PlantIdentifier({ onOpenPlantProfile, onClose }: PlantId
 
                         {/* Local Names Row */}
                         <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                          {match.kikuyuName && (
+                          {(match.kikuyuName || match.matchingHerbSummary?.kikuyuName) && (
                             <span className="px-2.5 py-1 bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-lg font-bold">
-                              Kikuyu: <strong className="uppercase">{match.kikuyuName}</strong>
+                              Kikuyu: <strong className="uppercase">{match.matchingHerbSummary?.kikuyuName || match.kikuyuName}</strong>
                             </span>
                           )}
-                          {match.swahiliName && (
+                          {(match.swahiliName || match.matchingHerbSummary?.swahiliName) && (
                             <span className="px-2.5 py-1 bg-stone-100 text-stone-800 border border-stone-200 rounded-lg font-medium">
-                              Swahili: <strong>{match.swahiliName}</strong>
+                              Swahili: <strong>{match.matchingHerbSummary?.swahiliName || match.swahiliName}</strong>
                             </span>
                           )}
-                          {match.luoName && (
+                          {(match.luoName || match.matchingHerbSummary?.luoName) && (
                             <span className="px-2.5 py-1 bg-stone-100 text-stone-800 border border-stone-200 rounded-lg font-medium">
-                              Luo: <strong>{match.luoName}</strong>
+                              Luo: <strong>{match.matchingHerbSummary?.luoName || match.luoName}</strong>
                             </span>
                           )}
-                          {match.kambaName && (
+                          {(match.kambaName || match.matchingHerbSummary?.kambaName) && (
                             <span className="px-2.5 py-1 bg-stone-100 text-stone-800 border border-stone-200 rounded-lg font-medium">
-                              Kamba: <strong>{match.kambaName}</strong>
+                              Kamba: <strong>{match.matchingHerbSummary?.kambaName || match.kambaName}</strong>
                             </span>
                           )}
-                          {match.otherLocalNames && (
+                          {/* Extensible other local names from directory */}
+                          {match.matchingHerbSummary?.otherLocalNames && match.matchingHerbSummary.otherLocalNames.length > 0 && (
+                            match.matchingHerbSummary.otherLocalNames.map((rec, oi) => (
+                              <span key={oi} className="px-2.5 py-1 bg-emerald-50/70 text-emerald-900 border border-emerald-200 rounded-lg font-medium text-[11px]">
+                                {rec.language}: <strong>{rec.name}</strong> {rec.locality ? `(${rec.locality})` : ''}
+                              </span>
+                            ))
+                          )}
+                          {!match.matchingHerbSummary?.otherLocalNames?.length && match.otherLocalNames && (
                             <span className="px-2.5 py-1 bg-stone-100 text-stone-700 border border-stone-200 rounded-lg font-medium">
                               Other: {match.otherLocalNames}
                             </span>

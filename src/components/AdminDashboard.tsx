@@ -6,7 +6,7 @@ import {
   BookOpen, Compass, Search, ToggleLeft, ToggleRight, MessageSquare, Send, Check, AlertCircle,
   Eye, EyeOff
 } from "lucide-react";
-import { Herb, BlogPost, KnowledgeBaseArticle, ChatLog, ContactMessage, BlogComment } from "../types";
+import { Herb, BlogPost, KnowledgeBaseArticle, ChatLog, ContactMessage, BlogComment, LocalNameRecord } from "../types";
 import { 
   fetchPlants, addPlant, editPlant, deletePlant, 
   fetchArticles, addArticle, fetchBlogs, addBlog, fetchAnalytics,
@@ -111,12 +111,14 @@ export default function AdminDashboard() {
   const [plantForm, setPlantForm] = useState<Omit<Herb, 'id'>>({
     kikuyuName: "",
     commonName: "",
+    englishName: "",
     scientificName: "",
     acceptedBotanicalName: "",
     botanicalFamily: "",
     swahiliName: "",
     luoName: "",
     kambaName: "",
+    otherLocalNames: [],
     distinguishingCharacteristics: "",
     habitatDistribution: "",
     conservationStatus: "Least Concern",
@@ -133,6 +135,38 @@ export default function AdminDashboard() {
     imageUrl: ""
   });
   const [newUseInput, setNewUseInput] = useState("");
+  
+  // States for adding multiple extensible local names (Maasai, Samburu, Meru, Kalenjin, etc.)
+  const [newLocalLanguage, setNewLocalLanguage] = useState("Maasai");
+  const [newLocalCustomLang, setNewLocalCustomLang] = useState("");
+  const [newLocalName, setNewLocalName] = useState("");
+  const [newLocalLocality, setNewLocalLocality] = useState("");
+
+  const handleAddLocalName = () => {
+    const lang = newLocalLanguage === "Other / Custom" ? newLocalCustomLang.trim() : newLocalLanguage.trim();
+    const name = newLocalName.trim();
+    if (lang && name) {
+      const newRec: LocalNameRecord = {
+        language: lang,
+        name: name,
+        locality: newLocalLocality.trim() || undefined
+      };
+      setPlantForm(prev => ({
+        ...prev,
+        otherLocalNames: [...(prev.otherLocalNames || []), newRec]
+      }));
+      setNewLocalName("");
+      setNewLocalLocality("");
+      setNewLocalCustomLang("");
+    }
+  };
+
+  const handleRemoveLocalName = (idx: number) => {
+    setPlantForm(prev => ({
+      ...prev,
+      otherLocalNames: (prev.otherLocalNames || []).filter((_, i) => i !== idx)
+    }));
+  };
   
   // Custom states for Simulated Upload and AI image recommendations
   const [isUploading, setIsUploading] = useState(false);
@@ -410,7 +444,13 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       if (editingPlantId) {
-        const fullHerb: Herb = { id: editingPlantId, ...plantForm };
+        const existingHerb = plants.find(p => p.id === editingPlantId);
+        const fullHerb: Herb = {
+          ...(existingHerb || {}),
+          id: editingPlantId,
+          ...plantForm,
+          otherLocalNames: plantForm.otherLocalNames || existingHerb?.otherLocalNames || []
+        };
         await editPlant(editingPlantId, fullHerb, adminPin);
         showStatus(`Successfully updated plant details for ${plantForm.kikuyuName}!`);
         setEditingPlantId(null);
@@ -423,12 +463,14 @@ export default function AdminDashboard() {
       setPlantForm({
         kikuyuName: "",
         commonName: "",
+        englishName: "",
         scientificName: "",
         acceptedBotanicalName: "",
         botanicalFamily: "",
         swahiliName: "",
         luoName: "",
         kambaName: "",
+        otherLocalNames: [],
         distinguishingCharacteristics: "",
         habitatDistribution: "",
         conservationStatus: "Least Concern",
@@ -444,6 +486,9 @@ export default function AdminDashboard() {
         imageColor: "from-green-800 to-emerald-900",
         imageUrl: ""
       });
+      setNewLocalName("");
+      setNewLocalLocality("");
+      setNewLocalCustomLang("");
       setUseCustomCategory(false);
       setUploadSuccess(false);
       setShowAISuggestions(false);
@@ -460,12 +505,14 @@ export default function AdminDashboard() {
     setPlantForm({
       kikuyuName: herb.kikuyuName,
       commonName: herb.commonName,
+      englishName: herb.englishName || herb.commonName || "",
       scientificName: herb.scientificName,
       acceptedBotanicalName: herb.acceptedBotanicalName || "",
       botanicalFamily: herb.botanicalFamily || "",
       swahiliName: herb.swahiliName || "",
       luoName: herb.luoName || "",
       kambaName: herb.kambaName || "",
+      otherLocalNames: herb.otherLocalNames ? [...herb.otherLocalNames] : [],
       distinguishingCharacteristics: herb.distinguishingCharacteristics || "",
       habitatDistribution: herb.habitatDistribution || "",
       conservationStatus: herb.conservationStatus || "Least Concern",
@@ -474,7 +521,7 @@ export default function AdminDashboard() {
       partUsed: herb.partUsed,
       description: herb.description,
       preparation: herb.preparation,
-      medicinalUses: herb.medicinalUses,
+      medicinalUses: [...herb.medicinalUses],
       traditionalContext: herb.traditionalContext,
       precautions: herb.precautions,
       category: herb.category,
@@ -1652,18 +1699,25 @@ function UserSessionHistory({ email }: { email: string }) {
                   </div>
 
                   {/* Multilingual Local Names */}
-                  <div className="border border-stone-200 p-3 rounded-xl bg-stone-50/70 space-y-2.5">
-                    <span className="text-[10px] uppercase font-extrabold text-emerald-850 tracking-wider block">
-                      Multilingual & Regional Vernacular Names
-                    </span>
+                  <div className="border border-stone-200 p-3.5 rounded-xl bg-stone-50/70 space-y-3">
+                    <div className="flex items-center justify-between border-b border-stone-200 pb-1.5">
+                      <span className="text-[10px] uppercase font-extrabold text-emerald-850 tracking-wider">
+                        Multilingual & Indigenous Vernacular Names
+                      </span>
+                      <span className="text-[9px] text-stone-500 font-mono">
+                        {(plantForm.otherLocalNames?.length || 0) + 4} Names Tracked
+                      </span>
+                    </div>
+
+                    {/* Standard East African National & Major Languages */}
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">English</label>
+                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">English Common Name</label>
                         <input
                           type="text"
                           placeholder="e.g. Red Stinkwood"
                           value={plantForm.commonName}
-                          onChange={(e) => setPlantForm({ ...plantForm, commonName: e.target.value })}
+                          onChange={(e) => setPlantForm({ ...plantForm, commonName: e.target.value, englishName: e.target.value })}
                           className="w-full p-2 border border-stone-300 rounded-lg text-stone-900 text-xs bg-white"
                         />
                       </div>
@@ -1678,7 +1732,7 @@ function UserSessionHistory({ email }: { email: string }) {
                         />
                       </div>
                       <div>
-                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">Luo</label>
+                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">Dholuo (Luo)</label>
                         <input
                           type="text"
                           placeholder="e.g. Yago / Ober"
@@ -1688,9 +1742,10 @@ function UserSessionHistory({ email }: { email: string }) {
                         />
                       </div>
                     </div>
+
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">Kamba</label>
+                        <label className="block mb-0.5 text-[10px] font-bold text-stone-700">Kikamba (Kamba)</label>
                         <input
                           type="text"
                           placeholder="e.g. Mũvau"
@@ -1708,6 +1763,106 @@ function UserSessionHistory({ email }: { email: string }) {
                           onChange={(e) => setPlantForm({ ...plantForm, partUsed: e.target.value })}
                           className="w-full p-2 border border-stone-300 rounded-lg text-stone-900 text-xs bg-white"
                         />
+                      </div>
+                    </div>
+
+                    {/* Extensible Community Names Section (Maasai, Samburu, Meru, Kalenjin, Luhya, etc.) */}
+                    <div className="pt-2 border-t border-stone-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[10px] font-bold text-stone-800 uppercase tracking-wide">
+                          Additional Community / Local Names (Extensible)
+                        </label>
+                        <span className="text-[9px] text-stone-500 italic">Adds to instant search index</span>
+                      </div>
+
+                      {/* Existing otherLocalNames badges */}
+                      {plantForm.otherLocalNames && plantForm.otherLocalNames.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 p-2 bg-white rounded-lg border border-stone-200 max-h-28 overflow-y-auto">
+                          {plantForm.otherLocalNames.map((rec, idx) => (
+                            <span 
+                              key={idx} 
+                              className="bg-emerald-50 border border-emerald-200/80 text-emerald-950 rounded-lg px-2 py-0.5 text-[10px] flex items-center gap-1.5 font-semibold"
+                            >
+                              <strong className="text-emerald-800 uppercase text-[9px]">{rec.language}:</strong>
+                              <span>{rec.name}</span>
+                              {rec.locality && <span className="text-stone-400 font-normal">({rec.locality})</span>}
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemoveLocalName(idx)} 
+                                className="text-stone-400 hover:text-red-600 transition"
+                                title="Remove local name"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add new local name mini-form */}
+                      <div className="bg-stone-100/70 p-2.5 rounded-lg border border-stone-200/80 space-y-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                          <div>
+                            <select
+                              value={newLocalLanguage}
+                              onChange={(e) => setNewLocalLanguage(e.target.value)}
+                              className="w-full p-1.5 border border-stone-300 rounded-md text-[11px] bg-white text-stone-900 font-semibold"
+                            >
+                              <option value="Maasai">Maasai</option>
+                              <option value="Samburu">Samburu</option>
+                              <option value="Meru">Meru</option>
+                              <option value="Kalenjin">Kalenjin</option>
+                              <option value="Luhya">Luhya</option>
+                              <option value="Embu">Embu</option>
+                              <option value="Turkana">Turkana</option>
+                              <option value="Borana">Borana</option>
+                              <option value="Taita">Taita</option>
+                              <option value="Pokot">Pokot</option>
+                              <option value="Somali">Somali</option>
+                              <option value="Other / Custom">Other / Custom</option>
+                            </select>
+                          </div>
+
+                          {newLocalLanguage === "Other / Custom" && (
+                            <div>
+                              <input
+                                type="text"
+                                placeholder="Language name..."
+                                value={newLocalCustomLang}
+                                onChange={(e) => setNewLocalCustomLang(e.target.value)}
+                                className="w-full p-1.5 border border-stone-300 rounded-md text-[11px] bg-white text-stone-900"
+                              />
+                            </div>
+                          )}
+
+                          <div className={newLocalLanguage === "Other / Custom" ? "sm:col-span-1" : "sm:col-span-1"}>
+                            <input
+                              type="text"
+                              placeholder="Vernacular name (e.g. Ol-sogonoi)"
+                              value={newLocalName}
+                              onChange={(e) => setNewLocalName(e.target.value)}
+                              className="w-full p-1.5 border border-stone-300 rounded-md text-[11px] bg-white text-stone-900 font-semibold"
+                            />
+                          </div>
+
+                          <div className={newLocalLanguage === "Other / Custom" ? "sm:col-span-3 flex gap-1.5" : "sm:col-span-1 flex gap-1.5"}>
+                            <input
+                              type="text"
+                              placeholder="Locality (e.g. Narok / Kajiado)"
+                              value={newLocalLocality}
+                              onChange={(e) => setNewLocalLocality(e.target.value)}
+                              className="w-full p-1.5 border border-stone-300 rounded-md text-[11px] bg-white text-stone-900"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAddLocalName}
+                              disabled={!newLocalName.trim()}
+                              className="px-3 py-1.5 bg-emerald-900 hover:bg-emerald-950 disabled:bg-stone-300 text-white rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 cursor-pointer shadow-xs"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

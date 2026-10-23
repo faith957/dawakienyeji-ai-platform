@@ -102,13 +102,32 @@ export async function addArticle(article: Omit<KnowledgeBaseArticle, 'id' | 'las
   return true;
 }
 
-export async function postChat(messages: ChatMessage[], currentQuery: string, language?: string): Promise<{ reply: string; logId: string; offline?: boolean; citations?: string[]; source?: 'ai' | 'local' }> {
+export async function postChat(
+  messages: ChatMessage[], 
+  currentQuery: string, 
+  language?: string,
+  imagePayload?: { data: string; mimeType: string }
+): Promise<{ 
+  reply: string; 
+  logId: string; 
+  offline?: boolean; 
+  citations?: string[]; 
+  source?: 'ai' | 'local';
+  plantIdentification?: PlantIdentificationResponse;
+  matchedHerbId?: string;
+}> {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ messages, currentQuery, language }),
+    body: JSON.stringify({ 
+      messages, 
+      currentQuery, 
+      language,
+      currentImage: imagePayload?.data,
+      currentMimeType: imagePayload?.mimeType
+    }),
   });
   if (!res.ok) throw new Error("Chat bot service experiencing high demand. Please try again.");
   return res.json();

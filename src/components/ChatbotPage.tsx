@@ -638,7 +638,8 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
       role: 'user',
       text: userText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      imageUrl: currentImage || undefined
+      imageUrl: currentImage || undefined,
+      imageMimeType: currentMime || undefined
     };
 
     // Update active session with user message
@@ -654,91 +655,36 @@ export default function ChatbotPage({ onBackToHome, onNavigateTo, initialShowSig
     setVoiceError(null);
 
     try {
-      if (currentImage) {
-        // Run photo-based plant identification through the shared backend endpoint
-        const idResult = await identifyPlant(currentImage, currentMime);
+      const currentSessionSnapshot = sessionsRef.current.find(s => s.id === activeId);
+      const historyMsg = currentSessionSnapshot ? currentSessionSnapshot.messages : [];
 
-        let responseMarkdown = "";
-        let matchedHerbId: string | undefined = undefined;
+      const imagePayload = currentImage ? { data: currentImage, mimeType: currentMime } : undefined;
+      const result = await postChat(historyMsg, userText, language, imagePayload);
 
-        if (idResult.isInconclusive || idResult.possibleMatches.length === 0) {
-          responseMarkdown = `### 🔍 Plant Identification Assessment\n\n${idResult.generalObservations}\n\n**Observation:** ${idResult.inconclusiveReason || "Please capture a closer photograph showing leaf margins, venation, bark texture, or flowers."}\n\n> ⚠️ **Important Medical & Safety Notice:** AI plant identification is strictly provisional. Visually similar plants can have drastically different chemical compositions and toxicities. Never handle or medicinally use wild plants based solely on an image match.`;
-        } else {
-          const topMatch = idResult.possibleMatches[0];
-          matchedHerbId = topMatch.matchingHerbId;
+      const botMsg: ChatMessage = {
+        id: result.logId ? `msg-bot-${result.logId}-${Date.now()}` : `msg-bot-${Date.now()}`,
+        role: 'model',
+        text: result.reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        citations: result.citations,
+        source: result.source,
+        plantIdentification: result.plantIdentification,
+        matchedHerbId: result.matchedHerbId
+      };
 
-          responseMarkdown = `### 🌿 Botanical Identification Results\n\n${idResult.generalObservations}\n\n`;
-          
-          idResult.possibleMatches.forEach((m, idx) => {
-            responseMarkdown += `#### Candidate ${idx + 1}: *${m.scientificName}* (${m.commonEnglishName || 'Indigenous Flora'})\n`;
-            responseMarkdown += `- **Plausibility Level:** ${m.confidenceLevel}\n`;
-            if (m.kikuyuName) responseMarkdown += `- **Gĩkũyũ Name:** **${m.kikuyuName}**\n`;
-            if (m.swahiliName) responseMarkdown += `- **Kiswahili Name:** ${m.swahiliName}\n`;
-            if (m.luoName) responseMarkdown += `- **Dholuo Name:** ${m.luoName}\n`;
-            if (m.kambaName) responseMarkdown += `- **Kikamba Name:** ${m.kambaName}\n`;
-            if (m.otherLocalNames) responseMarkdown += `- **Other Local Names:** ${m.otherLocalNames}\n`;
-            if (m.botanicalFamily) responseMarkdown += `- **Botanical Family:** ${m.botanicalFamily}\n`;
-            responseMarkdown += `- **Distinguishing Characteristics:** ${m.distinguishingCharacteristics}\n`;
-            if (m.cautionNotes) responseMarkdown += `- **Toxicology Caution:** ${m.cautionNotes}\n`;
-            if (m.inDirectory && m.matchingHerbId) {
-              responseMarkdown += `- **Directory Match:** ✅ Documented in Dawakienyeji local heritage records.\n\n`;
-            } else {
-              responseMarkdown += `- **Directory Match:** ℹ️ Not currently cataloged in the local directory. (We strictly avoid fabricating unverified medicinal claims).\n\n`;
-            }
-          });
-
-          responseMarkdown += `\n> ⚠️ **Mandatory Safety Warning:** AI visual identification is provisional and must not be used alone to determine whether a plant is safe for medicinal use or human handling. Visually similar species can possess differing toxicities.`;
+      setSessions(prev => prev.map(s => {
+        if (s.id === activeId) {
+          const title = s.messages.length <= 1 
+            ? (currentImage ? "Plant Photo ID" : (userText.slice(0, 24) + "...")) 
+            : s.title;
+          return {
+            ...s,
+            title,
+            messages: [...s.messages, botMsg]
+          };
         }
-
-        const botMsg: ChatMessage = {
-          id: `msg-bot-identify-${Date.now()}`,
-          role: 'model',
-          text: responseMarkdown,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          plantIdentification: idResult,
-          matchedHerbId: matchedHerbId
-        };
-
-        setSessions(prev => prev.map(s => {
-          if (s.id === activeId) {
-            const title = s.messages.length <= 1 ? "Plant Photo ID" : s.title;
-            return {
-              ...s,
-              title,
-              messages: [...s.messages, botMsg]
-            };
-          }
-          return s;
-        }));
-
-      } else {
-        const currentSessionSnapshot = sessionsRef.current.find(s => s.id === activeId);
-        const historyMsg = currentSessionSnapshot ? currentSessionSnapshot.messages : [];
-
-        const result = await postChat(historyMsg, userText, language);
-
-        const botMsg: ChatMessage = {
-          id: result.logId ? `msg-bot-${result.logId}-${Date.now()}` : `msg-bot-${Date.now()}`,
-          role: 'model',
-          text: result.reply,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          citations: result.citations,
-          source: result.source
-        };
-
-        setSessions(prev => prev.map(s => {
-          if (s.id === activeId) {
-            const title = s.messages.length === 1 ? (userText.slice(0, 24) + "...") : s.title;
-            return {
-              ...s,
-              title,
-              messages: [...s.messages, botMsg]
-            };
-          }
-          return s;
-        }));
-      }
-
+        return s;
+      }));
     } catch (err: any) {
       const errorMsg: ChatMessage = {
         id: `msg-err-${Date.now()}`,

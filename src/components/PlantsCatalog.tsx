@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   Search, Sprout, ShieldAlert, BookOpen, Coffee, FileSpreadsheet, 
-  X, HelpCircle, HeartPulse, Camera, Sparkles, ArrowRight, Layers, Eye
+  X, HelpCircle, HeartPulse, Camera, Sparkles, ArrowRight, Layers, Eye, AlertCircle
 } from "lucide-react";
 import { Herb } from "../types";
 import { fetchPlants } from "../utils/api";
@@ -71,35 +71,136 @@ export default function PlantsCatalog({ initialMode = 'catalog' }: PlantsCatalog
     return dicts[key]?.[language] || dicts[key]?.['en'] || key;
   };
 
-  // Enhanced search across all regional names, scientific names, uses, and habitats
-  const filteredPlants = plants.filter((h) => {
-    const query = searchTerm.toLowerCase().trim();
-    if (!query) {
-      return selectedCategory === "All" || h.category === selectedCategory;
-    }
+  // Diacritic and whitespace normalizer for Kikuyu, Swahili, Maa, Luo, Kamba, English & Latin names
+  const normalizeSearchText = (str: string): string => {
+    if (!str) return "";
+    return str
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // strip combining accents (e.g. acute, circumflex, tilde)
+      .replace(/[ĩĨ]/g, "i")
+      .replace(/[ũŨ]/g, "u")
+      .replace(/[ẽẼ]/g, "e")
+      .replace(/[õÕ]/g, "o")
+      .replace(/['’`\-–—_.,;:()]/g, "") // ignore punctuation and hyphens (e.g., 'ol-sogonoi' matches 'olsogonoi')
+      .replace(/\s+/g, " ")
+      .trim();
+  };
 
-    const otherNamesCombined = (h.otherLocalNames || []).map(r => `${r.name} ${r.language} ${r.locality}`).join(" ").toLowerCase();
+  interface MatchDetail {
+    field: string;
+    matchedValue: string;
+  }
 
-    const matchesSearch = 
-      h.kikuyuName.toLowerCase().includes(query) ||
-      h.commonName.toLowerCase().includes(query) ||
-      (h.englishName && h.englishName.toLowerCase().includes(query)) ||
-      h.scientificName.toLowerCase().includes(query) ||
-      (h.acceptedBotanicalName && h.acceptedBotanicalName.toLowerCase().includes(query)) ||
-      (h.swahiliName && h.swahiliName.toLowerCase().includes(query)) ||
-      (h.luoName && h.luoName.toLowerCase().includes(query)) ||
-      (h.kambaName && h.kambaName.toLowerCase().includes(query)) ||
-      otherNamesCombined.includes(query) ||
-      (h.distinguishingCharacteristics && h.distinguishingCharacteristics.toLowerCase().includes(query)) ||
-      (h.habitat && h.habitat.toLowerCase().includes(query)) ||
-      h.medicinalUses.some(use => use.toLowerCase().includes(query)) ||
-      h.description.toLowerCase().includes(query) ||
-      h.preparation.toLowerCase().includes(query);
+  interface SearchResultItem {
+    plant: Herb;
+    reasons: MatchDetail[];
+  }
+
+  // Enhanced search across scientific, accepted botanical, English, Kiswahili, Kikuyu, Luo, Kamba,
+  // Maasai, Samburu, Meru, Kalenjin, and all other documented local names, traits, habitats, and uses
+  const searchResults: SearchResultItem[] = plants.reduce<SearchResultItem[]>((acc, h) => {
+    const rawQuery = searchTerm.trim();
+    const query = normalizeSearchText(rawQuery);
 
     const matchesCategory = selectedCategory === "All" || h.category === selectedCategory;
+    if (!matchesCategory) return acc;
 
-    return matchesSearch && matchesCategory;
-  });
+    if (!query) {
+      acc.push({ plant: h, reasons: [] });
+      return acc;
+    }
+
+    const reasons: MatchDetail[] = [];
+
+    // 1. Kikuyu name (with and without diacritics: e.g. MŨTHĨGA / Muthiga)
+    if (normalizeSearchText(h.kikuyuName).includes(query)) {
+      reasons.push({ field: "Gĩkũyũ", matchedValue: h.kikuyuName });
+    }
+
+    // 2. Scientific name & Accepted botanical name
+    if (normalizeSearchText(h.scientificName).includes(query)) {
+      reasons.push({ field: "Scientific", matchedValue: h.scientificName });
+    }
+    if (h.acceptedBotanicalName && normalizeSearchText(h.acceptedBotanicalName).includes(query) && h.acceptedBotanicalName !== h.scientificName) {
+      reasons.push({ field: "Accepted Botanical", matchedValue: h.acceptedBotanicalName });
+    }
+
+    // 3. Common English name
+    if (h.commonName && normalizeSearchText(h.commonName).includes(query)) {
+      reasons.push({ field: "Common/English", matchedValue: h.commonName });
+    }
+    if (h.englishName && normalizeSearchText(h.englishName).includes(query) && h.englishName !== h.commonName) {
+      reasons.push({ field: "English", matchedValue: h.englishName });
+    }
+
+    // 4. Kiswahili name
+    if (h.swahiliName && normalizeSearchText(h.swahiliName).includes(query)) {
+      reasons.push({ field: "Kiswahili", matchedValue: h.swahiliName });
+    }
+
+    // 5. Luo name (Dholuo)
+    if (h.luoName && normalizeSearchText(h.luoName).includes(query)) {
+      reasons.push({ field: "Dholuo (Luo)", matchedValue: h.luoName });
+    }
+
+    // 6. Kamba name (Kikamba)
+    if (h.kambaName && normalizeSearchText(h.kambaName).includes(query)) {
+      reasons.push({ field: "Kikamba (Kamba)", matchedValue: h.kambaName });
+    }
+
+    // 7. Extensible Other Local Names (Maasai, Samburu, Meru, Kalenjin, Taita, Turkana, etc.)
+    if (h.otherLocalNames && Array.isArray(h.otherLocalNames)) {
+      for (const rec of h.otherLocalNames) {
+        if (
+          normalizeSearchText(rec.name).includes(query) ||
+          normalizeSearchText(rec.language).includes(query) ||
+          (rec.locality && normalizeSearchText(rec.locality).includes(query))
+        ) {
+          reasons.push({
+            field: rec.language,
+            matchedValue: `${rec.name}${rec.locality ? ` (${rec.locality})` : ""}`
+          });
+        }
+      }
+    }
+
+    // 8. Distinguishing characteristics & morphological field traits
+    if (h.distinguishingCharacteristics && normalizeSearchText(h.distinguishingCharacteristics).includes(query)) {
+      reasons.push({ field: "Diagnostic Trait", matchedValue: "Distinguishing characteristics" });
+    }
+
+    // 9. Habitat & Geographical distribution
+    if (h.habitat && normalizeSearchText(h.habitat).includes(query)) {
+      reasons.push({ field: "Habitat", matchedValue: h.habitat });
+    }
+    if (h.habitatDistribution && normalizeSearchText(h.habitatDistribution).includes(query)) {
+      reasons.push({ field: "Distribution", matchedValue: h.habitatDistribution });
+    }
+
+    // 10. Documented traditional medicinal uses & symptoms
+    const matchedUses = h.medicinalUses.filter(u => normalizeSearchText(u).includes(query));
+    if (matchedUses.length > 0) {
+      reasons.push({ field: "Documented Use", matchedValue: matchedUses.join(", ") });
+    }
+
+    // 11. General botanical description & preparations
+    if (reasons.length === 0) {
+      if (normalizeSearchText(h.description).includes(query)) {
+        reasons.push({ field: "Description", matchedValue: "Specimen description" });
+      } else if (normalizeSearchText(h.preparation).includes(query)) {
+        reasons.push({ field: "Preparation", matchedValue: "Preparation guidelines" });
+      }
+    }
+
+    if (reasons.length > 0) {
+      acc.push({ plant: h, reasons });
+    }
+
+    return acc;
+  }, []);
+
+  const filteredPlants = searchResults.map(r => r.plant);
 
   const handleOpenFromIdentifier = (herbId: string) => {
     const found = plants.find(p => p.id === herbId);
@@ -263,29 +364,77 @@ export default function PlantsCatalog({ initialMode = 'catalog' }: PlantsCatalog
             ))}
           </div>
 
+          {/* Ambiguity notice banner when search query matches multiple species */}
+          {searchTerm.trim().length > 0 && searchResults.length > 1 && (
+            <div className="p-4 sm:p-5 bg-amber-50/90 border border-amber-300 rounded-2xl shadow-xs flex items-start gap-3.5 text-left">
+              <div className="p-2 bg-amber-200 text-amber-950 rounded-xl shrink-0 mt-0.5">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs sm:text-sm font-black uppercase text-amber-950 tracking-wider">
+                  Multiple Species Match "{searchTerm}" ({searchResults.length} Species Documented)
+                </h4>
+                <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                  In East African ethnobotany, vernacular names, traditional symptoms, or morphological features often correspond to multiple distinct botanical species across different communities. Rather than assuming a single match, all {searchResults.length} candidate species are displayed below with their specific documented language, community locality, and botanical classification to prevent unsafe misapplication.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Database Catalog grid */}
           {loading ? (
             <div className="py-20 text-center text-sm text-stone-400 font-bold">
               {getLabelText("loading")}
             </div>
-          ) : filteredPlants.length === 0 ? (
-            <div id="no-search-results" className="py-16 text-center max-w-md mx-auto bg-white border border-stone-200 rounded-3xl p-8 space-y-4 shadow-sm">
-              <HelpCircle className="w-12 h-12 text-[#D4A017] mx-auto animate-bounce" />
-              <h3 className="text-md font-extrabold text-emerald-950 uppercase">{getLabelText("noResultsTitle")}</h3>
-              <p className="text-xs text-stone-500 leading-relaxed font-normal">
-                {getLabelText("noResultsDesc")}
-              </p>
-              <button
-                onClick={() => setActiveView('identify')}
-                className="py-2.5 px-5 bg-emerald-950 text-white rounded-xl text-xs font-bold transition inline-flex items-center gap-2 cursor-pointer shadow"
-              >
-                <Camera className="w-4 h-4 text-amber-300" />
-                Try Photo Identification
-              </button>
+          ) : searchResults.length === 0 ? (
+            <div id="no-search-results" className="py-12 px-6 max-w-xl mx-auto bg-white border border-stone-200 rounded-3xl p-8 space-y-4 shadow-sm text-left">
+              <div className="flex items-start gap-3.5">
+                <div className="p-3 bg-amber-100 text-amber-900 rounded-2xl shrink-0">
+                  <HelpCircle className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-black text-emerald-950 uppercase">
+                    No Documented Species Found for "{searchTerm}"
+                  </h3>
+                  <p className="text-xs text-stone-600 leading-relaxed font-normal">
+                    No plant record in our verified botanical directory matched this term. To protect biological and cultural safety, we do not fabricate or guess medicinal records for unverified names.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-2 text-xs">
+                <span className="text-[10px] uppercase font-bold text-stone-600 tracking-wider block">
+                  Search Tips & Verified Local Names:
+                </span>
+                <ul className="list-disc pl-4 space-y-1 text-stone-600 leading-relaxed">
+                  <li>Try typing without special diacritics (e.g. type <strong>Muthiga</strong>, <strong>Mucoroi</strong>, or <strong>Kiriri</strong>).</li>
+                  <li>Search in regional languages: <strong>Kikuyu, Kiswahili, Dholuo, Kikamba, Maasai, Samburu, Meru, Kalenjin</strong>.</li>
+                  <li>Search by botanical genus or species: e.g. <em>Warburgia</em>, <em>Prunus</em>, <em>Carissa</em>, <em>Aloe</em>.</li>
+                  <li>Search by documented symptom or condition: e.g. <em>cough</em>, <em>chest</em>, <em>fever</em>, <em>joint pain</em>, <em>stomach</em>.</li>
+                </ul>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="py-2.5 px-4 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Clear Search Filter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveView('identify')}
+                  className="py-2.5 px-5 bg-emerald-950 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition inline-flex items-center gap-2 cursor-pointer shadow-sm"
+                >
+                  <Camera className="w-4 h-4 text-amber-300" />
+                  Try Photo Identification
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPlants.map((rawPlant) => {
+              {searchResults.map(({ plant: rawPlant, reasons }) => {
                 const plant = translateHerb(rawPlant);
                 return (
                   <div 
@@ -370,8 +519,24 @@ export default function PlantsCatalog({ initialMode = 'catalog' }: PlantsCatalog
                           )}
                         </div>
 
+                        {/* Search Match Reason Indicator */}
+                        {searchTerm.trim().length > 0 && reasons.length > 0 && (
+                          <div className="p-2 bg-amber-50 border border-amber-200/90 rounded-xl text-[10px] space-y-1">
+                            <span className="font-extrabold uppercase text-amber-900 block tracking-wider">
+                              Why this plant matched:
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {reasons.slice(0, 3).map((r, ri) => (
+                                <span key={ri} className="bg-white px-2 py-0.5 rounded border border-amber-300 text-stone-800 font-medium">
+                                  <strong>{r.field}:</strong> {r.matchedValue}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Multilingual names pill row */}
-                        {(rawPlant.swahiliName || rawPlant.luoName || rawPlant.kambaName) && (
+                        {(rawPlant.swahiliName || rawPlant.luoName || rawPlant.kambaName || (rawPlant.otherLocalNames && rawPlant.otherLocalNames.length > 0)) && (
                           <div className="flex flex-wrap gap-1 text-[10px] text-stone-600 font-medium">
                             {rawPlant.swahiliName && (
                               <span className="bg-stone-100 px-2 py-0.5 rounded border border-stone-200 truncate">
@@ -388,6 +553,11 @@ export default function PlantsCatalog({ initialMode = 'catalog' }: PlantsCatalog
                                 Kamba: {rawPlant.kambaName}
                               </span>
                             )}
+                            {rawPlant.otherLocalNames?.slice(0, 2).map((rec, oi) => (
+                              <span key={oi} className="bg-stone-100 px-2 py-0.5 rounded border border-stone-200 truncate">
+                                {rec.language}: {rec.name}
+                              </span>
+                            ))}
                           </div>
                         )}
 

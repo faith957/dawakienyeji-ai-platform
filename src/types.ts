@@ -116,6 +116,7 @@ export interface ChatMessage {
   citations?: string[];
   source?: 'ai' | 'local';
   imageUrl?: string;
+  imageMimeType?: string;
   plantIdentification?: PlantIdentificationResponse;
   matchedHerbId?: string;
 }
@@ -176,9 +177,15 @@ export interface PossiblePlantMatch {
     commonName: string;
     kikuyuName: string;
     scientificName: string;
+    acceptedBotanicalName?: string;
+    botanicalFamily?: string;
     category: string;
     imageUrl?: string;
     severityRating?: string;
+    swahiliName?: string;
+    luoName?: string;
+    kambaName?: string;
+    otherLocalNames?: LocalNameRecord[];
   };
   inDirectory: boolean;
   cautionNotes: string;
@@ -187,10 +194,13 @@ export interface PossiblePlantMatch {
 export interface PlantIdentificationResponse {
   isInconclusive: boolean;
   inconclusiveReason?: string;
+  plantCount?: 'single_plant' | 'multiple_plants' | 'insufficient_detail' | 'non_plant';
+  plantCountExplanation?: string;
   possibleMatches: PossiblePlantMatch[];
   generalObservations: string;
   safetyNotice: string;
   disclaimer: string;
   modelUsed: string;
 }
+
 

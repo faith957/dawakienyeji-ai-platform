@@ -9,6 +9,7 @@ import { INITIAL_HERBS, INITIAL_REMEDIES, INITIAL_BLOGS, INITIAL_KNOWLEDGE_BASE 
 import { findDictionaryMatches, KIKUYU_DICTIONARY } from "./src/data/kikuyu_botanical_dictionary.js";
 import { Herb, BlogPost, TraditionalRemedy, KnowledgeBaseArticle, ChatMessage, ChatLog, BlogComment } from "./src/types.js";
 import { translateHerb, translateRemedy } from "./src/utils/translations.js";
+import { analyzePlantImage, sanitizeAndValidateImage } from "./src/utils/plantVision.js";
 
 const USERS_FILE = path.join(process.cwd(), "src", "data", "users.json");
 const CHAT_SESSIONS_FILE = path.join(process.cwd(), "src", "data", "user_sessions.json");
@@ -70,11 +71,38 @@ const saveUserSessions = (data: UserSessionsData) => {
   }
 };
 
+const HERBS_FILE = path.join(process.cwd(), "src", "data", "herbs_custom.json");
+
+// Load custom / extended herbs helper
+const loadHerbs = (): Herb[] => {
+  try {
+    if (fs.existsSync(HERBS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(HERBS_FILE, "utf-8"));
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    }
+  } catch (err) {
+    console.error("Error reading custom herbs file:", err);
+  }
+  return [...INITIAL_HERBS];
+};
+
+// Save custom herbs helper
+const saveHerbs = (herbs: Herb[]) => {
+  try {
+    fs.mkdirSync(path.dirname(HERBS_FILE), { recursive: true });
+    fs.writeFileSync(HERBS_FILE, JSON.stringify(herbs, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Error saving custom herbs file:", err);
+  }
+};
+
 let appUsers = loadUsers();
 let appConversations = loadUserSessions();
 
 // Global storage in-memory for live additions/edits so changes are immediate
-let dbHerbs: Herb[] = [...INITIAL_HERBS];
+let dbHerbs: Herb[] = loadHerbs();
 let dbRemedies: TraditionalRemedy[] = [...INITIAL_REMEDIES];
 let dbBlogs: BlogPost[] = [...INITIAL_BLOGS];
 let dbArticles: KnowledgeBaseArticle[] = [...INITIAL_KNOWLEDGE_BASE];
@@ -635,6 +663,7 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
     const maxHerbId = dbHerbs.reduce((max, h) => Math.max(max, parseInt(h.id) || 0), 0);
     newHerb.id = String(maxHerbId + 1);
     dbHerbs.unshift(newHerb); // add to top of list
+    saveHerbs(dbHerbs);
     res.json({ success: true, plant: newHerb });
   });
 
@@ -647,6 +676,7 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
       return res.status(404).json({ error: "Herb not found." });
     }
     dbHerbs[index] = { ...dbHerbs[index], ...updatedHerb };
+    saveHerbs(dbHerbs);
     res.json({ success: true, plant: dbHerbs[index] });
   });
 
@@ -658,6 +688,7 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
       return res.status(404).json({ error: "Herb not found." });
     }
     const removed = dbHerbs.splice(index, 1);
+    saveHerbs(dbHerbs);
     res.json({ success: true, plant: removed[0] });
   });
 
@@ -665,305 +696,15 @@ async function sendReplyEmail(userEmail: string, userName: string, originalMessa
   app.post("/api/plants/identify", async (req, res) => {
     try {
       const { imageBase64, mimeType } = req.body;
-      if (!imageBase64 || typeof imageBase64 !== "string") {
-        return res.status(400).json({ error: "No image data was provided. Please upload or capture a plant photo." });
-      }
-
-      // Sanitize base64 string if data URL prefix exists
-      let cleanBase64 = imageBase64;
-      let effectiveMime = mimeType || "image/jpeg";
-      if (imageBase64.includes(";base64,")) {
-        const parts = imageBase64.split(";base64,");
-        const match = parts[0].match(/data:(image\/[a-zA-Z0-9+.-]+)/);
-        if (match) {
-          effectiveMime = match[1];
-        }
-        cleanBase64 = parts[1];
-      }
-
-      // Validate allowed mime types
-      const allowedMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-      if (!allowedMimes.includes(effectiveMime.toLowerCase())) {
-        return res.status(400).json({ 
-          error: "Unsupported image format. Please submit a JPG, PNG, or WebP photograph." 
-        });
-      }
-
-      // Check size (approx 10MB limit)
-      const approxBytes = (cleanBase64.length * 3) / 4;
-      if (approxBytes > 10 * 1024 * 1024) {
-        return res.status(400).json({ 
-          error: "Image file exceeds the 10MB size limit. Please upload a smaller or compressed image." 
-        });
-      }
-
-      const ai = getGeminiClient();
-
-      const promptText = `
-You are an expert East African and global botanical taxonomist specializing in indigenous flora, ethnobotany, and morphometrics.
-Carefully examine this photograph of a plant specimen.
-
-SYSTEM TASKS:
-1. DIAGNOSTIC EVALUATION:
-   - Examine visual diagnostic organs: leaf phyllotaxy (opposite/alternate/whorled), venation, leaf margins, pubescence/hairs, stems, bark, thorns/spines, flowers, and fruits.
-   - If the image DOES NOT show a plant, or is so severely blurred/dark/cropped that key diagnostic traits are completely obscured, set "isInconclusive": true and describe in "inconclusiveReason" what diagnostic organs are needed (e.g., clear view of leaf arrangement, flowers, or bark).
-   - If evidence is sufficient to form credible hypotheses, propose between 1 and 4 candidate species. Communicate genuine uncertainty clearly.
-   - Do NOT invent false certainty or fabricate percentage numbers. Use categorical confidence levels: "High Plausibility", "Moderate Plausibility", or "Tentative / Low Plausibility".
-
-2. LOCAL & SCIENTIFIC NOMENCLATURE:
-   - Provide accepted binomial scientific name (e.g. Warburgia ugandensis) and family (e.g. Canellaceae).
-   - If known in East Africa (Kenya, Uganda, Tanzania), include common English, Kiswahili, Kikuyu (Gĩkũyũ), Luo (Dholuo), and Kamba names. If undocumented, leave empty string.
-   - Highlight key distinguishing morphological traits visible in the photo or typical of the species.
-
-3. SAFETY & TOXICOLOGY MANDATES:
-   - Never recommend ingesting, tasting, handling with bare hands, or medicinally preparing a wild plant based solely on a computer vision match.
-   - Warn clearly if the plant has known toxic look-alikes or dangerous saps (e.g., Solanum berries, Euphorbia latex, Senna laxative action).
-   - Visually similar species can have radically different toxicology and medicinal properties.
-
-Return your analysis strictly conforming to the requested JSON schema.
-`;
-
-      const imagePart = {
-        inlineData: {
-          mimeType: effectiveMime,
-          data: cleanBase64,
-        },
-      };
-
-      const textPart = {
-        text: promptText,
-      };
-
-      const visionSchema = {
-        type: Type.OBJECT,
-        properties: {
-          isInconclusive: {
-            type: Type.BOOLEAN,
-            description: "True if image is not a plant or cannot be reliably determined due to blur or lack of traits."
-          },
-          inconclusiveReason: {
-            type: Type.STRING,
-            description: "Explanation if inconclusive, or instructions on how to take a better photo."
-          },
-          generalObservations: {
-            type: Type.STRING,
-            description: "Detailed taxonomic visual observations of the specimen in the photo."
-          },
-          possibleMatches: {
-            type: Type.ARRAY,
-            description: "1 to 4 candidate species ordered from most to least plausible.",
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                scientificName: { type: Type.STRING, description: "Accepted botanical binomial" },
-                botanicalFamily: { type: Type.STRING, description: "Botanical family name" },
-                commonEnglishName: { type: Type.STRING, description: "English name" },
-                swahiliName: { type: Type.STRING, description: "Swahili name if documented" },
-                kikuyuName: { type: Type.STRING, description: "Kikuyu name if documented" },
-                luoName: { type: Type.STRING, description: "Luo name if documented" },
-                kambaName: { type: Type.STRING, description: "Kamba name if documented" },
-                otherLocalNames: { type: Type.STRING, description: "Other East African local names with language" },
-                distinguishingCharacteristics: { type: Type.STRING, description: "Diagnostic morphological traits" },
-                confidenceLevel: {
-                  type: Type.STRING,
-                  description: "Must be: 'High Plausibility', 'Moderate Plausibility', or 'Tentative / Low Plausibility'"
-                },
-                cautionNotes: { type: Type.STRING, description: "Toxicity warnings, look-alikes, or handling notes" }
-              },
-              required: ["scientificName", "confidenceLevel", "distinguishingCharacteristics", "cautionNotes"]
-            }
-          },
-          safetyNotice: {
-            type: Type.STRING,
-            description: "Mandatory caution warning about wild plant toxicity and look-alikes."
-          }
-        },
-        required: ["isInconclusive", "possibleMatches", "generalObservations", "safetyNotice"]
-      };
-
-      // Resilient Multi-Model Vision Cascade to prevent 503 / 429 unavailability
-      const candidateVisionModels = [
-        "gemini-2.5-flash",
-        "gemini-3.8-flash",
-        "gemini-2.5-pro",
-        "gemini-flash-latest"
-      ];
-
-      let rawJson = "";
-      let successfulModel = "";
-      let lastVisionError: any = null;
-
-      for (const modelName of candidateVisionModels) {
-        try {
-          console.log(`[Vision Engine] Attempting plant identification with model: ${modelName}`);
-          const visionResponse = await ai.models.generateContent({
-            model: modelName,
-            contents: { parts: [imagePart, textPart] },
-            config: {
-              responseMimeType: "application/json",
-              responseSchema: visionSchema
-            }
-          });
-
-          if (visionResponse && visionResponse.text) {
-            rawJson = visionResponse.text;
-            successfulModel = modelName;
-            console.log(`[Vision Engine] Successfully identified specimen using: ${modelName}`);
-            break;
-          }
-        } catch (modelErr: any) {
-          const errDetail = modelErr?.message || String(modelErr);
-          console.warn(`[Vision Engine] Model ${modelName} failed. Reason: ${errDetail}`);
-          lastVisionError = modelErr;
-          // Continue to next model in cascade
-        }
-      }
-
-      let parsedData: any = null;
-
-      if (rawJson) {
-        try {
-          // Clean potential markdown fences or whitespace
-          let cleanJsonText = rawJson.trim();
-          if (cleanJsonText.startsWith("```json")) {
-            cleanJsonText = cleanJsonText.replace(/^```json\s*/, "").replace(/```$/, "").trim();
-          } else if (cleanJsonText.startsWith("```")) {
-            cleanJsonText = cleanJsonText.replace(/^```\s*/, "").replace(/```$/, "").trim();
-          }
-          parsedData = JSON.parse(cleanJsonText);
-        } catch (parseErr) {
-          console.error("[Vision Engine] JSON parse error on output:", parseErr, rawJson);
-        }
-      }
-
-      // Graceful local herbarium synthesis if external AI vision models temporarily fail
-      if (!parsedData || !Array.isArray(parsedData.possibleMatches) || parsedData.possibleMatches.length === 0) {
-        console.log("[Vision Engine] Activating local East African ethnobotanical reference matcher fallback.");
-        
-        // Provide top representative curated medicinal plant species from local database
-        const curatedFallbackSpecies = dbHerbs.slice(0, 3).map((herb, idx) => ({
-          scientificName: herb.scientificName || herb.acceptedBotanicalName || "Warburgia ugandensis",
-          botanicalFamily: herb.botanicalFamily || "Canellaceae",
-          commonEnglishName: herb.commonName || herb.englishName || "Pepper Bark Tree",
-          swahiliName: herb.swahiliName || "Mkarambaki",
-          kikuyuName: herb.kikuyuName || "Mũthĩga",
-          luoName: herb.luoName || "Soga",
-          kambaName: herb.kambaName || "Muti",
-          otherLocalNames: "Documented in Mt. Kenya and Aberdares highlands flora.",
-          distinguishingCharacteristics: herb.distinguishingCharacteristics || herb.description || "Aromatic glossy leaves with distinct peppery taste and medicinal bark.",
-          confidenceLevel: idx === 0 ? "Moderate Plausibility" : "Tentative / Low Plausibility",
-          cautionNotes: herb.precautions || "Always verify exact species traits with elders and trained botanists prior to use."
-        }));
-
-        parsedData = {
-          isInconclusive: false,
-          inconclusiveReason: "",
-          generalObservations: "Specimen photograph received. Botanical visual characteristics have been analyzed against documented East African highland reference specimens from our botanical archives.",
-          possibleMatches: curatedFallbackSpecies,
-          safetyNotice: "Automated photographic identification is strictly provisional. Visually similar plants can possess radically differing toxicity. Never consume or medicinally prepare wild flora without certified taxonomic verification.",
-          isLocalFallback: true
-        };
-        successfulModel = "dawakienyeji-herbarium-engine";
-      }
-
-      // Cross-reference candidate matches with our verified database `dbHerbs`
-      const normalize = (s?: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-
-      const enrichedMatches = (parsedData.possibleMatches || []).map((match: any) => {
-        const mSciNorm = normalize(match.scientificName);
-        const mKikNorm = normalize(match.kikuyuName);
-        const mComNorm = normalize(match.commonEnglishName);
-
-        // Find match in dbHerbs
-        const matchedHerb = dbHerbs.find((h) => {
-          const hSciNorm = normalize(h.scientificName);
-          const hAcceptedNorm = normalize(h.acceptedBotanicalName);
-          const hKikNorm = normalize(h.kikuyuName);
-          const hComNorm = normalize(h.commonName);
-          const hEngNorm = normalize(h.englishName);
-
-          if (mSciNorm && (hSciNorm.includes(mSciNorm) || mSciNorm.includes(hSciNorm))) return true;
-          if (mSciNorm && hAcceptedNorm && (hAcceptedNorm.includes(mSciNorm) || mSciNorm.includes(hAcceptedNorm))) return true;
-          if (mKikNorm && mKikNorm.length > 3 && (hKikNorm.includes(mKikNorm) || mKikNorm.includes(hKikNorm))) return true;
-          if (mComNorm && mComNorm.length > 4 && (hComNorm.includes(mComNorm) || mComNorm.includes(hComNorm))) return true;
-          return false;
-        });
-
-        if (matchedHerb) {
-          return {
-            ...match,
-            inDirectory: true,
-            matchingHerbId: matchedHerb.id,
-            matchingHerbSummary: {
-              id: matchedHerb.id,
-              commonName: matchedHerb.commonName,
-              kikuyuName: matchedHerb.kikuyuName,
-              scientificName: matchedHerb.scientificName,
-              category: matchedHerb.category,
-              imageUrl: matchedHerb.imageUrl,
-              severityRating: matchedHerb.severityRating,
-            }
-          };
-        } else {
-          return {
-            ...match,
-            inDirectory: false,
-            matchingHerbId: undefined,
-            matchingHerbSummary: undefined
-          };
-        }
-      });
-
-      const responsePayload = {
-        isInconclusive: !!parsedData.isInconclusive,
-        inconclusiveReason: parsedData.inconclusiveReason || (parsedData.isInconclusive ? "The image lacked clear distinguishing botanical structures such as flowers, leaf venation, or clear margins needed for confident identification." : ""),
-        possibleMatches: enrichedMatches,
-        generalObservations: parsedData.generalObservations || "Botanical visual analysis completed.",
-        safetyNotice: parsedData.safetyNotice || "Warning: Visual similarity in plants does not guarantee identical chemical or medicinal properties. Multiple toxic species closely resemble beneficial herbs. Never consume, prepare, or handle wild flora based solely on automated photographic analysis.",
-        disclaimer: "This preliminary identification is generated by AI vision analysis for educational and cultural reference only. It is not an expert-confirmed botanical diagnosis. Consult a qualified taxonomist or healthcare provider before any use.",
-        modelUsed: successfulModel || "gemini-2.5-flash"
-      };
-
-      res.json(responsePayload);
+      const result = await analyzePlantImage({ imageBase64, mimeType }, dbHerbs);
+      return res.json(result);
     } catch (err: any) {
-      console.error("Plant identification unexpected handler error:", err);
-      // Even in an edge case exception, return a valid helpful diagnostic response rather than breaking the UI with 500
-      const fallbackHerb = dbHerbs[0] || INITIAL_HERBS[0];
-      res.json({
-        isInconclusive: false,
-        inconclusiveReason: "",
-        possibleMatches: [
-          {
-            scientificName: fallbackHerb.scientificName,
-            botanicalFamily: fallbackHerb.botanicalFamily || "Canellaceae",
-            commonEnglishName: fallbackHerb.commonName,
-            swahiliName: fallbackHerb.swahiliName || "Mkarambaki",
-            kikuyuName: fallbackHerb.kikuyuName,
-            luoName: fallbackHerb.luoName || "",
-            kambaName: fallbackHerb.kambaName || "",
-            distinguishingCharacteristics: fallbackHerb.distinguishingCharacteristics || fallbackHerb.description,
-            confidenceLevel: "Moderate Plausibility",
-            cautionNotes: fallbackHerb.precautions || "Please verify physical specimen with a botanist.",
-            inDirectory: true,
-            matchingHerbId: fallbackHerb.id,
-            matchingHerbSummary: {
-              id: fallbackHerb.id,
-              commonName: fallbackHerb.commonName,
-              kikuyuName: fallbackHerb.kikuyuName,
-              scientificName: fallbackHerb.scientificName,
-              category: fallbackHerb.category,
-              imageUrl: fallbackHerb.imageUrl,
-              severityRating: fallbackHerb.severityRating,
-            }
-          }
-        ],
-        generalObservations: "Specimen processed. Comparison matched against verified ethnobotanical database records.",
-        safetyNotice: "Automated photographic identification is educational and provisional. Never ingest or prepare wild plants without verified clinical or taxonomic confirmation.",
-        disclaimer: "Provisional educational analysis only.",
-        modelUsed: "dawakienyeji-herbarium-engine"
-      });
+      console.error("[Vision API Error]", err?.message || err);
+      return res.status(400).json({ error: err?.message || "Failed to analyze plant photograph." });
     }
   });
+
+
 
   // 5. Get all traditional remedies
   app.get("/api/remedies", (req, res) => {
@@ -1223,10 +964,23 @@ Return your analysis strictly conforming to the requested JSON schema.
   }
 
   app.post("/api/chat", async (req, res) => {
-    const { messages, currentQuery, language } = req.body;
-    if (!currentQuery) {
-      return res.status(400).json({ error: "No query provided." });
+    const { messages, currentQuery, language, currentImage, currentMimeType } = req.body;
+    if (!currentQuery && !currentImage) {
+      return res.status(400).json({ error: "No query or image provided." });
     }
+
+    const effectiveQuery = (currentQuery || "").trim() || (currentImage ? "Please identify this plant photograph." : "");
+
+    // Diagnostic logging
+    const approxBytes = currentImage ? Math.round((currentImage.length * 3) / 4) : 0;
+    console.log(`[Diagnostic /api/chat] Incoming request:`, {
+      hasImage: !!currentImage,
+      imageMime: currentMimeType || "none",
+      approxBytes,
+      query: effectiveQuery.slice(0, 80),
+      historyLength: Array.isArray(messages) ? messages.length : 0,
+      language: language || "en",
+    });
 
     // Map language code to English full names for Gemini prompt context
     const languageMap: { [key: string]: string } = {
@@ -1245,7 +999,197 @@ Return your analysis strictly conforming to the requested JSON schema.
         .replace(/[^a-z0-9\s]/g, ' ');
     };
 
-    // Context Extraction Helper to detect known plants mentioned within any message
+    // ----------------------------------------------------------------------
+    // BRANCH 1: CURRENT MESSAGE INCLUDES AN UPLOADED IMAGE
+    // ----------------------------------------------------------------------
+    if (currentImage) {
+      try {
+        console.log(`[Diagnostic Vision] Analyzing newly submitted image part (${approxBytes} bytes)...`);
+        const idResult = await analyzePlantImage(
+          { imageBase64: currentImage, mimeType: currentMimeType, userQuery: effectiveQuery },
+          dbHerbs
+        );
+
+        console.log(`[Diagnostic Vision] Result: plantCount=${idResult.plantCount}, isInconclusive=${idResult.isInconclusive}, candidates=${idResult.possibleMatches.length}`);
+
+        const maxLogId = dbChatLogs.reduce((max, l) => Math.max(max, parseInt(l.id) || 0), 0);
+        const logId = String(maxLogId + 1);
+        dbChatLogs.unshift({
+          id: logId,
+          query: effectiveQuery,
+          timestamp: new Date().toLocaleTimeString(),
+          answeredByBot: true
+        });
+
+        // Case 1A: MULTIPLE PLANTS DETECTED (e.g. flowerbeds, mixed groupings)
+        if (idResult.plantCount === "multiple_plants") {
+          const detail = idResult.plantCountExplanation || idResult.generalObservations;
+          const reply = `### 🌸 Botanical Specimen Assessment: Multiple Plant Species Detected\n\n` +
+            `**Visual Examination:** ${detail}\n\n` +
+            `**Key Identification Limitation:** This photograph depicts a mixed grouping or garden bed containing multiple distinct plant species. Because several plants share the frame, it is impossible to isolate a single botanical specimen or provide a reliable species identification.\n\n` +
+            `**Next Steps:** For accurate identification and safe traditional knowledge, please take and upload a **closer photograph focused on the specific individual plant** you wish to identify, clearly capturing its leaves (both upper and lower surfaces), stem, flower organs, or fruit.\n\n` +
+            `> ⚠️ **Mandatory Medical & Safety Caution:** Never harvest, ingest, or medicinally prepare wild or garden plants based on inconclusive or mixed-plant photographs. Visually similar plants can have radically differing toxicities.`;
+
+          return res.json({
+            reply,
+            logId,
+            source: 'ai',
+            plantIdentification: idResult,
+            citations: []
+          });
+        }
+
+        // Case 1B: INCONCLUSIVE / INSUFFICIENT DETAIL
+        if (idResult.isInconclusive || idResult.possibleMatches.length === 0) {
+          const reply = `### 🔍 Visual Specimen Assessment: Inconclusive Botanical Evidence\n\n` +
+            `**Observations:** ${idResult.generalObservations}\n\n` +
+            `**Reason:** ${idResult.inconclusiveReason || "The photograph does not show sufficient diagnostic botanical organs (such as leaf venation, leaf margins, stem attachment, or floral anatomy) to make a confident identification."}\n\n` +
+            `**Guidance:** Please capture a sharp, well-lit photograph in natural daylight closer to the specimen, focusing on clear leaves, flowers, or bark.\n\n` +
+            `> ⚠️ **Safety Notice:** AI photographic identification is strictly provisional. Never ingest or medicinally prepare wild flora based solely on an image match.`;
+
+          return res.json({
+            reply,
+            logId,
+            source: 'ai',
+            plantIdentification: idResult,
+            citations: []
+          });
+        }
+
+        // Case 1C: SINGLE SPECIMEN WITH PLAUSIBLE CANDIDATES
+        const matchedHerbsInDir = idResult.possibleMatches.filter(m => m.inDirectory && m.matchingHerbSummary);
+
+        let candidateBreakdown = "";
+        idResult.possibleMatches.forEach((m, idx) => {
+          candidateBreakdown += `#### Candidate ${idx + 1}: *${m.scientificName}* (${m.commonEnglishName || 'Indigenous Flora'})\n`;
+          candidateBreakdown += `- **Plausibility Level:** ${m.confidenceLevel}\n`;
+          if (m.kikuyuName) candidateBreakdown += `- **Gĩkũyũ Name:** **${m.kikuyuName}**\n`;
+          if (m.swahiliName) candidateBreakdown += `- **Kiswahili Name:** ${m.swahiliName}\n`;
+          if (m.luoName) candidateBreakdown += `- **Dholuo Name:** ${m.luoName}\n`;
+          if (m.kambaName) candidateBreakdown += `- **Kikamba Name:** ${m.kambaName}\n`;
+          if (m.otherLocalNames) candidateBreakdown += `- **Other Local Names:** ${m.otherLocalNames}\n`;
+          if (m.botanicalFamily) candidateBreakdown += `- **Botanical Family:** ${m.botanicalFamily}\n`;
+          candidateBreakdown += `- **Distinguishing Features:** ${m.distinguishingCharacteristics}\n`;
+          if (m.cautionNotes) candidateBreakdown += `- **Toxicology Caution:** ${m.cautionNotes}\n`;
+          if (m.inDirectory && m.matchingHerbSummary) {
+            candidateBreakdown += `- **Heritage Directory:** ✅ Documented in Dawakienyeji archives.\n\n`;
+          } else {
+            candidateBreakdown += `- **Heritage Directory:** ℹ️ Not currently cataloged as an East African traditional medicinal herb. (We strictly avoid fabricating unverified medicinal claims).\n\n`;
+          }
+        });
+
+        const isSpecificQuestion = effectiveQuery.length > 15 && 
+          !effectiveQuery.toLowerCase().includes("please identify this plant") &&
+          !effectiveQuery.toLowerCase().includes("identify this plant photograph");
+
+        let responseText = `### 🌿 Botanical Identification Results\n\n` +
+          `**Visual Taxonomic Observations:**\n${idResult.generalObservations}\n\n` +
+          candidateBreakdown;
+
+        if (matchedHerbsInDir.length > 0) {
+          responseText += `### 📚 Documented Traditional Ethnobotanical Records\n` +
+            matchedHerbsInDir.map(m => {
+              const h = dbHerbs.find(herb => herb.id === m.matchingHerbId);
+              return h ? `- **${h.kikuyuName}** (*${h.scientificName}*): Traditionally used for ${h.medicinalUses.slice(0, 3).join(", ")}. Preparation: ${h.preparation}. ⚠️ *Precaution: ${h.precautions}*` : '';
+            }).filter(Boolean).join("\n") + "\n\n";
+        }
+
+        if (isSpecificQuestion) {
+          responseText += `\n**Regarding your question ("${effectiveQuery}"):**\n`;
+          if (matchedHerbsInDir.length > 0) {
+            const primary = matchedHerbsInDir[0];
+            const primaryHerb = dbHerbs.find(h => h.id === primary.matchingHerbId);
+            responseText += `If this photographed specimen is verified as **${primary.kikuyuName || primary.scientificName}**, traditional East African herbal lore documents its use for ${primaryHerb ? primaryHerb.medicinalUses.join(", ") : 'wellness'}. However, automated computer vision cannot confirm biochemical safety or clinical efficacy. Never consume or medicinally prepare wild flora without certified taxonomic verification.`;
+          } else {
+            responseText += `The plausible candidate species for this specimen are not cataloged as traditional East African medicinal herbs in our verified directory. We adhere to strict cultural and scientific provenance and do not fabricate unverified medicinal claims for wild or exotic plants.`;
+          }
+        }
+
+        responseText += `\n\n> ⚠️ **Mandatory Safety Notice:** Automated photographic analysis is provisional and educational only. Visual similarity in plants does not guarantee identical chemical or medicinal properties. Never ingest or prepare wild plants without verified clinical or botanical confirmation.`;
+
+        const citations = matchedHerbsInDir.map(m => `${m.kikuyuName || m.scientificName} (${m.scientificName})`);
+
+        return res.json({
+          reply: responseText,
+          logId,
+          source: 'ai',
+          plantIdentification: idResult,
+          matchedHerbId: matchedHerbsInDir[0]?.matchingHerbId,
+          citations: citations.length ? citations : []
+        });
+
+      } catch (visionErr: any) {
+        console.error("[Diagnostic Vision] Error analyzing uploaded plant image:", visionErr);
+        return res.status(400).json({ error: visionErr?.message || "Failed to analyze plant photograph." });
+      }
+    }
+
+    // ----------------------------------------------------------------------
+    // BRANCH 2: FOLLOW-UP QUESTION REFERENCING PREVIOUS IMAGE IN SESSION
+    // ----------------------------------------------------------------------
+    const historyMsgs = Array.isArray(messages) ? messages : [];
+    const prevBotMsgWithId = historyMsgs.slice().reverse().find((m: any) => m.role === 'model' && m.plantIdentification);
+    const prevUserMsgWithImg = historyMsgs.slice().reverse().find((m: any) => m.role === 'user' && m.imageUrl);
+
+    const queryNormLower = norm(effectiveQuery).trim();
+    const isImageFollowUp = 
+      (queryNormLower.includes("this plant") || queryNormLower.includes("the plant") || queryNormLower.includes("this flower") ||
+       queryNormLower.includes("the photo") || queryNormLower.includes("the image") || queryNormLower.includes("can i drink") ||
+       queryNormLower.includes("can i use") || queryNormLower.includes("what is it used for") || queryNormLower.includes("how to prepare") ||
+       queryNormLower.includes("is it safe") || queryNormLower.includes("is it toxic") || queryNormLower.includes("what are its uses") ||
+       queryNormLower.includes("what does it cure") || queryNormLower.includes("traditional use")) &&
+      (prevBotMsgWithId || prevUserMsgWithImg);
+
+    if (isImageFollowUp && prevBotMsgWithId?.plantIdentification) {
+      console.log(`[Diagnostic Chat FollowUp] Detected follow-up question referencing previously analyzed image.`);
+      const priorId = prevBotMsgWithId.plantIdentification;
+
+      const maxLogId = dbChatLogs.reduce((max, l) => Math.max(max, parseInt(l.id) || 0), 0);
+      const logId = String(maxLogId + 1);
+
+      // If prior image had multiple plants
+      if (priorId.plantCount === "multiple_plants") {
+        const reply = `Regarding the photograph you shared earlier: as previously noted, the image depicts **multiple different plant species** in a mixed grouping. Without a close-up photograph of an individual plant, it is impossible to determine which specific plant you are asking about, and attributing any medicinal properties would be unsafe. Please upload a clear photo of just the single plant you are inquiring about.`;
+        return res.json({ reply, logId, source: 'ai', citations: [] });
+      }
+
+      // If prior image was inconclusive
+      if (priorId.isInconclusive || !priorId.possibleMatches || priorId.possibleMatches.length === 0) {
+        const reply = `The plant photograph you shared earlier was **inconclusive** and did not display sufficient botanical diagnostic details. To discuss its traditional uses or safety responsibly, please upload a clearer close-up photograph of the plant showing its leaf arrangement, flowers, or bark.`;
+        return res.json({ reply, logId, source: 'ai', citations: [] });
+      }
+
+      // Prior image had candidate species
+      const topMatch = priorId.possibleMatches[0];
+      const matchingHerb = topMatch.matchingHerbId ? dbHerbs.find(h => h.id === topMatch.matchingHerbId) : null;
+
+      let followUpReply = `### 🌿 Follow-up on Photographed Specimen (*${topMatch.scientificName}*)\n\n`;
+      followUpReply += `As determined from your uploaded photo, this specimen is provisionally identified as **${topMatch.scientificName}** (${topMatch.commonEnglishName || 'Specimen'}) with **${topMatch.confidenceLevel}**.\n\n`;
+
+      if (matchingHerb) {
+        followUpReply += `**Documented East African Traditional Lore (${matchingHerb.kikuyuName}):**\n`;
+        followUpReply += `- **Documented Traditional Uses:** ${matchingHerb.medicinalUses.join(", ")}\n`;
+        followUpReply += `- **Traditional Preparation Method:** ${matchingHerb.preparation}\n`;
+        followUpReply += `- **Parts Traditionally Used:** ${matchingHerb.partUsed}\n`;
+        followUpReply += `- **Known Safety Cautions:** ${matchingHerb.precautions}\n\n`;
+        followUpReply += `> ⚠️ **Important Caution:** These traditional uses apply **only if** the physical specimen is verified as *${matchingHerb.scientificName}* by an elder or botanist. Automated photo identification cannot confirm chemical properties. Never consume or apply an unconfirmed wild plant.`;
+      } else {
+        followUpReply += `This species (*${topMatch.scientificName}*) is not documented as a traditional medicinal herb in the Dawakienyeji East African directory. We do not fabricate medicinal claims for unverified or ornamental species.\n\n`;
+        followUpReply += `> ⚠️ **Safety Caution:** Wild and garden plants can contain toxic alkaloids or saponins. Do not consume or prepare this plant.`;
+      }
+
+      return res.json({
+        reply: followUpReply,
+        logId,
+        source: 'ai',
+        citations: matchingHerb ? [`${matchingHerb.kikuyuName} (${matchingHerb.scientificName})`] : []
+      });
+    }
+
+    // ----------------------------------------------------------------------
+    // BRANCH 3: STANDARD BOTANICAL TEXT SEARCH (RAG)
+    // ----------------------------------------------------------------------
+    // Context Extraction Helper to detect known plants mentioned within USER messages only
     const getPresentPlantsKeys = (text: string) => {
       const textNorm = norm(text);
       const foundNames: string[] = [];
@@ -1254,7 +1198,6 @@ Return your analysis strictly conforming to the requested JSON schema.
         const kn = norm(h.kikuyuName);
         const cn = norm(h.commonName);
         const sn = norm(h.scientificName);
-        // Ensure word bounds or clean substring checks
         if (textNorm.includes(kn) || textNorm.includes(cn) || textNorm.includes(sn)) {
           if (!foundNames.includes(h.kikuyuName)) {
             foundNames.push(h.kikuyuName);
@@ -1276,10 +1219,9 @@ Return your analysis strictly conforming to the requested JSON schema.
       return foundNames;
     };
 
-    const directPlantsKeys = getPresentPlantsKeys(currentQuery);
-    const queryNormRaw = norm(currentQuery).trim();
+    const directPlantsKeys = getPresentPlantsKeys(effectiveQuery);
+    const queryNormRaw = norm(effectiveQuery).trim();
     
-    // Check if query is likely a follow-up asking for details, prep, or dosage about previously discussed plants
     const isFollowUp = 
       queryNormRaw.length < 55 && (
         queryNormRaw.includes("prepare") || queryNormRaw.includes("prep") || queryNormRaw.includes("how to") || 
@@ -1293,17 +1235,17 @@ Return your analysis strictly conforming to the requested JSON schema.
         queryNormRaw.includes("swelling") || queryNormRaw.includes("pain") || queryNormRaw.includes("ache")
       );
 
-    let enrichedQuery = currentQuery;
+    let enrichedQuery = effectiveQuery;
     let contextPlantFound = "";
     let contextSymptomFound = "";
 
-    // If no direct plants are found, or if it has follow-up indicators, let's pull context from message history
+    // Pull context ONLY from USER messages in history to prevent bot greeting from contaminating with MŨTHĨGA
     if (directPlantsKeys.length === 0 || isFollowUp) {
       if (Array.isArray(messages) && messages.length > 0) {
-        // Walk backwards to find most recently mentioned plant names in history
         for (let i = messages.length - 1; i >= 0; i--) {
           const msg = messages[i];
-          const msgText = msg ? (msg.text || "") : "";
+          if (!msg || msg.role !== "user") continue; // << CRITICAL: Ignore bot greeting and replies
+          const msgText = msg.text || "";
           if (!msgText) continue;
           const msgPlants = getPresentPlantsKeys(msgText);
           if (msgPlants.length > 0) {
@@ -1312,7 +1254,6 @@ Return your analysis strictly conforming to the requested JSON schema.
           }
         }
 
-        // Walk backwards to find most recently mentioned symptoms and medical conditions
         const symptomsList = [
           "toothache", "tooth", "teeth", "tooch", "thoot", "toot", 
           "stomach", "fever", "malaria", "cough", "headache", "backache",
@@ -1320,7 +1261,8 @@ Return your analysis strictly conforming to the requested JSON schema.
         ];
         for (let i = messages.length - 1; i >= 0; i--) {
           const msg = messages[i];
-          const msgText = msg ? norm(msg.text || "") : "";
+          if (!msg || msg.role !== "user") continue; // << CRITICAL: Ignore bot greeting
+          const msgText = norm(msg.text || "");
           if (!msgText) continue;
           for (const s of symptomsList) {
             if (msgText.includes(s)) {
@@ -1334,8 +1276,8 @@ Return your analysis strictly conforming to the requested JSON schema.
     }
 
     if (contextPlantFound || contextSymptomFound) {
-      enrichedQuery = `${currentQuery} ${contextPlantFound} ${contextSymptomFound}`.trim();
-      console.log(`[Info-Log] Enriching follow-up query with conversational history: "${currentQuery}" -> "${enrichedQuery}"`);
+      enrichedQuery = `${effectiveQuery} ${contextPlantFound} ${contextSymptomFound}`.trim();
+      console.log(`[Info-Log] Enriching follow-up query with conversational history: "${effectiveQuery}" -> "${enrichedQuery}"`);
     }
 
     const queryNorm = norm(enrichedQuery).trim();
@@ -1634,11 +1576,11 @@ CRITICAL INSTRUCTIONS FOR EXTERNAL SEARCHES:
       // Append current user message
       chatContents.push({
         role: "user",
-        parts: [{ text: `${currentQuery}\n\n[CONTEXT SEARCH INFORMATION]:\n${contextStr}` }]
+        parts: [{ text: `${effectiveQuery}\n\n[CONTEXT SEARCH INFORMATION]:\n${contextStr}` }]
       });
 
       // Try with fallback models to handle 503 / 429 under high demand
-      const modelsToTry = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-1.5-flash"];
+      const modelsToTry = ["gemini-2.5-flash", "gemini-3.8-flash", "gemini-2.5-pro"];
       let response = null;
       let lastError = null;
 
